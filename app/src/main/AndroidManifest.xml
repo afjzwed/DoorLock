@@ -11,6 +11,9 @@
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
     <!--自启动权限-->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <!--网络状态改变-->
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
 
     <application
         android:name=".MainApplication"
@@ -22,8 +25,9 @@
         android:theme="@style/AppTheme">
 
         <!--所有activity的属性都未补全-->
-        <activity android:name=".ui.activity.MainActivity"
-                  android:screenOrientation="landscape">
+        <activity
+            android:name=".ui.activity.MainActivity"
+            android:screenOrientation="landscape">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
 
@@ -37,8 +41,7 @@
             android:screenOrientation="landscape"/>
 
 
-
-
+        <service android:name=".ui.activity.MainService"/>
         <!--开机(更新)启动广播-->
         <receiver android:name="com.cxwl.hurry.doorlock.receiver.NativeAccessReceiver">
             <intent-filter>

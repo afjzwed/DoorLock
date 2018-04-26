@@ -1,31 +1,143 @@
 package com.cxwl.hurry.doorlock.ui.activity;
 
 import android.annotation.SuppressLint;
+import android.app.Service;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
+import android.os.Handler;
+import android.os.IBinder;
+import android.os.Message;
+import android.os.Messenger;
+import android.os.RemoteException;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 
+import com.cxwl.hurry.doorlock.MainApplication;
 import com.cxwl.hurry.doorlock.R;
+import com.cxwl.hurry.doorlock.utils.NetWorkUtils;
+
+import java.util.Timer;
+import java.util.TimerTask;
+
+import static com.cxwl.hurry.doorlock.utils.NetWorkUtils.NETWOKR_TYPE_ETHERNET;
+import static com.cxwl.hurry.doorlock.utils.NetWorkUtils.NETWOKR_TYPE_MOBILE;
+import static com.cxwl.hurry.doorlock.utils.NetWorkUtils.NETWORK_TYPE_NONE;
+import static com.cxwl.hurry.doorlock.utils.NetWorkUtils.NETWORK_TYPE_WIFI;
 
 public class MainActivity extends AppCompatActivity {
 
     private static String TAG = "MainActivity";
 
-
+    private Handler mHandle;
+    private Messenger mainMessage;
+    private Messenger serviceMessage;
     private String mac;//Mac地址
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        initHandle();
+        initMainService();
 
+    }
+    private void initHandle() {
+        mHandle = new Handler() {
+            @Override
+            public void handleMessage(Message msg) {
+                super.handleMessage(msg);
+                switch (msg.what) {
+                    default:
+                        break;
+                }
 
+            }
+        };
+        mainMessage = new Messenger(mHandle);
+    }
+    private void initMainService() {
+        Intent intent = new Intent(this, MainService.class);
+        bindService(intent, serviceConnection, Service.BIND_AUTO_CREATE);
+    }
+
+    private ServiceConnection serviceConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            serviceMessage = new Messenger(service);
+            Log.i(TAG, "连接MainService成功" + (serviceMessage != null));
+            if (!NetWorkUtils.isNetworkAvailable(MainActivity.this)) {
+                mHandle.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        Log.i(TAG, "无网状态");
+                    }
+                });
+            } else {
+                Log.i(TAG, "有网");
+            }
+            sendMainMessager(MainService.MAIN_ACTIVITY_INIT, NetWorkUtils.isNetworkAvailable(MainActivity
+                    .this));
+            initNet();
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+
+        }
+    };
+    /**
+     * 通过ServiceMessenger将注册消息发送到Service中的Handler
+     */
+    private void sendMainMessager(int what, Object o) {
+        Message message = Message.obtain();
+        message.what = what;
+        message.replyTo = mainMessage;
+        message.obj = o;
+        try {
+            serviceMessage.send(message);
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+    }
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        unbindService(serviceConnection);
+    }
+
+    private void initNet() {
+        final WifiManager wifiManager = (WifiManager) MainApplication.getApplication().getSystemService(WIFI_SERVICE);//获得WifiManager
+        final Timer timer = new Timer();
+        timer.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                switch (NetWorkUtils.getCurrentNetType(MainActivity.this)) {
+                    case NETWORK_TYPE_WIFI:
+                        Log.i(TAG, "NETWORK_TYPE_WIFI");
+                        break;
+                    case NETWOKR_TYPE_ETHERNET:
+                        Log.i(TAG, "NETWOKR_TYPE_ETHERNET");
+
+                        break;
+                    case NETWOKR_TYPE_MOBILE:
+                        Log.i(TAG, "gprs");
+                        break;
+                    case NETWORK_TYPE_NONE:
+                        Log.i(TAG, "断网");
+                    default:
+                        break;
+                }
+
+            }
+
+        }, 1000, 5000);
     }
 
     @Override
@@ -63,7 +175,7 @@ public class MainActivity extends AppCompatActivity {
             return false;
         } else if (keyCode == KeyEvent.KEYCODE_A) {
             Log.e(TAG, "keyCode " + "A" + "管理处");
-            startNewActivity(this, HurryDemoActivity.class,null);
+            startNewActivity(this, HurryDemoActivity.class, null);
             return false;
         } else if (keyCode == KeyEvent.KEYCODE_B) {
             Log.e(TAG, "keyCode " + "B" + "拨号");
@@ -117,6 +229,7 @@ public class MainActivity extends AppCompatActivity {
 
     /**
      * 强制让控件失去焦点
+     *
      * @param view
      */
     private void delFocus(View view) {
