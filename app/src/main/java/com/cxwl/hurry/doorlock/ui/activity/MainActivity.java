@@ -26,6 +26,7 @@ import com.cxwl.hurry.doorlock.utils.NetWorkUtils;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import static com.cxwl.hurry.doorlock.utils.MacUtils.getWifiMac;
 import static com.cxwl.hurry.doorlock.utils.NetWorkUtils.NETWOKR_TYPE_ETHERNET;
 import static com.cxwl.hurry.doorlock.utils.NetWorkUtils.NETWOKR_TYPE_MOBILE;
 import static com.cxwl.hurry.doorlock.utils.NetWorkUtils.NETWORK_TYPE_NONE;
@@ -48,6 +49,7 @@ public class MainActivity extends AppCompatActivity {
         initMainService();
 
     }
+
     private void initHandle() {
         mHandle = new Handler() {
             @Override
@@ -62,6 +64,7 @@ public class MainActivity extends AppCompatActivity {
         };
         mainMessage = new Messenger(mHandle);
     }
+
     private void initMainService() {
         Intent intent = new Intent(this, MainService.class);
         bindService(intent, serviceConnection, Service.BIND_AUTO_CREATE);
@@ -82,7 +85,8 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 Log.i(TAG, "有网");
             }
-            sendMainMessager(MainService.MAIN_ACTIVITY_INIT, NetWorkUtils.isNetworkAvailable(MainActivity
+            sendMainMessager(MainService.MAIN_ACTIVITY_INIT, NetWorkUtils.isNetworkAvailable
+                    (MainActivity
                     .this));
             initNet();
         }
@@ -92,6 +96,7 @@ public class MainActivity extends AppCompatActivity {
 
         }
     };
+
     /**
      * 通过ServiceMessenger将注册消息发送到Service中的Handler
      */
@@ -106,14 +111,20 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
     }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
         unbindService(serviceConnection);
     }
 
+    /**
+     * 使用定时器,每隔5秒获得一次信号强度值
+     */
+    @SuppressLint("WifiManagerLeak")
     private void initNet() {
-        final WifiManager wifiManager = (WifiManager) MainApplication.getApplication().getSystemService(WIFI_SERVICE);//获得WifiManager
+        final WifiManager wifiManager = (WifiManager) MainApplication.getApplication()
+                .getSystemService(WIFI_SERVICE);//获得WifiManager
         final Timer timer = new Timer();
         timer.scheduleAtFixedRate(new TimerTask() {
             @Override
@@ -238,18 +249,6 @@ public class MainActivity extends AppCompatActivity {
 
         boolean focusable = view.isFocusable();
         Log.e(TAG, "失去焦点 " + focusable);
-    }
-
-    @SuppressLint("WifiManagerLeak")
-    protected String getWifiMac() {
-        WifiManager wifi = (WifiManager) getSystemService(Context.WIFI_SERVICE);
-        WifiInfo info = wifi.getConnectionInfo();
-        mac = info.getMacAddress();
-        if (mac != null) {
-            return mac;
-        } else {
-            return "";
-        }
     }
 
     private void startNewActivity(Context context, Class<?> clz, Bundle bundle) {

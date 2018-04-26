@@ -304,7 +304,6 @@ public class HurryDemoActivity extends AppCompatActivity implements DialogInterf
         } else if (keyCode == KeyEvent.KEYCODE_9) {
             edittext_keyoutput.setText("9" + " 按键2失去焦点");
             delFocus(button_gpiooutput_lock);
-            finish();
             return false;
         } else if (keyCode == KeyEvent.KEYCODE_STAR) {
             edittext_keyoutput.setText("*");
@@ -337,6 +336,7 @@ public class HurryDemoActivity extends AppCompatActivity implements DialogInterf
             return false;
         } else if (keyCode == KeyEvent.KEYCODE_D) {
             edittext_keyoutput.setText("D" + "返回");
+            finish();
             return false;
         } else if (keyCode == KeyEvent.KEYCODE_DEL) {
             edittext_keyoutput.setText("*");
@@ -705,13 +705,13 @@ public class HurryDemoActivity extends AppCompatActivity implements DialogInterf
         bFlag_input_IO5 = false;
         bRunReadSerial = false;
 
-        pthread.interrupt();
-        pthread = null;
+//        pthread.interrupt();
+//        pthread = null;
         myHandler = null;
-        pSerialport = null;
         if (iRead != 0) {
             pSerialport.close(iRead);
         }
+        pSerialport = null;
         m_rkctrl = null;
         super.onDestroy();
     }
