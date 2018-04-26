@@ -14,6 +14,13 @@
     <!--网络状态改变-->
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-permission android:name="android.hardware.camera"/>
+    <uses-permission android:name="android.hardware.camera.autofocus"/>
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
 
     <application
         android:name=".MainApplication"
@@ -60,6 +67,13 @@
                 <action android:name="android.intent.action.PACKAGE_REMOVED"/>
             </intent-filter>
         </receiver>
+        <!--rtc服务类-->
+
+        <service android:name="rtc.sdk.impl.SdkService">
+            <intent-filter>
+                <action android:name="rtc.sdk.service"/>
+            </intent-filter>
+        </service>
     </application>
 
 </manifest>
