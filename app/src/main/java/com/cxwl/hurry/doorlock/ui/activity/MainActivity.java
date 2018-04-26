@@ -6,7 +6,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.net.wifi.WifiInfo;
+import android.graphics.Typeface;
 import android.net.wifi.WifiManager;
 import android.os.Handler;
 import android.os.IBinder;
@@ -18,35 +18,111 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
+import android.widget.EditText;
+import android.widget.GridView;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
+import android.widget.TextView;
 
 import com.cxwl.hurry.doorlock.MainApplication;
 import com.cxwl.hurry.doorlock.R;
+import com.cxwl.hurry.doorlock.service.MainService;
+import com.cxwl.hurry.doorlock.utils.Intenet;
+import com.cxwl.hurry.doorlock.utils.MacUtils;
 import com.cxwl.hurry.doorlock.utils.NetWorkUtils;
 
 import java.util.Timer;
 import java.util.TimerTask;
 
-import static com.cxwl.hurry.doorlock.utils.MacUtils.getWifiMac;
 import static com.cxwl.hurry.doorlock.utils.NetWorkUtils.NETWOKR_TYPE_ETHERNET;
 import static com.cxwl.hurry.doorlock.utils.NetWorkUtils.NETWOKR_TYPE_MOBILE;
 import static com.cxwl.hurry.doorlock.utils.NetWorkUtils.NETWORK_TYPE_NONE;
 import static com.cxwl.hurry.doorlock.utils.NetWorkUtils.NETWORK_TYPE_WIFI;
 
-public class MainActivity extends AppCompatActivity {
+/**
+ * MainActivity
+ * Created by William on 2018/4/26
+ */
+public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
     private static String TAG = "MainActivity";
+
+    private TextView version_text;//版本名显示
+    private View container;//根View
+    private LinearLayout videoLayout;
+    private RelativeLayout rl_nfc, rl;//录卡布局和网络检测提示布局
+    private GridView mGridView;
+    private ImageView iv_setting, bluetooth_image, iv_bind, imageView, wifi_image;
+    private TextView headPaneTextView, tv_message, tv_battery, showMacText;
+    private EditText tv_input, et_blackno, et_unitno, tv_input_text;
 
     private Handler mHandle;
     private Messenger mainMessage;
     private Messenger serviceMessage;
     private String mac;//Mac地址
+    private boolean isFlag = true;//录卡时楼栋编号焦点监听的标识
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        initView();//初始化View
+
         initHandle();
         initMainService();
+
+    }
+
+    /**
+     * 初始化view
+     */
+    public void initView() {
+        version_text = (TextView) findViewById(R.id.version_text);
+        version_text.setText(getVersionName());
+        container = findViewById(R.id.container);
+        rl_nfc = (RelativeLayout) findViewById(R.id.rl_nfc);//录卡布局
+        et_blackno = (EditText) findViewById(R.id.et_blockno);//录卡时楼栋编号
+        et_unitno = (EditText) findViewById(R.id.et_unitno);//录卡时房屋编号
+        iv_bind = (ImageView) findViewById(R.id.user_bind);//QQ物联标志
+        imageView = (ImageView) findViewById(R.id.iv_erweima);//二维码
+        wifi_image = (ImageView) findViewById(R.id.wifi_image); //wifi图标控件初始化
+        iv_setting = (ImageView) findViewById(R.id.iv_setting);//左上角弹出菜单按钮
+        bluetooth_image = (ImageView) findViewById(R.id.bluetooth_image);//蓝牙按钮
+        tv_message = (TextView) findViewById(R.id.tv_message);//录入卡提示信息
+        tv_input_text = (EditText) findViewById(R.id.tv_input_text);//桌面会话状态的提示信息
+        tv_battery = (TextView) findViewById(R.id.tv_battery);//显示蓝牙锁的电量
+        mGridView = (GridView) findViewById(R.id.gridView_binderlist);//QQ物联相关（应该用于显示绑定用户
+        rl = (RelativeLayout) findViewById(R.id.net_view_rl);//网络检测提示布局
+        showMacText = (TextView) findViewById(R.id.show_mac);//mac地址
+        tv_input = (EditText) findViewById(R.id.tv_input);//完全不知道干嘛用
+
+        //getBgBanners();// 网络获得轮播背景图片数据
+
+        rl.setOnClickListener(this);
+        iv_setting.setOnClickListener(this);
+
+        //QQ物联相关，注释
+//        mAdapter = new BinderListAdapter(this);
+//        mGridView.setAdapter(mAdapter);
+
+        sendBroadcast(new Intent("com.android.action.hide_navigationbar"));//隱藏底部導航
+        container.setSystemUiVisibility(13063);//设置状态栏显示与否,禁止頂部下拉
+
+//        Typeface typeFace = Typeface.createFromAsset(getAssets(), "fonts/GBK.TTF");//字体设置
+//        tv_input.setTypeface(typeFace);// com_log.setTypeface(typeFace);
+        et_blackno.setOnFocusChangeListener(new View.OnFocusChangeListener() {
+            @Override
+            public void onFocusChange(View v, boolean hasFocus) {
+                if (hasFocus) {
+                    isFlag = true;
+                } else {
+                    isFlag = false;
+                }
+            }
+        });
 
     }
 
@@ -68,6 +144,8 @@ public class MainActivity extends AppCompatActivity {
     private void initMainService() {
         Intent intent = new Intent(this, MainService.class);
         bindService(intent, serviceConnection, Service.BIND_AUTO_CREATE);
+
+
     }
 
     private ServiceConnection serviceConnection = new ServiceConnection() {
@@ -190,8 +268,6 @@ public class MainActivity extends AppCompatActivity {
             return false;
         } else if (keyCode == KeyEvent.KEYCODE_B) {
             Log.e(TAG, "keyCode " + "B" + "拨号");
-            String wifiMac = getWifiMac();
-            Log.e(TAG, "mac " + wifiMac);
             return false;
         } else if (keyCode == KeyEvent.KEYCODE_C) {
             Log.e(TAG, "keyCode " + "C" + "帮助");
@@ -258,5 +334,36 @@ public class MainActivity extends AppCompatActivity {
             intent.putExtras(bundle);
         }
         context.startActivity(intent);
+    }
+
+    /**
+     * 获取版本名
+     *
+     * @return
+     */
+    private String getVersionName() {
+        String verName = "";
+        try {
+            verName = this.getPackageManager().
+                    getPackageInfo(this.getPackageName(), 0).versionName;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return verName;
+    }
+
+
+    @Override
+    public void onClick(View view) {
+        switch (view.getId()) {//跳转网络或网络设置
+            case R.id.net_view_rl: {
+
+                break;
+            }
+            case R.id.iv_setting: {
+//                initMenu();//初始化左上角弹出框
+                break;
+            }
+        }
     }
 }

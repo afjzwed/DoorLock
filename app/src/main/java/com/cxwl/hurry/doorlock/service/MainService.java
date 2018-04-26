@@ -1,4 +1,4 @@
-package com.cxwl.hurry.doorlock.ui.activity;
+package com.cxwl.hurry.doorlock.service;
 
 import android.app.Service;
 import android.content.Intent;
