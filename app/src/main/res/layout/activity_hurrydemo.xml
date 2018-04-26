@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                xmlns:tools="http://schemas.android.com/tools"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                tools:context=".ui.activity.MainActivity">
+
+
+    <LinearLayout
+        android:id="@+id/gpio_output"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/textview_gpiooutput"
+            android:layout_width="200dp"
+            android:layout_height="65dp"
+            android:text="@string/textview_gpiooutput"
+            android:textSize="30px"/>
+
+        <ToggleButton
+            android:id="@+id/button_gpiooutput_IO1"
+            android:layout_width="200dp"
+            android:layout_height="65dp"
+            android:layout_below="@+id/button_gpiooutput"
+            android:textOff="@string/button_gpiooutput_io1_off"
+            android:textOn="@string/button_gpiooutput_io1_on"/>
+
+        <ToggleButton
+            android:id="@+id/button_gpiooutput_lock"
+            android:layout_width="200dp"
+            android:layout_height="65dp"
+            android:layout_below="@+id/button_gpiooutput_IO1"
+            android:textOff="@string/button_gpiooutput_lock_off"
+            android:textOn="@string/button_gpiooutput_lock_on"/>
+
+
+        <ToggleButton
+            android:id="@+id/button_gpiooutput_relay"
+            android:layout_width="200dp"
+            android:layout_height="61dp"
+            android:layout_below="@+id/button_gpiooutput_lock"
+            android:textOff="@string/button_gpiooutput_relay_off"
+            android:textOn="@string/button_gpiooutput_relay_on"/>
+
+
+        <ToggleButton
+            android:id="@+id/button_gpiooutput_lightboard"
+            android:layout_width="200dp"
+            android:layout_height="65dp"
+            android:layout_below="@+id/button_gpiooutput_relay"
+            android:textOff="@string/button_gpiooutput_lightboard_off"
+            android:textOn="@string/button_gpiooutput_lightboard_on"/>
+
+
+    </LinearLayout>
+
+
+    <LinearLayout
+        android:id="@+id/gpio_input"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="50dp"
+        android:layout_toRightOf="@+id/gpio_output"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/textview_gpioinput"
+            android:layout_width="200dp"
+            android:layout_height="65dp"
+            android:text="@string/textview_gpioinput"
+            android:textSize="30px"/>
+
+        <ToggleButton
+            android:id="@+id/button_gpioinput_IO5"
+            android:layout_width="200dp"
+            android:layout_height="65dp"
+            android:layout_below="@+id/textview_gpioinput"
+            android:textOff="@string/button_gpioinput_io5_off"
+            android:textOn="@string/button_gpioinput_io5_on"/>
+
+        <!--<ToggleButton-->
+        <!--android:id="@+id/button_gpioinput_IO2"-->
+        <!--android:layout_width="200dp"-->
+        <!--android:layout_height="65dp"-->
+        <!--android:textOn="@string/button_gpioinput_io2_on"-->
+        <!--android:textOff="@string/button_gpioinput_io2_off"-->
+        <!--android:layout_below="@+id/textview_gpioinput" />-->
+
+        <ToggleButton
+            android:id="@+id/button_gpioinput_IO3"
+            android:layout_width="200dp"
+            android:layout_height="65dp"
+            android:layout_below="@+id/button_gpioinput_IO2"
+            android:textOff="@string/button_gpioinput_io3_off"
+            android:textOn="@string/button_gpioinput_io3_on"/>
+
+        <ToggleButton
+            android:id="@+id/button_gpioinput_IO4"
+            android:layout_width="200dp"
+            android:layout_height="65dp"
+            android:layout_below="@+id/button_gpioinput_IO3"
+            android:textOff="@string/button_gpioinput_io4_off"
+            android:textOn="@string/button_gpioinput_io4_on"/>
+
+
+        <ToggleButton
+            android:id="@+id/button_gpioinput_IO2"
+            android:layout_width="200dp"
+            android:layout_height="65dp"
+            android:layout_below="@+id/button_gpioinput_IO4"
+            android:textOff="@string/button_gpioinput_io2_off"
+            android:textOn="@string/button_gpioinput_io2_on"/>
+
+        <!--<ToggleButton-->
+        <!--android:id="@+id/button_gpioinput_IO5"-->
+        <!--android:layout_width="200dp"-->
+        <!--android:layout_height="65dp"-->
+        <!--android:layout_below="@+id/button_gpioinput_IO4"-->
+        <!--android:textOn="@string/button_gpioinput_io5_on"-->
+        <!--android:textOff="@string/button_gpioinput_io5_off"/>-->
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/key_output"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="50dp"
+        android:layout_toRightOf="@+id/gpio_input"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/textview_keyoutput"
+            android:layout_width="200dp"
+            android:layout_height="65dp"
+            android:text="@string/textview_keyoutput"
+            android:textSize="30px"/>
+
+        <EditText
+            android:id="@+id/edittext_keyoutput"
+            android:layout_width="200dp"
+            android:layout_height="70dp"
+            android:layout_below="@+id/textview_keyoutput"
+            android:focusable="false"
+            android:textColor="#FF6600"
+            android:textSize="35dp"/>
+
+        <TextView
+            android:id="@+id/textview_rfid_output"
+            android:layout_width="200dp"
+            android:layout_height="65dp"
+            android:layout_below="@+id/edittext_keyoutput"
+            android:text="@string/textview_rfidoutput"
+            android:textSize="30px"/>
+
+        <EditText
+            android:id="@+id/edittext_rfidoutput"
+            android:layout_width="200dp"
+            android:layout_height="300dp"
+            android:layout_below="@+id/textview_rfid_output"
+            android:layout_gravity="left"
+            android:focusable="false"
+            android:gravity="left"
+            android:inputType="textMultiLine"
+            android:textColor="#FF6600"
+            android:textSize="25dp"/>
+
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/output_msg"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="50dp"
+        android:layout_toRightOf="@+id/key_output"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/textview_title"
+            android:layout_width="300dp"
+            android:layout_height="65dp"
+            android:text="@string/textview_msg_title"
+            android:textSize="30px"/>
+
+        <EditText
+            android:id="@+id/edittext_msgoutput"
+            android:layout_width="300dp"
+            android:layout_height="400dp"
+            android:layout_below="@+id/textview_title"
+            android:focusable="false"
+            android:gravity="top|left"
+            android:textColor="#FF6600"
+            android:textSize="30dp"/>
+
+    </LinearLayout>
+
+
+</RelativeLayout>
