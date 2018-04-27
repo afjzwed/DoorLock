@@ -17,6 +17,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.SurfaceView;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.GridView;
@@ -47,6 +48,8 @@ import static com.cxwl.hurry.doorlock.utils.NetWorkUtils.NETWORK_TYPE_WIFI;
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
     private static String TAG = "MainActivity";
+    public static final int MSG_RTC_ONVIDEO_IN = 10011;//接收到视频呼叫
+    public static final int MSG_ADVERTISE_IMAGE = 20001;//跟新背景图片
 
     private TextView version_text;//版本名显示
     private View container;//根View
@@ -63,6 +66,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private String mac;//Mac地址
     private boolean isFlag = true;//录卡时楼栋编号焦点监听的标识
 
+    private SurfaceView localView = null;
+    private SurfaceView remoteView = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -98,7 +103,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         rl = (RelativeLayout) findViewById(R.id.net_view_rl);//网络检测提示布局
         showMacText = (TextView) findViewById(R.id.show_mac);//mac地址
         tv_input = (EditText) findViewById(R.id.tv_input);//完全不知道干嘛用
-
+        videoLayout = (LinearLayout) findViewById(R.id.ll_video);//用于添加视频通话的根布局
         //getBgBanners();// 网络获得轮播背景图片数据
 
         rl.setOnClickListener(this);
@@ -132,6 +137,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             public void handleMessage(Message msg) {
                 super.handleMessage(msg);
                 switch (msg.what) {
+                    case MSG_RTC_ONVIDEO_IN:
+                        Log.i(TAG, "发起视频呼叫");
+                        onRtcVideoOn();
+                        break;
                     default:
                         break;
                 }
@@ -163,8 +172,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             } else {
                 Log.i(TAG, "有网");
             }
-            sendMainMessager(MainService.MAIN_ACTIVITY_INIT, NetWorkUtils.isNetworkAvailable
-                    (MainActivity
+            sendMainMessager(MainService.MAIN_ACTIVITY_INIT, NetWorkUtils.isNetworkAvailable(MainActivity
                     .this));
             initNet();
         }
@@ -201,8 +209,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      */
     @SuppressLint("WifiManagerLeak")
     private void initNet() {
-        final WifiManager wifiManager = (WifiManager) MainApplication.getApplication()
-                .getSystemService(WIFI_SERVICE);//获得WifiManager
+        final WifiManager wifiManager = (WifiManager) MainApplication.getApplication().getSystemService(WIFI_SERVICE)
+                ;//获得WifiManager
         final Timer timer = new Timer();
         timer.scheduleAtFixedRate(new TimerTask() {
             @Override
@@ -352,6 +360,58 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         return verName;
     }
 
+    /****************************天翼rtc********************/
+    public void onRtcVideoOn() {
+        initVideoViews();
+        Log.e(TAG, "开始创建remoteView");
+        MainService.callConnection.buildVideo(remoteView);
+        setVideoSurfaceVisibility(View.VISIBLE);
+    }
+
+    /**
+     * 创建本地view和远端
+     */
+    void initVideoViews() {
+        //创建本地view
+        if (localView != null) {
+            return;
+        }
+        if (MainService.callConnection != null) {
+            localView = (SurfaceView) MainService.callConnection.createVideoView(true, this, true);
+        }
+        if (localView != null) {
+            localView.setVisibility(View.INVISIBLE);
+            videoLayout.addView(localView);
+            localView.setKeepScreenOn(true);
+            localView.setZOrderMediaOverlay(true);
+            localView.setZOrderOnTop(true);
+        }
+        //创建远端view
+        if (MainService.callConnection != null)
+            remoteView = (SurfaceView) MainService.callConnection.createVideoView(false, this, true);
+        if (remoteView != null) {
+            remoteView.setVisibility(View.INVISIBLE);
+            remoteView.setKeepScreenOn(true);
+            remoteView.setZOrderMediaOverlay(true);
+            remoteView.setZOrderOnTop(true);
+        }
+    }
+
+    /**
+     * 显示本地view和远端view
+     *
+     * @param visible
+     */
+    private void setVideoSurfaceVisibility(int visible) {
+        if (localView != null) {
+            localView.setVisibility(visible);
+        }
+        if (remoteView != null) {
+            remoteView.setVisibility(visible);
+        }
+    }
+
+    /****************************天翼rtc********************/
 
     @Override
     public void onClick(View view) {

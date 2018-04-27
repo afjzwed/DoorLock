@@ -7,9 +7,12 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
 import android.os.Messenger;
+import android.os.RemoteException;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
+import com.cxwl.hurry.doorlock.R;
+import com.cxwl.hurry.doorlock.ui.activity.MainActivity;
 import com.cxwl.hurry.doorlock.utils.MacUtils;
 
 import org.json.JSONException;
@@ -22,8 +25,10 @@ import jni.util.Utils;
 import rtc.sdk.clt.RtcClientImpl;
 import rtc.sdk.common.RtcConst;
 import rtc.sdk.common.SdkSettings;
+import rtc.sdk.core.RtcRules;
 import rtc.sdk.iface.ClientListener;
 import rtc.sdk.iface.Connection;
+import rtc.sdk.iface.ConnectionListener;
 import rtc.sdk.iface.Device;
 import rtc.sdk.iface.DeviceListener;
 import rtc.sdk.iface.RtcClient;
@@ -66,6 +71,9 @@ public class MainService extends Service {
         key = mac.replace(":", "");
         Log.i(TAG, "初始化mac=" + mac + "key=" + key);
     }
+
+    /****************************初始化天翼操作********************************/
+    public static Connection callConnection;
 
     /**
      * 初始化天翼sdk
@@ -161,7 +169,9 @@ public class MainService extends Service {
                 device = rtcClient.createDevice(jargs.toString(), deviceListener);
                 //登陆
                 Log.i(TAG, " 设置监听 deviceListener   ");
-
+                calling("1003");
+                calling("1002");
+                calling("2008");
             } catch (JSONException e) {
                 Log.i(TAG, "登陆rtc失败   e:" + e.toString());
                 e.printStackTrace();
@@ -219,6 +229,52 @@ public class MainService extends Service {
         }
     };
 
+    private void calling(String callName) {
+        try {
+            String remoteuri = RtcRules.UserToRemoteUri_new(callName, RtcConst.UEType_Any);
+            JSONObject jinfo = new JSONObject();
+            jinfo.put(RtcConst.kCallRemoteUri, remoteuri);
+            jinfo.put(RtcConst.kCallType, RtcConst.CallType_A_V);
+            callConnection=device.connect(jinfo.toString(), connectionListener);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 视频进行连接的回调
+     */
+    ConnectionListener connectionListener = new ConnectionListener() {
+        @Override
+        public void onConnecting() {
+            Log.i(TAG, "onConnecting正在进行视频或音频的连接....");
+        }
+
+        @Override
+        public void onConnected() {
+            Log.i(TAG, "onConnected");
+        }
+
+        @Override
+        public void onDisconnected(int code) {
+            Log.i(TAG, "onDisconnected" + code);
+            callConnection=null;
+        }
+
+        @Override
+        public void onVideo() {
+            Log.i(TAG, "onVideo");
+            sendMessageToMainAcitivity(MainActivity.MSG_RTC_ONVIDEO_IN, "");
+
+        }
+
+        @Override
+        public void onNetStatus(int msg, String info) {
+
+        }
+    };
+
+    /****************************初始化天翼操作********************************/
     private void initHandler() {
         mHandler = new Handler() {
             @Override
@@ -242,5 +298,25 @@ public class MainService extends Service {
     @Override
     public IBinder onBind(Intent intent) {
         return serviceMessage.getBinder();
+    }
+
+    /**
+     * 发送消息到mainactivity
+     *
+     * @param what
+     * @param o
+     */
+
+    private void sendMessageToMainAcitivity(int what, Object o) {
+        if (mainMessage != null) {
+            Message message = Message.obtain();
+            message.what = what;
+            message.obj = o;
+            try {
+                mainMessage.send(message);
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+        }
     }
 }
