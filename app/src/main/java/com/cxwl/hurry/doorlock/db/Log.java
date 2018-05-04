@@ -21,6 +21,18 @@ public class Log {
     private String kaimenfangshi;
     @Property(nameInDb = "kaimenjietu")
     private String kaimenjietu;
+    @Generated(hash = 1623580919)
+    public Log(Long id, String mac, String kaimenshijian, String kaimenfangshi,
+            String kaimenjietu) {
+        this.id = id;
+        this.mac = mac;
+        this.kaimenshijian = kaimenshijian;
+        this.kaimenfangshi = kaimenfangshi;
+        this.kaimenjietu = kaimenjietu;
+    }
+    @Generated(hash = 1364647056)
+    public Log() {
+    }
     public String getKaimenjietu() {
         return this.kaimenjietu;
     }
@@ -51,16 +63,5 @@ public class Log {
     public void setId(Long id) {
         this.id = id;
     }
-    @Generated(hash = 1915572211)
-    public Log(Long id, String mac, String kaimenshijian, String kaimenfangshi,
-               String kaimenjietu) {
-        this.id = id;
-        this.mac = mac;
-        this.kaimenshijian = kaimenshijian;
-        this.kaimenfangshi = kaimenfangshi;
-        this.kaimenjietu = kaimenjietu;
-    }
-    @Generated(hash = 408859211)
-    public Log() {
-    }
+ 
 }
