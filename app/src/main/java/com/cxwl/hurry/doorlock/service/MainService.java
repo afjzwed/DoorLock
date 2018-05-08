@@ -68,9 +68,13 @@ public class MainService extends Service {
     private static final String TAG = "MainService";
     public static final int MAIN_ACTIVITY_INIT = 0;
     public static final int MSG_CALLMEMBER = 20002;//呼叫成员
-    public static final int MSG_CARD_INCOME = 20008;//刷卡回调
+
     public static final int MSG_START_DIAL = 20005;//开始呼叫
     public static final int MSG_CHECK_PASSWORD = 20006;//检查密码
+    public static final int MSG_CARD_INCOME = 20008;//刷卡回调
+
+    public static final int MSG_UPDATE_NETWORKSTATE = 20028;
+
     public static final int MSG_START_DIAL_PICTURE = 21005;//开始呼叫的访客图片
     public static final int MSG_CHECK_PASSWORD_PICTURE = 21006;//密码访客图片
 
@@ -111,6 +115,7 @@ public class MainService extends Service {
 
     Thread timeoutCheckThread = null;//自动取消呼叫的定时器
 
+    private boolean netWorkstate = false;
 
     @Override
     public void onCreate() {
@@ -121,9 +126,8 @@ public class MainService extends Service {
         initDB();
         initMacKey();
 
-//skdfhsfhsdlkjds
-    }
 
+    }
 
     /**
      * 初始化handle
@@ -135,14 +139,15 @@ public class MainService extends Service {
                 switch (msg.what) {
                     case MAIN_ACTIVITY_INIT:
                         mainMessage = msg.replyTo;
-                        Boolean obj = (Boolean) msg.obj;
-                        Log.i(TAG, "MainActivity初始化完成" + (obj ? "有网" : "没网"));
-                        initClientInfo();
+                        netWorkstate = (Boolean) msg.obj;
+                        Log.i(TAG, "MainActivity初始化完成  MainServic开始初始化" + (netWorkstate ? "有网" : "没网"));
+                        init();
                         break;
                     case MSG_RTC_REGISTER:
-                        //登陆成功后 rtc注册
+                        //登陆成功后
                         Log.i(TAG, "登陆成功后 rtc注册");
-                        initTYSDK();
+                        initTYSDK();// rtc注册
+
                         break;
                     case MSG_CALLMEMBER:
                         //呼叫成员
@@ -187,6 +192,16 @@ public class MainService extends Service {
                         Log.e(TAG, "onCardIncome obj1" + obj1);
                         break;
                     }
+                    case MSG_UPDATE_NETWORKSTATE: {
+                        boolean obj1 = (boolean) msg.obj;
+                        Log.e(TAG, "initWhenConnected obj1" + obj1);
+//                        if (obj1) {
+//                            initWhenConnected(); //开始在线版本
+//                        } else {
+//                            initWhenOffline(); //开始离线版本
+//                        }
+                        break;
+                    }
                     default:
                         break;
                 }
@@ -196,14 +211,62 @@ public class MainService extends Service {
         serviceMessage = new Messenger(mHandler);
     }
 
+    protected void init() {
+
+        // TODO: 2018/5/8    initAexUtil(); //安卓工控设备控制器初始化
+        Log.i("MainService", "init AEX");
+        // TODO: 2018/5/8  initSqlUtil();  初始化卡相关数据库工具类
+        Log.i("MainService", "init SQL");
+        // TODO: 2018/5/8   initCheckTopActivity();检查最上层界面
+
+        //xiaozd add
+        if (netWorkstate) {
+            initWhenConnected(); //开始在线版本
+        } else {
+            // TODO: 2018/5/8   initWhenOffline(); //开始离线版本
+        }
+    }
+
+    /**
+     * 进入在线版本
+     */
+    protected void initWhenConnected() {
+        if (initMacKey()) {
+            Log.i("MainService", "INIT MAC Address");
+            try {
+                initClientInfo();
+            } catch (Exception e) {
+                Log.v("MainService", "onDeviceStateChanged,result=" + e.getMessage());
+            }
+        }
+    }
+
     private void initDB() {
         mDbUtils = DbUtils.getInstans();
     }
 
-    private void initMacKey() {
+    /**
+     * 获取WIFI mac地址和密码
+     */
+    private boolean initMacKey() {
         mac = MacUtils.getMac();
-        key = mac.replace(":", "");
-        Log.i(TAG, "初始化mac=" + mac + "key=" + key);
+        if (mac == null || mac.length() == 0) {
+            //无法获取设备编号 用mainMessage发送信息给MainActivity显示
+            return false;
+        } else {
+            key = mac.replace(":", "");
+            Log.i(TAG, "初始化mac=" + mac + "key=" + key);
+            //获取设备编号 用mainMessage发送信息给MainActivity显示
+//            Message message = Message.obtain();
+//            message.what = MainActivity.MSG_GET_MAC_ADDRESS;
+//            message.obj = mac;
+//            try {
+//                initMessenger.send(message);
+//            } catch (RemoteException e) {
+//                e.printStackTrace();
+//            }
+            return true;
+        }
     }
 
     protected void initClientInfo() {

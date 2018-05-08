@@ -13,7 +13,11 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.hardware.Camera;
 import android.media.AudioManager;
+import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
+import android.nfc.NfcAdapter;
+import android.nfc.Tag;
+import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
@@ -62,6 +66,7 @@ import org.json.JSONObject;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -94,8 +99,8 @@ import static com.cxwl.hurry.doorlock.utils.NfcReader.ACTION_NFC_CARDINFO;
  * MainActivity
  * Created by William on 2018/4/26
  */
-public class MainActivity extends AppCompatActivity implements View.OnClickListener, TakePictureCallback, NfcReader
-        .AccountCallback {
+public class MainActivity extends AppCompatActivity implements View.OnClickListener,
+        TakePictureCallback, NfcReader.AccountCallback, NfcAdapter.ReaderCallback {
 
     private static String TAG = "MainActivity";
     public static final int MSG_RTC_ONVIDEO_IN = 10011;//接收到视频呼叫
@@ -111,7 +116,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private TextView headPaneTextView, tv_message, tv_battery, showMacText;
     private EditText tv_input, et_blackno, et_unitno, tv_input_text;
 
-    private Handler mHandle;
+    private Handler handler;
     private Messenger mainMessage;
     private Messenger serviceMessage;//Service端的Messenger
     private String mac;//Mac地址
@@ -134,6 +139,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private String cardId;//卡ID
     private boolean nfcFlag = false;//录卡页面是否显示(即是否录卡)的标识,默认false
     private Receive receive; //本地广播
+    private int netWorkFlag = -1;//当前网络是否可用标识 有网为1 无网为0
+    private Timer netTimer = new Timer();//检测网络用定时器
+    private boolean checkTime = false;//是否校时过的标识,没有重置为false操作
+
+    private WifiInfo wifiInfo = null;//获得的Wifi信息
+    private int level;//信号强度值
+    private WifiManager wifiManager = null;//Wifi管理器
 
     private UploadManager uploadManager;//七牛上传
 
@@ -145,13 +157,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         //全屏设置，隐藏窗口所有装饰
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN);//清除FLAG
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager
+                .LayoutParams.FLAG_FULLSCREEN);
 
         {
             ActionBar ab = getActionBar();
-            if (ab != null) {
-                ab.setDisplayHomeAsUpEnabled(true);//左上角显示应用程序图标
-            }
+            if (ab != null) ab.setDisplayHomeAsUpEnabled(true);//左上角显示应用程序图标
         }
         setContentView(R.layout.activity_main);
         hwservice.EnterFullScreen();//hwservice为appLibs的服务
@@ -164,6 +175,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         initMainService();
         initVoiceVolume();//初始化音量设置
         initAutoCamera();
+
+
+        initNet();
 
     }
 
@@ -185,11 +199,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      * 初始化音量设置
      */
     protected void initVoiceVolume() {
-        AudioManager audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
+        AudioManager audioManager = (AudioManager) getSystemService(this.AUDIO_SERVICE);
         initVoiceVolume(audioManager, AudioManager.STREAM_MUSIC, DeviceConfig.VOLUME_STREAM_MUSIC);
         initVoiceVolume(audioManager, AudioManager.STREAM_RING, DeviceConfig.VOLUME_STREAM_RING);
-        initVoiceVolume(audioManager, AudioManager.STREAM_SYSTEM, DeviceConfig.VOLUME_STREAM_SYSTEM);
-        initVoiceVolume(audioManager, AudioManager.STREAM_VOICE_CALL, DeviceConfig.VOLUME_STREAM_VOICE_CALL);
+        initVoiceVolume(audioManager, AudioManager.STREAM_SYSTEM, DeviceConfig
+                .VOLUME_STREAM_SYSTEM);
+        initVoiceVolume(audioManager, AudioManager.STREAM_VOICE_CALL, DeviceConfig
+                .VOLUME_STREAM_VOICE_CALL);
     }
 
     /**
@@ -299,7 +315,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      * 初始化handler
      */
     private void initHandle() {
-        mHandle = new Handler() {
+        handler = new Handler() {
             @Override
             public void handleMessage(Message msg) {
                 super.handleMessage(msg);
@@ -347,9 +363,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
             }
         };
-        mainMessage = new Messenger(mHandle);
+        mainMessage = new Messenger(handler);
     }
 
+    /**
+     * 登录成功后
+     * @param msg
+     */
     private void onLoginAfter(Message msg) {
         if (msg.obj != null) {
             JSONObject result = (JSONObject) msg.obj;
@@ -362,6 +382,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     JSONObject user = result.getJSONObject("user");
                     setCommunityName(user.getString("communityName"));
                     setLockName(user.getString("lockName"));
+
+                    enableReaderMode(); //登录成功后开启读卡
+                    Log.e(TAG, "可以读卡");
+
+                    // TODO: 2018/5/8 登录成功后人脸识别对比开启
+
                 } else if (code == 1) { //登录失败,MAC地址不存在服务器
                     //显示MAC地址并提示添加
                     showMacaddress(result.getString("mac"));
@@ -387,19 +413,23 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             //获取Service端的Messenger
             serviceMessage = new Messenger(service);
             Log.i(TAG, "连接MainService成功" + (serviceMessage != null));
-            if (!NetWorkUtils.isNetworkAvailable(MainActivity.this)) {
-                mHandle.post(new Runnable() {
+            netWorkFlag = NetWorkUtils.isNetworkAvailable(MainActivity.this) ? 1 : 0;
+            if (netWorkFlag == 0) {
+                enableReaderMode();//无网时打开读卡
+                mHandler.post(new Runnable() {
                     @Override
                     public void run() {
                         Log.i(TAG, "无网状态");
+                        // TODO: 2018/5/8    rl.setVisibility(View.VISIBLE);//界面上显示无网提示
                     }
                 });
             } else {
                 Log.i(TAG, "有网");
+                // TODO: 2018/5/8   setStatusBarIcon(true); initSystemtime();
             }
             sendMainMessager(MainService.MAIN_ACTIVITY_INIT, NetWorkUtils.isNetworkAvailable(MainActivity
                     .this));
-            initNet();
+            initNetListen();
         }
 
         @Override
@@ -407,6 +437,82 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         }
     };
+
+    /**
+     * 每隔一秒检查一次网络是否可用
+     */
+    private void initNetListen() {
+        netTimer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                int s = NetWorkUtils.isNetworkAvailable(MainActivity.this) ? 1 : 0;
+                if (s != netWorkFlag) {//如果当前网络状态与之前不一致
+                    if (s == 1) {//当前有网，之前没网
+                        //关闭读卡
+                        disableReaderMode();//没网时打开过一次
+                        //时间更新
+                        initSystemtime();
+                    } else {//当前没网，之前有网
+                        enableReaderMode(); //打开读卡
+                    }
+                    sendMainMessager(MainService.MSG_UPDATE_NETWORKSTATE, s == 1 ? true : false);
+                    netWorkFlag = s;
+                    mHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            // TODO: 2018/5/8 下面暂时注释
+//                            if (netWorkFlag == 1) {
+//                                setStatusBarIcon(true);
+//                                rl.setVisibility(View.GONE);
+//                            } else {
+//                                setStatusBarIcon(false);
+//                                rl.setVisibility(View.VISIBLE);
+//                            }
+                        }
+                    });
+                }
+            }
+        }, 500, 1000);
+    }
+
+    /**
+     * 校时
+     */
+    private void initSystemtime() {
+        if (NetWorkUtils.isNetworkAvailable(this) && !checkTime) {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    Calendar c = HttpApi.getInstance().loadTime();
+                    if (c != null) {
+                        if (checkTime(c)) {
+                            SimpleDateFormat d = new SimpleDateFormat("yyyyMMdd.HHmmss");
+                            String cmd = "date -s '[_update_time]'";
+                            String time = d.format(c.getTime());
+                            cmd = cmd.replace("[_update_time]", time);
+                            hwservice.execRootCommand(cmd);
+                            checkTime = true;
+                            HttpApi.e("时间更新：" + time);
+                        } else {
+                            HttpApi.e("系统与服务器时间差小，不更新");
+                        }
+                    } else {
+                        HttpApi.i("获取服务器时间出错！");
+                    }
+
+                }
+            }).start();
+        }
+    }
+
+    private boolean checkTime(Calendar c) {
+        Calendar c1 = Calendar.getInstance();
+        long abs = Math.abs(c.getTimeInMillis() - c1.getTimeInMillis());
+        if (abs > 1 * 60 * 1000) {
+            return true;
+        }
+        return false;
+    }
 
     /**
      * 通过ServiceMessenger将注册消息发送到Service中的Handler
@@ -435,15 +541,39 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      */
     @SuppressLint("WifiManagerLeak")
     private void initNet() {
-        final WifiManager wifiManager = (WifiManager) MainApplication.getApplication().getSystemService(WIFI_SERVICE)
-                ;//获得WifiManager
-        final Timer timer = new Timer();
+        wifiManager  =(WifiManager) MainApplication.getApplication().getSystemService(WIFI_SERVICE);//获得WifiManager
+        Timer timer = new Timer();
         timer.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
                 switch (NetWorkUtils.getCurrentNetType(MainActivity.this)) {
                     case NETWORK_TYPE_WIFI:
                         //  Log.i(TAG, "NETWORK_TYPE_WIFI");
+                        wifiInfo = wifiManager.getConnectionInfo();
+                        //获得信号强度值
+                        level = wifiInfo.getRssi();
+                        //根据获得的信号强度发送信息
+                        if (level <= 0 && level >= -50) {
+                            Message msg = new Message();
+                            msg.what = 1;
+                            mHandler.sendMessage(msg);
+                        } else if (level < -50 && level >= -70) {
+                            Message msg = new Message();
+                            msg.what = 2;
+                            mHandler.sendMessage(msg);
+                        } else if (level < -70 && level >= -80) {
+                            Message msg = new Message();
+                            msg.what = 3;
+                            mHandler.sendMessage(msg);
+                        } else if (level < -80 && level >= -100) {
+                            Message msg = new Message();
+                            msg.what = 4;
+                            mHandler.sendMessage(msg);
+                        } else {
+                            Message msg = new Message();
+                            msg.what = 5;
+                            mHandler.sendMessage(msg);
+                        }
                         break;
                     case NETWOKR_TYPE_ETHERNET:
                         Log.i(TAG, "NETWOKR_TYPE_ETHERNET");
@@ -494,7 +624,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             } else {
                 toast("此房号或电话号码不存在");
             }
-
         } else if (key == 11) {
             //删除键
             if (currentStatus == CALLING_MODE) {
@@ -504,8 +633,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 //删除当前一个数字
                 delInput();
             }
-
-
         }
     }
 
@@ -606,9 +733,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             value = 8;
         } else if ((keyCode == KeyEvent.KEYCODE_9)) {
             value = 9;
-        } else if (keyCode == KeyEvent.KEYCODE_B) {
+        } else if (keyCode == 66) {
             value = 10;//确定键
-        } else if (keyCode == KeyEvent.KEYCODE_D) {
+        } else if (keyCode == 67) {
             value = 11;//删除键
         }
         return value;
@@ -785,7 +912,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
         //创建远端view
         if (MainService.callConnection != null) {
-            remoteView = (SurfaceView) MainService.callConnection.createVideoView(false, this, true);
+            remoteView = (SurfaceView) MainService.callConnection.createVideoView(false, this,
+                    true);
         }
         if (remoteView != null) {
             remoteView.setVisibility(View.INVISIBLE);
@@ -828,7 +956,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     /**
      * 开始启动拍照
      */
-    protected void takePicture(final String thisValue, final boolean isCall, final TakePictureCallback callback) {
+    protected void takePicture(final String thisValue, final boolean isCall, final
+    TakePictureCallback callback) {
         if (currentStatus == CALLING_MODE || currentStatus == PASSWORD_CHECKING_MODE) {
             final String uuid = getUUID(); //随机生成UUID
             lastImageUuid = uuid;
@@ -1078,7 +1207,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private void setDialStatus(String value) {
         final String thisValue = value;
-        mHandle.post(new Runnable() {
+        handler.post(new Runnable() {
             @Override
             public void run() {
                 setTextView(R.id.tv_input_label, thisValue);
@@ -1089,7 +1218,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     //设置桌面会话的状态
     private void setDialValue(String value) {
         final String thisValue = value;
-        mHandle.post(new Runnable() {
+        handler.post(new Runnable() {
             @Override
             public void run() {
                 setTextView(R.id.tv_input_text, thisValue);
@@ -1098,7 +1227,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     private void toast(final String message) {
-        mHandle.post(new Runnable() {
+        handler.post(new Runnable() {
             @Override
             public void run() {
                 Utils.DisplayToast(MainActivity.this, message);
@@ -1108,7 +1237,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private void setTempkeyValue(String value) {
         final String thisValue = value;
-        mHandle.post(new Runnable() {
+        handler.post(new Runnable() {
             @Override
             public void run() {
                 setTextView(R.id.tv_input_text, thisValue);
@@ -1127,7 +1256,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      */
     private void setCommunityName(String value) {
         final String thisValue = value;
-        mHandle.post(new Runnable() {
+        handler.post(new Runnable() {
             @Override
             public void run() {
                 setTextView(R.id.tv_community, thisValue);
@@ -1140,10 +1269,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      *
      * @param value
      */
-
     private void setLockName(String value) {
         final String thisValue = value;
-        mHandle.post(new Runnable() {
+        handler.post(new Runnable() {
             @Override
             public void run() {
                 setTextView(R.id.tv_lock, thisValue);
@@ -1176,7 +1304,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public void onAccountReceived(String account) {
         //这里接收到刷卡后获得的卡ID
         cardId = account;
-        Log.e(TAG, "onAccountReceived 卡信息 account" + account + " cardId " + cardId);
+        Log.e(TAG, "onAccountReceived 卡信息 account " + account + " cardId " + cardId);
         if (!nfcFlag) {//非录卡状态（卡信息用于开门）
             Message message = Message.obtain();
             message.what = MainService.MSG_CARD_INCOME;
@@ -1190,11 +1318,105 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             Message message = Message.obtain();
             message.what = MSG_INPUT_CARDINFO;
             message.obj = account;
-            mHandle.sendMessage(message);
+            handler.sendMessage(message);
         }
     }
 
     /****************************设置一些状态************************/
+
+    /**
+     * 开启nfc读卡模式
+     */
+    private void enableReaderMode() {
+        Log.i(TAG, "开启读卡模式");
+        NfcAdapter nfc = NfcAdapter.getDefaultAdapter(this);
+        if (nfc != null) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                if (this instanceof NfcAdapter.ReaderCallback) {
+                    if (!this.isDestroyed()) {
+                        nfc.enableReaderMode(this, this, NfcReader.READER_FLAGS, null);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 禁用读卡
+     */
+    private void disableReaderMode() {
+        Log.i(TAG, "禁用读卡模式");
+        NfcAdapter nfc = NfcAdapter.getDefaultAdapter(this);
+        if (nfc != null) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                if (!this.isDestroyed()) {
+                    nfc.disableReaderMode(this);
+                }
+            }
+        }
+    }
+
+    @Override
+    public void onTagDiscovered(Tag tag) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            if ((nfcReader != null) && (nfcReader instanceof NfcAdapter.ReaderCallback)) {
+                NfcAdapter.ReaderCallback nfcReader = (NfcAdapter.ReaderCallback) this.nfcReader;
+                nfcReader.onTagDiscovered(tag);
+            }
+        }
+    }
+
+    /**
+     * 使用Handler实现UI线程与Timer线程之间的信息传递,每5秒告诉UI线程获得wifi Info
+     */
+    private Handler mHandler = new Handler() {
+
+        @Override
+        public void handleMessage(Message msg) {
+            switch (msg.what) {
+                // 如果收到正确的消息就获取WifiInfo，改变图片并显示信号强度
+                // TODO: 2018/5/8 以下QQ物联相关暂时注释
+//                case 11:
+//                    wifi_image.setImageResource(R.mipmap.ethernet);
+////                    if (listTemp1 != null && listTemp1.length > 0) {
+////                        iv_bind.setImageDrawable(getResources().getDrawable(R.mipmap
+////                                .binder_default_head));
+////                    } else {
+////                        iv_bind.setImageDrawable(getResources().getDrawable(R.mipmap
+//// .bind_offline));
+////                    }
+//                    break;
+//                case 1:
+//                    wifi_image.setImageResource(R.mipmap.wifi02);
+//                    break;
+//                case 2:
+//                    wifi_image.setImageResource(R.mipmap.wifi02);
+//                    break;
+//                case 3:
+//                    wifi_image.setImageResource(R.mipmap.wifi03);
+//                    break;
+//                case 4:
+//                    wifi_image.setImageResource(R.mipmap.wifi04);
+//                    break;
+//                case 5:
+//                    wifi_image.setImageResource(R.mipmap.wifi05);
+//                    break;
+//                case 6://无网络连接
+//                    rl.setVisibility(View.VISIBLE);
+//                    break;
+//                case 7:
+//                    //提示用户无网络连接
+//                    rl.setVisibility(View.GONE);
+//                    break;
+//                default:
+//                    //以防万一
+//                    wifi_image.setImageResource(R.mipmap.wifi_05);
+//                    rl.setVisibility(View.VISIBLE);
+            }
+        }
+
+    };
+
 
     public class Receive extends BroadcastReceiver {
         @Override
