@@ -42,21 +42,21 @@ public class DbUtils {
     /**
      * 增加一条卡信息
      */
-    private void insertOneKa(Ka ka) {
+    public void insertOneKa(Ka ka) {
         mKaDao.insert(ka);
     }
 
     /**
      * 删除一条卡信息
      */
-    private void deleteOneKa(Ka ka) {
+    public void deleteOneKa(Ka ka) {
         mKaDao.delete(ka);
     }
 
     /**
      * 增加所有卡信息
      */
-    private void addAllKa(List<Ka> ka) {
+    public void addAllKa(List<Ka> ka) {
         //先删除所有卡信息
         deleteAllKa();
         for (int i = 0; i < ka.size(); i++) {
@@ -65,9 +65,20 @@ public class DbUtils {
     }
 
     /**
+     * 数据库中是否存在此卡信息
+     */
+    public boolean isHasKa(String ka_id) {
+        Ka unique = mKaDao.queryBuilder().where(KaDao.Properties.Ka_id.eq(ka_id)).unique();
+        if (unique != null) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * 删除所有卡信息
      */
-    private void deleteAllKa() {
+    public void deleteAllKa() {
         //先删除所有卡信息
         mKaDao.deleteAll();
 
@@ -76,21 +87,21 @@ public class DbUtils {
     /**
      * 增加一条脸信息
      */
-    private void insertOneLian(Lian lian) {
+    public void insertOneLian(Lian lian) {
         mLianDao.insert(lian);
     }
 
     /**
      * 删除一条脸信息
      */
-    private void deleteOneLian(Lian lian) {
+    public void deleteOneLian(Lian lian) {
         mLianDao.delete(lian);
     }
 
     /**
      * 增加所有脸信息
      */
-    private void addAllLian(List<Lian> lian) {
+    public void addAllLian(List<Lian> lian) {
         //先删除所有脸信息
         deleteAllLian();
         for (int i = 0; i < lian.size(); i++) {
@@ -101,28 +112,29 @@ public class DbUtils {
     /**
      * 删除所有脸信息
      */
-    private void deleteAllLian() {
+    public void deleteAllLian() {
         mLianDao.deleteAll();
 
     }
+
     /**
      * 增加一条日志信息
      */
-    private void insertOneLog(Log log) {
+    public void insertOneLog(Log log) {
         mLogDao.insert(log);
     }
 
     /**
      * 删除一条日志信息
      */
-    private void deleteOneLog(Log log) {
+    public void deleteOneLog(Log log) {
         mLogDao.delete(log);
     }
 
     /**
      * 增加所有日志信息
      */
-    private void addAllLog(List<Log> log) {
+    public void addAllLog(List<Log> log) {
         //先删除所有日志信息
         deleteAllLog();
         for (int i = 0; i < log.size(); i++) {
@@ -133,7 +145,7 @@ public class DbUtils {
     /**
      * 删除所有日志信息
      */
-    private void deleteAllLog() {
+    public void deleteAllLog() {
         mLogDao.deleteAll();
 
     }
