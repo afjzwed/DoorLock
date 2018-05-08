@@ -123,7 +123,8 @@ public class MainService extends Service {
         initMacKey();
 
         //textDB();
-
+//sdfadsfdsafd
+//        分支??
 
     }
 
