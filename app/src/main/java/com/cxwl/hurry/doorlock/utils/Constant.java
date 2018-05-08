@@ -33,4 +33,6 @@ public class Constant {
     public static final int MSG_CALLMEMBER_TIMEOUT = 11005;//呼叫成员超时
     public static final int MSG_CALLMEMBER_NO_ONLINE = 12005;//呼叫成员不在线
 
+    public static final int MSG_INPUT_CARDINFO = 0x04;//重复录入卡信息
+
 }

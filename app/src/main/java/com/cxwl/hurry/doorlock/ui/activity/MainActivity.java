@@ -1,14 +1,18 @@
 package com.cxwl.hurry.doorlock.ui.activity;
 
 import android.annotation.SuppressLint;
+import android.app.ActionBar;
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.hardware.Camera;
+import android.media.AudioManager;
 import android.net.wifi.WifiManager;
 import android.os.Environment;
 import android.os.Handler;
@@ -23,6 +27,7 @@ import android.view.KeyEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.GridView;
 import android.widget.ImageView;
@@ -30,12 +35,14 @@ import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
+import com.androidex.aexapplibs.appLibsService;
 import com.cxwl.hurry.doorlock.MainApplication;
 import com.cxwl.hurry.doorlock.R;
 import com.cxwl.hurry.doorlock.config.DeviceConfig;
 import com.cxwl.hurry.doorlock.interfac.TakePictureCallback;
 import com.cxwl.hurry.doorlock.service.MainService;
 import com.cxwl.hurry.doorlock.utils.NetWorkUtils;
+import com.cxwl.hurry.doorlock.utils.NfcReader;
 import com.cxwl.hurry.doorlock.utils.UploadUtil;
 
 import org.json.JSONObject;
@@ -56,6 +63,7 @@ import static com.cxwl.hurry.doorlock.utils.Constant.MSG_CALLMEMBER_NO_ONLINE;
 import static com.cxwl.hurry.doorlock.utils.Constant.MSG_CALLMEMBER_SERVER_ERROR;
 import static com.cxwl.hurry.doorlock.utils.Constant.MSG_CALLMEMBER_TIMEOUT;
 import static com.cxwl.hurry.doorlock.utils.Constant.MSG_CANCEL_CALL;
+import static com.cxwl.hurry.doorlock.utils.Constant.MSG_INPUT_CARDINFO;
 import static com.cxwl.hurry.doorlock.utils.Constant.MSG_LOGIN_AFTER;
 import static com.cxwl.hurry.doorlock.utils.Constant.MSG_RTC_DISCONNECT;
 import static com.cxwl.hurry.doorlock.utils.Constant.MSG_RTC_NEWCALL;
@@ -67,12 +75,14 @@ import static com.cxwl.hurry.doorlock.utils.NetWorkUtils.NETWOKR_TYPE_ETHERNET;
 import static com.cxwl.hurry.doorlock.utils.NetWorkUtils.NETWOKR_TYPE_MOBILE;
 import static com.cxwl.hurry.doorlock.utils.NetWorkUtils.NETWORK_TYPE_NONE;
 import static com.cxwl.hurry.doorlock.utils.NetWorkUtils.NETWORK_TYPE_WIFI;
+import static com.cxwl.hurry.doorlock.utils.NfcReader.ACTION_NFC_CARDINFO;
 
 /**
  * MainActivity
  * Created by William on 2018/4/26
  */
-public class MainActivity extends AppCompatActivity implements View.OnClickListener, TakePictureCallback {
+public class MainActivity extends AppCompatActivity implements View.OnClickListener,
+        TakePictureCallback, NfcReader.AccountCallback {
 
     private static String TAG = "MainActivity";
     public static final int MSG_RTC_ONVIDEO_IN = 10011;//接收到视频呼叫
@@ -90,9 +100,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private Handler mHandle;
     private Messenger mainMessage;
-    private Messenger serviceMessage;
+    private Messenger serviceMessage;//Service端的Messenger
     private String mac;//Mac地址
     private boolean isFlag = true;//录卡时楼栋编号焦点监听的标识
+    private NfcReader nfcReader;//用于nfc卡扫描
 
     private SurfaceView localView = null;//rtc本地摄像头view
     private SurfaceView remoteView = null;//rtc远端视频view
@@ -105,17 +116,94 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private SurfaceView autoCameraSurfaceView = null;
     private boolean mCamerarelease = true; //判断照相机是否释放
 
+    public appLibsService hwservice;//hwservice为安卓工控appLibs的服务
+
+    private String cardId;//卡ID
+    private boolean nfcFlag = false;//录卡页面是否显示(即是否录卡)的标识,默认false
+    private Receive receive; //本地广播
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // TODO: 2018/5/8  此处hwservice实例化没以MainActivity继承AndroidExActivityBase实现
+        this.hwservice = new appLibsService(this);
         super.onCreate(savedInstanceState);
+
+        //全屏设置，隐藏窗口所有装饰
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN);//清除FLAG
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager
+                .LayoutParams.FLAG_FULLSCREEN);
+
+        {
+            ActionBar ab = getActionBar();
+            if (ab != null) ab.setDisplayHomeAsUpEnabled(true);//左上角显示应用程序图标
+        }
         setContentView(R.layout.activity_main);
+        hwservice.EnterFullScreen();//hwservice为appLibs的服务
 
         initView();//初始化View
-        initAutoCamera();
+        initScreen();
         initHandle();
+        initAexNfcReader();//初始化nfc本地广播
         initMainService();
+        initVoiceVolume();//初始化音量设置
+        initAutoCamera();
 
+    }
+
+    /**
+     * 初始化音量设置
+     */
+    protected void initVoiceVolume() {
+        AudioManager audioManager = (AudioManager) getSystemService(this.AUDIO_SERVICE);
+        initVoiceVolume(audioManager, AudioManager.STREAM_MUSIC, DeviceConfig.VOLUME_STREAM_MUSIC);
+        initVoiceVolume(audioManager, AudioManager.STREAM_RING, DeviceConfig.VOLUME_STREAM_RING);
+        initVoiceVolume(audioManager, AudioManager.STREAM_SYSTEM, DeviceConfig
+                .VOLUME_STREAM_SYSTEM);
+        initVoiceVolume(audioManager, AudioManager.STREAM_VOICE_CALL, DeviceConfig
+                .VOLUME_STREAM_VOICE_CALL);
+    }
+
+    /**
+     * 设置具体音量
+     * @param audioManager
+     * @param type
+     * @param value
+     */
+    protected void initVoiceVolume(AudioManager audioManager, int type, int value) {
+        int thisValue = audioManager.getStreamMaxVolume(type);//得到最大音量
+        thisValue = thisValue * value / 10;//具体音量值
+        audioManager.setStreamVolume(type, thisValue, AudioManager.FLAG_PLAY_SOUND);//调整音量时播放声音
+    }
+
+    /**
+     * 初始化nfc阅读器
+     */
+    private void initAexNfcReader() {
+        //nfc系统默认有效
+        nfcReader = new NfcReader(this);
+        //enableReaderMode(); //xiaozd add
+        receive = new Receive();
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(ACTION_NFC_CARDINFO);//NFC读取到卡片信息
+        registerReceiver(receive, intentFilter);
+    }
+
+    /**
+     * 初始化视频通话布局(用于天翼rtc？)
+     */
+    protected void initScreen() {
+        //callLayout=(LinearLayout) findViewById(R.id.call_pane);
+        //guestLayout=(LinearLayout) findViewById(R.id.guest_pane);
+        headPaneTextView = (TextView) findViewById(R.id.header_pane);//可视对讲设备状态
+        videoLayout = (LinearLayout) findViewById(R.id.ll_video);//用于添加视频通话的根布局
+
+//        videoPane = (LinearLayout) findViewById(R.id.video_pane);
+//        imagePane = (LinearLayout) findViewById(R.id.image_pane);
+//        remoteLayout = (LinearLayout) findViewById(R.id.ll_remote);
+
+        setTextView(R.id.tv_community, MainService.communityName);
+        setTextView(R.id.tv_lock, MainService.lockName);
     }
 
     /**
@@ -178,6 +266,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     }
 
+    /**
+     * 初始化handler
+     */
     private void initHandle() {
         mHandle = new Handler() {
             @Override
@@ -216,6 +307,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         Log.e(TAG, "呼叫用户不在线");
                         onCallMemberError(msg.what);
                         break;
+                    case MSG_INPUT_CARDINFO:
+                        Log.e(TAG, "重复录卡");
+                        String obj = (String) msg.obj;
+                        tv_message.setText(obj);
+                        break;
                     default:
                         break;
                 }
@@ -251,12 +347,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         Intent intent = new Intent(this, MainService.class);
         bindService(intent, serviceConnection, Service.BIND_AUTO_CREATE);
 
-
+        // TODO: 2018/5/8 开门服务类暂时注释
+//        Intent dlIntent = new Intent(MainActivity.this, DoorLock.class);
+//        startService(dlIntent);//start方式启动锁Service
     }
 
     private ServiceConnection serviceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
+            //获取Service端的Messenger
             serviceMessage = new Messenger(service);
             Log.i(TAG, "连接MainService成功" + (serviceMessage != null));
             if (!NetWorkUtils.isNetworkAvailable(MainActivity.this)) {
@@ -269,7 +368,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             } else {
                 Log.i(TAG, "有网");
             }
-            sendMainMessager(MainService.MAIN_ACTIVITY_INIT, NetWorkUtils.isNetworkAvailable(MainActivity
+            sendMainMessager(MainService.MAIN_ACTIVITY_INIT, NetWorkUtils.isNetworkAvailable
+                    (MainActivity
                     .this));
             initNet();
         }
@@ -306,8 +406,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      */
     @SuppressLint("WifiManagerLeak")
     private void initNet() {
-        final WifiManager wifiManager = (WifiManager) MainApplication.getApplication().getSystemService(WIFI_SERVICE)
-                ;//获得WifiManager
+        final WifiManager wifiManager = (WifiManager) MainApplication.getApplication()
+                .getSystemService(WIFI_SERVICE);//获得WifiManager
         final Timer timer = new Timer();
         timer.scheduleAtFixedRate(new TimerTask() {
             @Override
@@ -477,7 +577,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             value = 8;
         } else if ((keyCode == KeyEvent.KEYCODE_9)) {
             value = 9;
-        } else if (keyCode ==KeyEvent.KEYCODE_B) {
+        } else if (keyCode == KeyEvent.KEYCODE_B) {
             value = 10;//确定键
         } else if (keyCode == KeyEvent.KEYCODE_D) {
             value = 11;//删除键
@@ -656,7 +756,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
         //创建远端view
         if (MainService.callConnection != null) {
-            remoteView = (SurfaceView) MainService.callConnection.createVideoView(false, this, true);
+            remoteView = (SurfaceView) MainService.callConnection.createVideoView(false, this,
+                    true);
         }
         if (remoteView != null) {
             remoteView.setVisibility(View.INVISIBLE);
@@ -699,7 +800,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     /**
      * 开始启动拍照
      */
-    protected void takePicture(final String thisValue, final boolean isCall, final TakePictureCallback callback) {
+    protected void takePicture(final String thisValue, final boolean isCall, final
+    TakePictureCallback callback) {
         if (currentStatus == CALLING_MODE || currentStatus == PASSWORD_CHECKING_MODE) {
             final String uuid = getUUID(); //随机生成UUID
             lastImageUuid = uuid;
@@ -725,8 +827,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    private synchronized void doTakePicture(final String thisValue, final boolean isCall, final String uuid, final
-    TakePictureCallback callback) {
+    private synchronized void doTakePicture(final String thisValue, final boolean isCall, final
+    String uuid, final TakePictureCallback callback) {
         mCamerarelease = false;
         try {
             camera = Camera.open();
@@ -759,8 +861,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         try {
                             Log.v("MainActivity", "拍照成功");
                             Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
-                            final File file = new File(Environment.getExternalStorageDirectory(), System
-                                    .currentTimeMillis() + ".jpg");
+                            final File file = new File(Environment.getExternalStorageDirectory(),
+                                    System.currentTimeMillis() + ".jpg");
                             FileOutputStream outputStream = new FileOutputStream(file);
                             bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream);
                             outputStream.close();
@@ -781,7 +883,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                         } catch (Exception e) {
                                         }
                                         if (checkTakePictureAvailable(uuid)) {
-                                            callback.afterTakePickture(thisValue, fileUrl, isCall, uuid);
+                                            callback.afterTakePickture(thisValue, fileUrl,
+                                                    isCall, uuid);
                                         } else {
                                             Log.v("MainActivity", "上传照片成功,但已取消");
                                         }
@@ -868,8 +971,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     /**
      * 开始呼叫
      */
-    protected void startDialorPasswordDirectly(final String thisValue, final String fileUrl, final boolean isCall,
-                                               String uuid) {
+    protected void startDialorPasswordDirectly(final String thisValue, final String fileUrl,
+                                               final boolean isCall, String uuid) {
         if (currentStatus == CALLING_MODE || currentStatus == PASSWORD_CHECKING_MODE) {
             Message message = Message.obtain();
             String[] parameters = new String[3];
@@ -897,8 +1000,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    protected void startSendPictureDirectly(final String thisValue, final String fileUrl, final boolean isCall,
-                                            String uuid) {
+    protected void startSendPictureDirectly(final String thisValue, final String fileUrl, final
+    boolean isCall, String uuid) {
         if (fileUrl == null || fileUrl.length() == 0) {
             return;
         }
@@ -1022,6 +1125,42 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         setDialValue(blockNo);
         setCurrentStatus(CALL_MODE);
     }
+
+    @Override
+    public void onAccountReceived(String account) {
+        //这里接收到刷卡后获得的卡ID
+        cardId = account;
+        Log.e(TAG, "onAccountReceived 卡信息 account" + account + " cardId " + cardId);
+        if (!nfcFlag) {//非录卡状态（卡信息用于开门）
+            Message message = Message.obtain();
+            message.what = MainService.MSG_CARD_INCOME;
+            message.obj = account;
+            try {
+                serviceMessage.send(message);
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+        } else {//正在录卡状态（卡信息用于录入）
+            Message message = Message.obtain();
+            message.what = MSG_INPUT_CARDINFO;
+            message.obj = account;
+            mHandle.sendMessage(message);
+        }
+    }
+
     /****************************设置一些状态************************/
+
+    public class Receive extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String actionName = intent.getAction();
+            switch (actionName) {
+                case ACTION_NFC_CARDINFO:
+                    String cardInfo = intent.getStringExtra("cardinfo");
+                    Log.i(TAG, "onReceive: cardinfo=" + cardInfo);
+                    break;
+            }
+        }
+    }
 
 }

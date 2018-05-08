@@ -19,7 +19,6 @@ import com.cxwl.hurry.doorlock.utils.DbUtils;
 import com.cxwl.hurry.doorlock.utils.HttpApi;
 import com.cxwl.hurry.doorlock.utils.HttpUtils;
 import com.cxwl.hurry.doorlock.utils.MacUtils;
-import com.cxwl.hurry.doorlock.utils.ToastUtil;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -69,6 +68,8 @@ public class MainService extends Service {
     public static final int MAIN_ACTIVITY_INIT = 0;
     public static final int MSG_CALLMEMBER = 20002;//呼叫成员
 
+    public static final int MSG_CARD_INCOME = 20008;//刷卡回调
+
     public static final int MSG_START_DIAL = 20005;//开始呼叫
     public static final int MSG_CHECK_PASSWORD = 20006;//检查密码
     public static final int MSG_START_DIAL_PICTURE = 21005;//开始呼叫的访客图片
@@ -90,7 +91,8 @@ public class MainService extends Service {
     private String token;//天翼登陆所需的token；
     private Device device;//天翼登陆连接成功 发消息的类
     private DbUtils mDbUtils;//数据库操作
-    private Hashtable<String, String> currentAdvertisementFiles = new Hashtable<String, String>(); //广告数据地址
+    private Hashtable<String, String> currentAdvertisementFiles = new Hashtable<String, String>()
+            ; //广告数据地址
     private AudioManager audioManager;//音频管理器
 
     private ArrayList allUserList = new ArrayList();
@@ -174,6 +176,12 @@ public class MainService extends Service {
 
                     case MSG_CHECK_PASSWORD_PICTURE:
                         break;
+                    case MSG_CARD_INCOME: {
+                        // TODO: 2018/5/8 下面的方法中进行卡信息处理（判定及开门等）  onCardIncome((String) msg.obj);
+                        String obj1 = (String) msg.obj;
+                        Log.e(TAG, "onCardIncome obj1" + obj1);
+                        break;
+                    }
                     default:
                         break;
                 }
@@ -365,7 +373,8 @@ public class MainService extends Service {
     private void getTokenFromServer() {
         Log.i(TAG, "rtc平台获取token");
         RtcConst.UEAPPID_Current = RtcConst.UEAPPID_Self;//账号体系，包括私有、微博、QQ等，必须在获取token之前确定。
-        JSONObject jsonobj = HttpManager.getInstance().CreateTokenJson(0, key, RtcHttpClient.grantedCapabiltyID, "");
+        JSONObject jsonobj = HttpManager.getInstance().CreateTokenJson(0, key, RtcHttpClient
+                .grantedCapabiltyID, "");
         HttpResult ret = HttpManager.getInstance().getCapabilityToken(jsonobj, APP_ID, APP_KEY);
         onResponseGetToken(ret);
     }
@@ -380,7 +389,8 @@ public class MainService extends Service {
             try {
                 String code = jsonrsp.getString(RtcConst.kcode);
                 String reason = jsonrsp.getString(RtcConst.kreason);
-                Log.v("MainService", "Response getCapabilityToken code:" + code + " reason:" + reason);
+                Log.v("MainService", "Response getCapabilityToken code:" + code + " reason:" +
+                        reason);
                 if (code.equals("0")) {
                     token = jsonrsp.getString(RtcConst.kcapabilityToken);
                     Log.i(TAG, "获取token成功 token=" + token);
@@ -646,7 +656,8 @@ public class MainService extends Service {
                         if (callConnectState == CALL_VIDEO_CONNECTING) { //如果现在是尝试连接状态
                             Log.v("MainService", "超时检查，取消当前呼叫");
                             resetCallMode();
-                            sendMessageToMainAcitivity(MSG_CALLMEMBER_TIMEOUT, ""); //通知界面目前已经超时，并进入初始状态
+                            sendMessageToMainAcitivity(MSG_CALLMEMBER_TIMEOUT, "");
+                            //通知界面目前已经超时，并进入初始状态
                         }
                     }
                 } catch (InterruptedException e) {
@@ -680,7 +691,8 @@ public class MainService extends Service {
                     }
                     if (!username.equals(acceptMember)) {
                         Log.v("MainService", "--->取消" + username);
-                        String userUrl = RtcRules.UserToRemoteUri_new(username, RtcConst.UEType_Any);
+                        String userUrl = RtcRules.UserToRemoteUri_new(username, RtcConst
+                                .UEType_Any);
                         Log.e(TAG, "发送取消呼叫的消息");
                         device.sendIm(userUrl, "cmd/json", command.toString());
                     }
@@ -788,8 +800,8 @@ public class MainService extends Service {
             JSONArray userList = (JSONArray) result.get("userList");
             JSONArray unitDeviceList = (JSONArray) result.get("unitDeviceList");
             HttpApi.i("拨号中->网络请求在线列表" + (result != null ? result.toString() : ""));
-            if ((userList != null && userList.length() > 0) || (unitDeviceList != null && unitDeviceList.length() >
-                    0)) {
+            if ((userList != null && userList.length() > 0) || (unitDeviceList != null &&
+                    unitDeviceList.length() > 0)) {
                 Log.v("MainService", "收到新的呼叫，清除呼叫数据，UUID=" + callUuid);
                 HttpApi.i("拨号中->清除呼叫数据");
                 allUserList.clear();
