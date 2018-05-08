@@ -27,6 +27,7 @@ import org.json.JSONObject;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.List;
 
 import jni.http.HttpManager;
@@ -67,9 +68,7 @@ public class MainService extends Service {
     private static final String TAG = "MainService";
     public static final int MAIN_ACTIVITY_INIT = 0;
     public static final int MSG_CALLMEMBER = 20002;//呼叫成员
-
     public static final int MSG_CARD_INCOME = 20008;//刷卡回调
-
     public static final int MSG_START_DIAL = 20005;//开始呼叫
     public static final int MSG_CHECK_PASSWORD = 20006;//检查密码
     public static final int MSG_START_DIAL_PICTURE = 21005;//开始呼叫的访客图片
@@ -91,8 +90,7 @@ public class MainService extends Service {
     private String token;//天翼登陆所需的token；
     private Device device;//天翼登陆连接成功 发消息的类
     private DbUtils mDbUtils;//数据库操作
-    private Hashtable<String, String> currentAdvertisementFiles = new Hashtable<String, String>()
-            ; //广告数据地址
+    private Hashtable<String, String> currentAdvertisementFiles = new Hashtable<String, String>(); //广告数据地址
     private AudioManager audioManager;//音频管理器
 
     private ArrayList allUserList = new ArrayList();
@@ -113,6 +111,7 @@ public class MainService extends Service {
 
     Thread timeoutCheckThread = null;//自动取消呼叫的定时器
 
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -124,6 +123,7 @@ public class MainService extends Service {
 
 //skdfhsfhsdlkjds
     }
+
 
     /**
      * 初始化handle
@@ -168,6 +168,13 @@ public class MainService extends Service {
                         startCallMember();
                         break;
                     case MSG_START_DIAL_PICTURE:
+                        Log.i(TAG, "开始发送呼叫访客图片地址");
+                        String[] parameters1 = (String[]) msg.obj;
+                        if (parameters1[2].equals(imageUuid)) {
+                            imageUrl = parameters1[1];
+                            Log.i(TAG, "访客图片地址"+imageUrl);
+                            sendCallAppendImage();
+                        }
                         break;
                     case MSG_CHECK_PASSWORD:
                         break;
@@ -371,8 +378,7 @@ public class MainService extends Service {
     private void getTokenFromServer() {
         Log.i(TAG, "rtc平台获取token");
         RtcConst.UEAPPID_Current = RtcConst.UEAPPID_Self;//账号体系，包括私有、微博、QQ等，必须在获取token之前确定。
-        JSONObject jsonobj = HttpManager.getInstance().CreateTokenJson(0, key, RtcHttpClient
-                .grantedCapabiltyID, "");
+        JSONObject jsonobj = HttpManager.getInstance().CreateTokenJson(0, key, RtcHttpClient.grantedCapabiltyID, "");
         HttpResult ret = HttpManager.getInstance().getCapabilityToken(jsonobj, APP_ID, APP_KEY);
         onResponseGetToken(ret);
     }
@@ -387,8 +393,7 @@ public class MainService extends Service {
             try {
                 String code = jsonrsp.getString(RtcConst.kcode);
                 String reason = jsonrsp.getString(RtcConst.kreason);
-                Log.v("MainService", "Response getCapabilityToken code:" + code + " reason:" +
-                        reason);
+                Log.v("MainService", "Response getCapabilityToken code:" + code + " reason:" + reason);
                 if (code.equals("0")) {
                     token = jsonrsp.getString(RtcConst.kcapabilityToken);
                     Log.i(TAG, "获取token成功 token=" + token);
@@ -689,8 +694,7 @@ public class MainService extends Service {
                     }
                     if (!username.equals(acceptMember)) {
                         Log.v("MainService", "--->取消" + username);
-                        String userUrl = RtcRules.UserToRemoteUri_new(username, RtcConst
-                                .UEType_Any);
+                        String userUrl = RtcRules.UserToRemoteUri_new(username, RtcConst.UEType_Any);
                         Log.e(TAG, "发送取消呼叫的消息");
                         device.sendIm(userUrl, "cmd/json", command.toString());
                     }
@@ -701,6 +705,35 @@ public class MainService extends Service {
         } catch (Exception e) {
             e.printStackTrace();
             Log.v("MainService", "取消失败--" + acceptMember);
+        }
+    }
+
+    /**
+     * 发送图片消息  appendImage
+     */
+    protected void sendCallAppendImage() {
+        try {
+            JSONObject data = new JSONObject();
+            data.put("command", "appendImage");
+            data.put("from", this.key);
+            data.put("imageUrl", this.imageUrl);
+            data.put("imageUuid", this.imageUuid);
+            Log.v("MainService", "开始发送访客图片");
+            if (triedUserList.size() > 0) {
+                Iterator iterator = triedUserList.iterator();
+                while (iterator.hasNext()) {
+                    JSONObject userObject = (JSONObject) iterator.next();
+                    String username = (String) userObject.get("username");
+                    if (username.length() == 17) {
+                        username = username.replaceAll(":", "");
+                    }
+                    String userUrl = RtcRules.UserToRemoteUri_new(username, RtcConst.UEType_Any);
+                    int sendResult = device.sendIm(userUrl, "cmd/json", data.toString());
+                    Log.v("MainService", "发送访客图片-->" + username);
+                    Log.v("MainService", "sendIm(): " + sendResult);
+                }
+            }
+        } catch (JSONException e) {
         }
     }
 
@@ -798,8 +831,8 @@ public class MainService extends Service {
             JSONArray userList = (JSONArray) result.get("userList");
             JSONArray unitDeviceList = (JSONArray) result.get("unitDeviceList");
             HttpApi.i("拨号中->网络请求在线列表" + (result != null ? result.toString() : ""));
-            if ((userList != null && userList.length() > 0) || (unitDeviceList != null &&
-                    unitDeviceList.length() > 0)) {
+            if ((userList != null && userList.length() > 0) || (unitDeviceList != null && unitDeviceList.length() >
+                    0)) {
                 Log.v("MainService", "收到新的呼叫，清除呼叫数据，UUID=" + callUuid);
                 HttpApi.i("拨号中->清除呼叫数据");
                 allUserList.clear();
