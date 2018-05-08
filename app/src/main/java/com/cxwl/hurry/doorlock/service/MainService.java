@@ -122,7 +122,7 @@ public class MainService extends Service {
         initDB();
         initMacKey();
 
-
+//skdfhsfhsdlkjds
     }
 
     /**
