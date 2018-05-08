@@ -51,10 +51,6 @@
             </intent-filter>
         </activity>
 
-        <activity
-            android:name=".ui.activity.HurryDemoActivity"
-            android:screenOrientation="landscape"/>
-
 
         <service android:name=".service.MainService"/>
         <!--开机(更新)启动广播-->
