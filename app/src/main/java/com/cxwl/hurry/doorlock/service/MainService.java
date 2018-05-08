@@ -122,9 +122,6 @@ public class MainService extends Service {
         initDB();
         initMacKey();
 
-        //textDB();
-//sdfadsfdsafd
-//        分支??
 
     }
 
