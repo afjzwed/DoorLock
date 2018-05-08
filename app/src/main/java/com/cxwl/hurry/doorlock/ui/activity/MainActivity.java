@@ -6,8 +6,11 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.graphics.Typeface;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.hardware.Camera;
 import android.net.wifi.WifiManager;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
@@ -17,6 +20,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.widget.EditText;
@@ -28,14 +32,37 @@ import android.widget.TextView;
 
 import com.cxwl.hurry.doorlock.MainApplication;
 import com.cxwl.hurry.doorlock.R;
+import com.cxwl.hurry.doorlock.config.DeviceConfig;
+import com.cxwl.hurry.doorlock.interfac.TakePictureCallback;
 import com.cxwl.hurry.doorlock.service.MainService;
-import com.cxwl.hurry.doorlock.utils.Intenet;
-import com.cxwl.hurry.doorlock.utils.MacUtils;
 import com.cxwl.hurry.doorlock.utils.NetWorkUtils;
+import com.cxwl.hurry.doorlock.utils.UploadUtil;
 
+import org.json.JSONObject;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.util.HashMap;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.UUID;
 
+import jni.util.Utils;
+
+import static com.cxwl.hurry.doorlock.utils.Constant.CALLING_MODE;
+import static com.cxwl.hurry.doorlock.utils.Constant.CALL_MODE;
+import static com.cxwl.hurry.doorlock.utils.Constant.MSG_CALLMEMBER_ERROR;
+import static com.cxwl.hurry.doorlock.utils.Constant.MSG_CALLMEMBER_NO_ONLINE;
+import static com.cxwl.hurry.doorlock.utils.Constant.MSG_CALLMEMBER_SERVER_ERROR;
+import static com.cxwl.hurry.doorlock.utils.Constant.MSG_CALLMEMBER_TIMEOUT;
+import static com.cxwl.hurry.doorlock.utils.Constant.MSG_CANCEL_CALL;
+import static com.cxwl.hurry.doorlock.utils.Constant.MSG_LOGIN_AFTER;
+import static com.cxwl.hurry.doorlock.utils.Constant.MSG_RTC_DISCONNECT;
+import static com.cxwl.hurry.doorlock.utils.Constant.MSG_RTC_NEWCALL;
+import static com.cxwl.hurry.doorlock.utils.Constant.MSG_RTC_ONVIDEO;
+import static com.cxwl.hurry.doorlock.utils.Constant.MSG_RTC_REGISTER;
+import static com.cxwl.hurry.doorlock.utils.Constant.ONVIDEO_MODE;
+import static com.cxwl.hurry.doorlock.utils.Constant.PASSWORD_CHECKING_MODE;
 import static com.cxwl.hurry.doorlock.utils.NetWorkUtils.NETWOKR_TYPE_ETHERNET;
 import static com.cxwl.hurry.doorlock.utils.NetWorkUtils.NETWOKR_TYPE_MOBILE;
 import static com.cxwl.hurry.doorlock.utils.NetWorkUtils.NETWORK_TYPE_NONE;
@@ -45,11 +72,12 @@ import static com.cxwl.hurry.doorlock.utils.NetWorkUtils.NETWORK_TYPE_WIFI;
  * MainActivity
  * Created by William on 2018/4/26
  */
-public class MainActivity extends AppCompatActivity implements View.OnClickListener {
+public class MainActivity extends AppCompatActivity implements View.OnClickListener, TakePictureCallback {
 
     private static String TAG = "MainActivity";
     public static final int MSG_RTC_ONVIDEO_IN = 10011;//接收到视频呼叫
     public static final int MSG_ADVERTISE_IMAGE = 20001;//跟新背景图片
+    public static int currentStatus = CALL_MODE;//当前状态
 
     private TextView version_text;//版本名显示
     private View container;//根View
@@ -66,8 +94,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private String mac;//Mac地址
     private boolean isFlag = true;//录卡时楼栋编号焦点监听的标识
 
-    private SurfaceView localView = null;
-    private SurfaceView remoteView = null;
+    private SurfaceView localView = null;//rtc本地摄像头view
+    private SurfaceView remoteView = null;//rtc远端视频view
+    private String blockNo = "";//输入的房号
+    private HashMap<String, String> uuidMaps = new HashMap<String, String>();//储存uuid
+    private String lastImageUuid = ""; //与拍照图片相对应
+
+    private Camera camera = null;
+    private SurfaceHolder autoCameraHolder = null;
+    private SurfaceView autoCameraSurfaceView = null;
+    private boolean mCamerarelease = true; //判断照相机是否释放
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -75,10 +112,20 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         setContentView(R.layout.activity_main);
 
         initView();//初始化View
-
+        initAutoCamera();
         initHandle();
         initMainService();
 
+    }
+
+    /**
+     * 初始化照相机的surefaceview
+     */
+    protected void initAutoCamera() {
+        Log.v("MainActivity", "initAutoCamera-->");
+        autoCameraSurfaceView = (SurfaceView) findViewById(R.id.autoCameraSurfaceview);
+        autoCameraHolder = autoCameraSurfaceView.getHolder();
+        autoCameraHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
     }
 
     /**
@@ -137,9 +184,37 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             public void handleMessage(Message msg) {
                 super.handleMessage(msg);
                 switch (msg.what) {
-                    case MSG_RTC_ONVIDEO_IN:
-                        Log.i(TAG, "发起视频呼叫");
+                    case MSG_LOGIN_AFTER:
+                        //登陆成功后 设置信息 初始化rtc
+                        Log.i(TAG, "登陆成功后");
+                        onLoginAfter(msg);
+                        break;
+                    case MSG_RTC_ONVIDEO:
+                        //接通视频通话
+                        Log.i(TAG, "接通视频通话");
                         onRtcVideoOn();
+                        break;
+                    case MSG_RTC_DISCONNECT:
+                        //视频通话断开
+                        Log.i(TAG, "视频通话断开");
+                        onRtcDisconnect();
+                        //启动人脸识别
+//                        if (faceHandler != null) {
+//                            faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_CONTRAST, 3000);
+//                        }
+                        break;
+                    case MSG_RTC_NEWCALL:
+                        //收到新的来电
+                        Log.i(TAG, "收到新的来电");
+                        onRtcConnected();
+                        break;
+                    case MSG_CALLMEMBER_TIMEOUT:
+                        Log.e(TAG, "呼叫超时");
+                        onCallMemberError(msg.what);
+                        break;
+                    case MSG_CALLMEMBER_NO_ONLINE:
+                        Log.e(TAG, "呼叫用户不在线");
+                        onCallMemberError(msg.what);
                         break;
                     default:
                         break;
@@ -148,6 +223,28 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         };
         mainMessage = new Messenger(mHandle);
+    }
+
+    private void onLoginAfter(Message msg) {
+        if (msg.obj != null) {
+            JSONObject result = (JSONObject) msg.obj;
+            try {
+                int code = result.getInt("code");
+                if (code == 0) {//登录成功
+                    //初始化token
+                    sendMainMessager(MSG_RTC_REGISTER, null);
+                    //初始化社区信息
+                    JSONObject user = result.getJSONObject("user");
+                    setCommunityName(user.getString("communityName"));
+                    setLockName(user.getString("lockName"));
+                } else if (code == 1) { //登录失败,MAC地址不存在服务器
+                    //显示MAC地址并提示添加
+                    showMacaddress(result.getString("mac"));
+                }
+            } catch (Exception e) {
+
+            }
+        }
     }
 
     private void initMainService() {
@@ -217,7 +314,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             public void run() {
                 switch (NetWorkUtils.getCurrentNetType(MainActivity.this)) {
                     case NETWORK_TYPE_WIFI:
-                        Log.i(TAG, "NETWORK_TYPE_WIFI");
+                        //  Log.i(TAG, "NETWORK_TYPE_WIFI");
                         break;
                     case NETWOKR_TYPE_ETHERNET:
                         Log.i(TAG, "NETWOKR_TYPE_ETHERNET");
@@ -238,75 +335,226 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     @Override
-    public boolean onKeyDown(int keyCode, KeyEvent event) {
-        if (keyCode == KeyEvent.KEYCODE_0) {
-
-            Log.e(TAG, "keyCode" + "0");
-            return false;
-        } else if (keyCode == KeyEvent.KEYCODE_1) {
-            Log.e(TAG, "keyCode" + "1");
-
-            return false;
-        } else if (keyCode == KeyEvent.KEYCODE_2) {
-            Log.e(TAG, "keyCode" + "2");
-            return false;
-        } else if (keyCode == KeyEvent.KEYCODE_3) {
-            Log.e(TAG, "keyCode" + "3");
-            return false;
-        } else if (keyCode == KeyEvent.KEYCODE_4) {
-            Log.e(TAG, "keyCode" + "4");
-            return false;
-        } else if (keyCode == KeyEvent.KEYCODE_5) {
-            Log.e(TAG, "keyCode" + "5");
-            return false;
-        } else if (keyCode == KeyEvent.KEYCODE_6) {
-            Log.e(TAG, "keyCode" + "6");
-            return false;
-        } else if (keyCode == KeyEvent.KEYCODE_7) {
-            Log.e(TAG, "keyCode" + "7");
-            return false;
-        } else if (keyCode == KeyEvent.KEYCODE_8) {
-            Log.e(TAG, "keyCode" + "8");
-        } else if (keyCode == KeyEvent.KEYCODE_9) {
-            Log.e(TAG, "keyCode" + "9");
-            return false;
-        } else if (keyCode == KeyEvent.KEYCODE_A) {
-            Log.e(TAG, "keyCode " + "A" + "管理处");
-            startNewActivity(this, HurryDemoActivity.class, null);
-            return false;
-        } else if (keyCode == KeyEvent.KEYCODE_B) {
-            Log.e(TAG, "keyCode " + "B" + "拨号");
-            return false;
-        } else if (keyCode == KeyEvent.KEYCODE_C) {
-            Log.e(TAG, "keyCode " + "C" + "帮助");
-            return false;
-        } else if (keyCode == KeyEvent.KEYCODE_D) {
-            Log.e(TAG, "keyCode " + "D" + "返回");
-            return false;
-        } else if (keyCode == KeyEvent.KEYCODE_DEL) {
-            Log.e(TAG, "keyCode " + "*");
-            return false;
-        } else if (keyCode == KeyEvent.KEYCODE_STAR) {
-            Log.e(TAG, "keyCode" + "*");
-            return false;
-        } else if (keyCode == KeyEvent.KEYCODE_POUND) {
-            Log.e(TAG, "keyCode" + "");
-            return false;
-        } else if (keyCode == KeyEvent.KEYCODE_F4) {
-            Log.e(TAG, "keyCode" + "️➡️");
-            return false;
-        } else if (keyCode == KeyEvent.KEYCODE_F3) {
-            Log.e(TAG, "keyCode" + "⬅️️");
-            return false;
-        } else if (keyCode == KeyEvent.KEYCODE_F2) {
-            Log.e(TAG, "keyCode" + "管理处");
-            return false;
-        } else if (keyCode == KeyEvent.KEYCODE_F1) {
-            Log.e(TAG, "keyCode" + "帮助");
-            return false;
+    public boolean dispatchKeyEvent(KeyEvent event) {
+        if (event.getAction() == KeyEvent.ACTION_DOWN) {
+            int keyCode = event.getKeyCode();
+            onKeyDown(keyCode);
         }
-        return super.onKeyDown(keyCode, event);
+        return false;
     }
+
+    private void onKeyDown(int keyCode) {
+        int key = convertKeyCode(keyCode);
+        if (key >= 0 && key != 10 && key != 11) {
+            //数字键
+            if (currentStatus == CALL_MODE) {
+                input(key);
+            }
+        } else if (key == 10) {
+            //确定键
+            if (blockNo.length() == 0) {
+                //表示输入密码访问
+                toast("输入密码");
+            } else if (blockNo.length() == 4) {
+                //长度等于4并且按下确定键 表示呼叫房号
+                startDialing(blockNo);
+                toast("开始进行呼叫房号");
+            } else if (blockNo.length() == 11) {
+                //长度等于11并且按下确定键 表示呼叫手机号
+                toast("开始进行呼叫手机号");
+            } else {
+                toast("此房号或电话号码不存在");
+            }
+
+        } else if (key == 11) {
+            //删除键
+            if (currentStatus == CALLING_MODE) {
+                startCancelCall();
+            }
+            if (blockNo.length() > 0) {
+                //删除当前一个数字
+                delInput();
+            }
+
+
+        }
+    }
+
+    /**
+     * 呼叫出现错误
+     *
+     * @param reason
+     */
+
+    protected void onCallMemberError(int reason) {
+        blockNo = "";
+        setDialValue("");
+        setCurrentStatus(CALL_MODE);
+        if (reason == MSG_CALLMEMBER_ERROR) {
+            Utils.DisplayToast(MainActivity.this, "您呼叫的房间号错误或者无注册用户");
+            Log.v("MainActivity", "无用户取消呼叫");
+            clearImageUuidAvaible(lastImageUuid);
+        } else if (reason == MSG_CALLMEMBER_TIMEOUT) {
+            Utils.DisplayToast(MainActivity.this, "您呼叫的房间号无人应答");
+        } else if (reason == MSG_CALLMEMBER_SERVER_ERROR) {
+            Utils.DisplayToast(MainActivity.this, "无法从服务器获取住户信息，请联系管理处");
+        }
+//        else if (reason == MSG_CALLMEMBER_DIRECT_TIMEOUT) {
+//            Utils.DisplayToast(MainActivity.this, "您呼叫的房间直拨电话无人应答");
+//        }else if (reason == MSG_CALLMEMBER_NO_ONLINE) {
+//            Utils.DisplayToast(MainActivity.this, "您呼叫的房间号无人在线");
+//        }
+        //启动人脸识别
+//        if (faceHandler != null) {
+//            faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_CONTRAST, 1000);
+//        }
+    }
+
+    protected void startCancelCall() {
+        new Thread() {
+            @Override
+            public void run() {
+                //  stopCallCamera();
+                try {
+                    sleep(1000);
+                } catch (Exception e) {
+                }
+                sendMainMessager(MSG_CANCEL_CALL, "");
+//                if (faceHandler != null) {
+//                    faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_CONTRAST, 1000);
+//                }
+                try {
+                    sleep(1000);
+                } catch (Exception e) {
+                }
+                toast("您已经取消拨号");
+                resetDial();
+            }
+        }.start();
+    }
+
+    private void startDialing(String blockNo) {
+        //呼叫前，确认摄像头不被占用 红软
+
+
+        Log.i(TAG, "拍摄访客照片 并进行呼叫" + blockNo);
+        setCurrentStatus(CALLING_MODE);
+        //拍摄访客照片 并进行呼叫
+        takePicture(blockNo, true, MainActivity.this);
+    }
+
+    private void input(int key) {
+        blockNo = blockNo + key;
+        Log.i(TAG, "input  blockNo=" + blockNo);
+        setDialValue(blockNo);
+    }
+
+    private void delInput() {
+        Log.i(TAG, "delInput  blockNo=" + blockNo);
+        blockNo = blockNo.substring(0, blockNo.length() - 1);
+        setDialValue(blockNo);
+    }
+
+    private int convertKeyCode(int keyCode) {
+        int value = -1;
+        if ((keyCode == KeyEvent.KEYCODE_0)) {
+            value = 0;
+        } else if ((keyCode == KeyEvent.KEYCODE_1)) {
+            value = 1;
+        } else if ((keyCode == KeyEvent.KEYCODE_2)) {
+            value = 2;
+        } else if ((keyCode == KeyEvent.KEYCODE_3)) {
+            value = 3;
+        } else if ((keyCode == KeyEvent.KEYCODE_4)) {
+            value = 4;
+        } else if ((keyCode == KeyEvent.KEYCODE_5)) {
+            value = 5;
+        } else if ((keyCode == KeyEvent.KEYCODE_6)) {
+            value = 6;
+        } else if ((keyCode == KeyEvent.KEYCODE_7)) {
+            value = 7;
+        } else if ((keyCode == KeyEvent.KEYCODE_8)) {
+            value = 8;
+        } else if ((keyCode == KeyEvent.KEYCODE_9)) {
+            value = 9;
+        } else if (keyCode ==KeyEvent.KEYCODE_B) {
+            value = 10;//确定键
+        } else if (keyCode == KeyEvent.KEYCODE_D) {
+            value = 11;//删除键
+        }
+        return value;
+    }
+
+    //    @Override
+//    public boolean onKeyDown(int keyCode, KeyEvent event) {
+//        if (keyCode == KeyEvent.KEYCODE_0) {
+//
+//            Log.e(TAG, "keyCode" + "0");
+//            return false;
+//        } else if (keyCode == KeyEvent.KEYCODE_1) {
+//            Log.e(TAG, "keyCode" + "1");
+//
+//            return false;
+//        } else if (keyCode == KeyEvent.KEYCODE_2) {
+//            Log.e(TAG, "keyCode" + "2");
+//            return false;
+//        } else if (keyCode == KeyEvent.KEYCODE_3) {
+//            Log.e(TAG, "keyCode" + "3");
+//            return false;
+//        } else if (keyCode == KeyEvent.KEYCODE_4) {
+//            Log.e(TAG, "keyCode" + "4");
+//            return false;
+//        } else if (keyCode == KeyEvent.KEYCODE_5) {
+//            Log.e(TAG, "keyCode" + "5");
+//            return false;
+//        } else if (keyCode == KeyEvent.KEYCODE_6) {
+//            Log.e(TAG, "keyCode" + "6");
+//            return false;
+//        } else if (keyCode == KeyEvent.KEYCODE_7) {
+//            Log.e(TAG, "keyCode" + "7");
+//            return false;
+//        } else if (keyCode == KeyEvent.KEYCODE_8) {
+//            Log.e(TAG, "keyCode" + "8");
+//        } else if (keyCode == KeyEvent.KEYCODE_9) {
+//            Log.e(TAG, "keyCode" + "9");
+//            return false;
+//        } else if (keyCode == KeyEvent.KEYCODE_A) {
+//            Log.e(TAG, "keyCode " + "A" + "管理处");
+//            startNewActivity(this, HurryDemoActivity.class, null);
+//            return false;
+//        } else if (keyCode == KeyEvent.KEYCODE_B) {
+//            Log.e(TAG, "keyCode " + "B" + "拨号");
+//            return false;
+//        } else if (keyCode == KeyEvent.KEYCODE_C) {
+//            Log.e(TAG, "keyCode " + "C" + "帮助");
+//            return false;
+//        } else if (keyCode == KeyEvent.KEYCODE_D) {
+//            Log.e(TAG, "keyCode " + "D" + "返回");
+//            return false;
+//        } else if (keyCode == KeyEvent.KEYCODE_DEL) {
+//            Log.e(TAG, "keyCode " + "*");
+//            return false;
+//        } else if (keyCode == KeyEvent.KEYCODE_STAR) {
+//            Log.e(TAG, "keyCode" + "*");
+//            return false;
+//        } else if (keyCode == KeyEvent.KEYCODE_POUND) {
+//            Log.e(TAG, "keyCode" + "");
+//            return false;
+//        } else if (keyCode == KeyEvent.KEYCODE_F4) {
+//            Log.e(TAG, "keyCode" + "️➡️");
+//            return false;
+//        } else if (keyCode == KeyEvent.KEYCODE_F3) {
+//            Log.e(TAG, "keyCode" + "⬅️️");
+//            return false;
+//        } else if (keyCode == KeyEvent.KEYCODE_F2) {
+//            Log.e(TAG, "keyCode" + "管理处");
+//            return false;
+//        } else if (keyCode == KeyEvent.KEYCODE_F1) {
+//            Log.e(TAG, "keyCode" + "帮助");
+//            return false;
+//        }
+//        return super.onKeyDown(keyCode, event);
+//    }
 
     /**
      * 强制让控件获取焦点
@@ -361,7 +609,27 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     /****************************天翼rtc********************/
+    public void onRtcDisconnect() {
+        Log.i(TAG, "重置房号为空 设置为 呼叫模式状态");
+        blockNo = "";
+        setDialValue(blockNo);
+        setCurrentStatus(CALL_MODE);
+        //启动广告
+        //    advertiseHandler.start(adverErrorCallBack);
+
+        videoLayout.setVisibility(View.INVISIBLE);
+        setVideoSurfaceVisibility(View.INVISIBLE);
+    }
+
+    public void onRtcConnected() {
+        setCurrentStatus(ONVIDEO_MODE);
+        setDialValue("");
+        //暂时停止广告播放
+        // advertiseHandler.pause(adverErrorCallBack);
+    }
+
     public void onRtcVideoOn() {
+        setDialValue("正在和" + blockNo + "视频通话");
         initVideoViews();
         Log.e(TAG, "开始创建remoteView");
         MainService.callConnection.buildVideo(remoteView);
@@ -387,8 +655,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             localView.setZOrderOnTop(true);
         }
         //创建远端view
-        if (MainService.callConnection != null)
+        if (MainService.callConnection != null) {
             remoteView = (SurfaceView) MainService.callConnection.createVideoView(false, this, true);
+        }
         if (remoteView != null) {
             remoteView.setVisibility(View.INVISIBLE);
             remoteView.setKeepScreenOn(true);
@@ -426,4 +695,333 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         }
     }
+/****************************拍照相关************************/
+    /**
+     * 开始启动拍照
+     */
+    protected void takePicture(final String thisValue, final boolean isCall, final TakePictureCallback callback) {
+        if (currentStatus == CALLING_MODE || currentStatus == PASSWORD_CHECKING_MODE) {
+            final String uuid = getUUID(); //随机生成UUID
+            lastImageUuid = uuid;
+            setImageUuidAvaibale(uuid);
+            callback.beforeTakePickture(thisValue, isCall, uuid);
+            Log.v("MainActivity", "开始启动拍照");
+            new Thread() {
+                @Override
+                public void run() {
+                    try {
+                        Thread.sleep(300);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    final String thisUuid = uuid;
+                    if (checkTakePictureAvailable(thisUuid)) {
+                        doTakePicture(thisValue, isCall, uuid, callback);
+                    } else {
+                        Log.v("MainActivity", "取消拍照");
+                    }
+                }
+            }.start();
+        }
+    }
+
+    private synchronized void doTakePicture(final String thisValue, final boolean isCall, final String uuid, final
+    TakePictureCallback callback) {
+        mCamerarelease = false;
+        try {
+            camera = Camera.open();
+
+        } catch (Exception e) {
+        }
+        Log.v("MainActivity", "打开相机");
+        if (camera == null) {
+            try {
+                camera = Camera.open(0);
+            } catch (Exception e) {
+            }
+        }
+        if (camera != null) {
+            try {
+                Camera.Parameters parameters = camera.getParameters();
+                parameters.setPreviewSize(320, 240);
+                try {
+                    camera.setParameters(parameters);
+                } catch (Exception err) {
+                    err.printStackTrace();
+                }
+                camera.setPreviewDisplay(autoCameraHolder);
+                camera.startPreview();
+                camera.autoFocus(null);
+                Log.v("MainActivity", "开始拍照");
+                camera.takePicture(null, null, new Camera.PictureCallback() {
+                    @Override
+                    public void onPictureTaken(byte[] data, Camera camera) {
+                        try {
+                            Log.v("MainActivity", "拍照成功");
+                            Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
+                            final File file = new File(Environment.getExternalStorageDirectory(), System
+                                    .currentTimeMillis() + ".jpg");
+                            FileOutputStream outputStream = new FileOutputStream(file);
+                            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream);
+                            outputStream.close();
+                            final String url = DeviceConfig.SERVER_URL + "/app/upload/image";
+                            if (checkTakePictureAvailable(uuid)) {
+                                new Thread() {
+                                    @Override
+                                    public void run() {
+                                        String fileUrl = null;
+                                        try {
+                                            Log.i(TAG, "开始上传照片");
+                                            fileUrl = UploadUtil.uploadFile(file, url);
+                                            if (fileUrl != null) {
+                                                Log.i(TAG, "上传照片成功");
+                                            } else {
+                                                Log.e(TAG, "上传照片失败");
+                                            }
+                                        } catch (Exception e) {
+                                        }
+                                        if (checkTakePictureAvailable(uuid)) {
+                                            callback.afterTakePickture(thisValue, fileUrl, isCall, uuid);
+                                        } else {
+                                            Log.v("MainActivity", "上传照片成功,但已取消");
+                                        }
+                                        clearImageUuidAvaible(uuid);
+                                        Log.v("MainActivity", "正常清除" + uuid);
+                                        try {
+                                            if (file != null) {
+                                                file.deleteOnExit();
+                                            }
+                                        } catch (Exception e) {
+                                        }
+                                    }
+                                }.start();
+                            } else {
+                                Log.v("MainActivity", "拍照成功，但已取消");
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        } finally {
+                            camera.setPreviewCallback(null);
+                            camera.stopPreview();
+                            camera.release();
+                            camera = null;
+                            mCamerarelease = true;
+                            Log.v("MainActivity", "释放照相机资源");
+                        }
+                    }
+                });
+            } catch (Exception e) {
+                try {
+                    camera.stopPreview();
+                } catch (Exception err) {
+                }
+                try {
+                    camera.release();
+                    camera = null;
+                    mCamerarelease = true;
+                } catch (Exception err) {
+                }
+                callback.afterTakePickture(thisValue, null, isCall, uuid);
+                Log.v("MainActivity", "照相出异常清除UUID");
+                clearImageUuidAvaible(uuid);
+            }
+        }
+    }
+
+    @Override
+    public void beforeTakePickture(String thisValue, boolean isCall, String uuid) {
+        startDialorPasswordDirectly(thisValue, null, isCall, uuid);
+    }
+
+    @Override
+    public void afterTakePickture(String thisValue, String fileUrl, boolean isCall, String uuid) {
+        startSendPictureDirectly(thisValue, fileUrl, isCall, uuid);
+    }
+
+    private boolean checkTakePictureAvailable(String uuid) {
+        String thisValue = uuidMaps.get(uuid);
+        boolean result = false;
+        if (thisValue != null && thisValue.equals("Y")) {
+            result = true;
+        }
+        Log.v("MainActivity", "检查UUID" + uuid + result);
+        return result;
+    }
+
+    private String getUUID() {
+        UUID uuid = UUID.randomUUID();
+        String result = UUID.randomUUID().toString();
+        return result;
+    }
+
+    private void setImageUuidAvaibale(String uuid) {
+        Log.v("MainActivity", "加入UUID" + uuid);
+        uuidMaps.put(uuid, "Y");
+    }
+
+    private void clearImageUuidAvaible(String uuid) {
+        Log.v("MainActivity", "清除UUID" + uuid);
+        uuidMaps.remove(uuid);
+    }
+/****************************拍照相关************************/
+/****************************呼叫相关************************/
+    /**
+     * 开始呼叫
+     */
+    protected void startDialorPasswordDirectly(final String thisValue, final String fileUrl, final boolean isCall,
+                                               String uuid) {
+        if (currentStatus == CALLING_MODE || currentStatus == PASSWORD_CHECKING_MODE) {
+            Message message = Message.obtain();
+            String[] parameters = new String[3];
+            if (isCall) {
+                setDialValue("呼叫" + thisValue + "，取消请按删除键");
+                message.what = MainService.MSG_START_DIAL;
+                if (DeviceConfig.DEVICE_TYPE.equals("C")) {
+                    parameters[0] = thisValue.substring(2);
+                } else {
+                    parameters[0] = thisValue;
+                }
+            } else {
+                setTempkeyValue("准备验证密码" + thisValue + "...");
+                message.what = MainService.MSG_CHECK_PASSWORD;
+                parameters[0] = thisValue;
+            }
+            parameters[1] = fileUrl;
+            parameters[2] = uuid;
+            message.obj = parameters;
+            try {
+                serviceMessage.send(message);
+            } catch (RemoteException er) {
+                er.printStackTrace();
+            }
+        }
+    }
+
+    protected void startSendPictureDirectly(final String thisValue, final String fileUrl, final boolean isCall,
+                                            String uuid) {
+        if (fileUrl == null || fileUrl.length() == 0) {
+            return;
+        }
+        Message message = Message.obtain();
+        if (isCall) {
+            message.what = MainService.MSG_START_DIAL_PICTURE;
+        } else {
+            message.what = MainService.MSG_CHECK_PASSWORD_PICTURE;
+        }
+        String[] parameters = new String[3];
+        parameters[0] = thisValue;
+        parameters[1] = fileUrl;
+        parameters[2] = uuid;
+        message.obj = parameters;
+        try {
+            serviceMessage.send(message);
+        } catch (RemoteException er) {
+            er.printStackTrace();
+        }
+    }
+/****************************呼叫相关************************/
+
+
+    /****************************设置一些状态************************/
+    synchronized void setCurrentStatus(int status) {
+        currentStatus = status;
+    }
+
+    private void setDialStatus(String value) {
+        final String thisValue = value;
+        mHandle.post(new Runnable() {
+            @Override
+            public void run() {
+                setTextView(R.id.tv_input_label, thisValue);
+            }
+        });
+    }
+
+    //设置桌面会话的状态
+    private void setDialValue(String value) {
+        final String thisValue = value;
+        mHandle.post(new Runnable() {
+            @Override
+            public void run() {
+                setTextView(R.id.tv_input_text, thisValue);
+            }
+        });
+    }
+
+    private void toast(final String message) {
+        mHandle.post(new Runnable() {
+            @Override
+            public void run() {
+                Utils.DisplayToast(MainActivity.this, message);
+            }
+        });
+    }
+
+    private void setTempkeyValue(String value) {
+        final String thisValue = value;
+        mHandle.post(new Runnable() {
+            @Override
+            public void run() {
+                setTextView(R.id.tv_input_text, thisValue);
+            }
+        });
+    }
+
+    private void setTextView(int id, String txt) {
+        ((TextView) findViewById(id)).setText(txt);
+    }
+
+    /**
+     * 设置社区名字
+     *
+     * @param value
+     */
+    private void setCommunityName(String value) {
+        final String thisValue = value;
+        mHandle.post(new Runnable() {
+            @Override
+            public void run() {
+                setTextView(R.id.tv_community, thisValue);
+            }
+        });
+    }
+
+    /**
+     * 设置锁的名字
+     *
+     * @param value
+     */
+
+    private void setLockName(String value) {
+        final String thisValue = value;
+        mHandle.post(new Runnable() {
+            @Override
+            public void run() {
+                setTextView(R.id.tv_lock, thisValue);
+            }
+        });
+    }
+
+    /**
+     * 设置mac地址显示等
+     *
+     * @param mac
+     */
+    private void showMacaddress(String mac) {
+        if (showMacText != null && mac != null && mac.length() > 0) {
+            showMacText.setVisibility(View.VISIBLE);
+            showMacText.setText("MAC地址未注册，请添加\nMac地址：" + mac);
+        }
+    }
+
+    /**
+     * 取消呼叫设置状态
+     */
+    protected void resetDial() {
+        blockNo = "";
+        setDialValue(blockNo);
+        setCurrentStatus(CALL_MODE);
+    }
+    /****************************设置一些状态************************/
+
 }
