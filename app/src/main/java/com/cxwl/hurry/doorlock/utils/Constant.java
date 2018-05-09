@@ -27,8 +27,8 @@ public class Constant {
     public static final int CALL_VIDEO_CONNECTING = 21; //链接中
 
     public static final int MSG_LOGIN = 20001; //登录成功
-    public static final int MSG_LOGIN_AFTER = 20002; //登录成功后
-    public static final int MSG_RTC_REGISTER = 20003;//rtc注册
+    public static final int MSG_LOGIN_AFTER = 20002; //登录成功后,开始rtc登录,人脸识别,读卡开始,心跳包等
+    public static final int MSG_RTC_REGISTER = 20003;//rtc登录
     public static final int MSG_CANCEL_CALL = 20010;//取消呼叫
     public static final int MSG_CALLMEMBER_TIMEOUT = 11005;//呼叫成员超时
     public static final int MSG_CALLMEMBER_NO_ONLINE = 12005;//呼叫成员不在线

@@ -18,6 +18,7 @@ public class DeviceConfig {
 
 
     public static int CANCEL_CALL_WAIT_TIME = 1000 * 30;//自动取消呼叫等待时间
+    public static int CONNECT_REPORT_WAIT_TIME = 1000*60;//心跳间隔时间
 
     public static int VOLUME_STREAM_MUSIC = 5;//音乐音量
     public static int VOLUME_STREAM_VOICE_CALL = 5;//通话音量

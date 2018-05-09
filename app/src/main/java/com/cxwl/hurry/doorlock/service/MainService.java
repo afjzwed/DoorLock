@@ -67,13 +67,14 @@ import static com.cxwl.hurry.doorlock.utils.Constant.MSG_RTC_REGISTER;
 public class MainService extends Service {
     private static final String TAG = "MainService";
     public static final int MAIN_ACTIVITY_INIT = 0;
+    public static final int REGISTER_ACTIVITY_DIAL = 3;
     public static final int MSG_CALLMEMBER = 20002;//呼叫成员
 
     public static final int MSG_START_DIAL = 20005;//开始呼叫
     public static final int MSG_CHECK_PASSWORD = 20006;//检查密码
     public static final int MSG_CARD_INCOME = 20008;//刷卡回调
 
-    public static final int MSG_UPDATE_NETWORKSTATE = 20028;
+    public static final int MSG_UPDATE_NETWORKSTATE = 20028;//网络状态改变
 
     public static final int MSG_START_DIAL_PICTURE = 21005;//开始呼叫的访客图片
     public static final int MSG_CHECK_PASSWORD_PICTURE = 21006;//密码访客图片
@@ -114,6 +115,8 @@ public class MainService extends Service {
     public String imageUuid = null;//图片对应的uuid
 
     Thread timeoutCheckThread = null;//自动取消呼叫的定时器
+
+    Thread connectReportThread = null;//心跳包线程
 
     private boolean netWorkstate = false;
 
@@ -195,13 +198,16 @@ public class MainService extends Service {
                     case MSG_UPDATE_NETWORKSTATE: {
                         boolean obj1 = (boolean) msg.obj;
                         Log.e(TAG, "initWhenConnected obj1" + obj1);
-//                        if (obj1) {
-//                            initWhenConnected(); //开始在线版本
-//                        } else {
-//                            initWhenOffline(); //开始离线版本
-//                        }
+                        if (obj1) {
+                            initWhenConnected(); //开始在线版本
+                        } else {
+                            // TODO: 2018/5/8   initWhenOffline(); //开始离线版本
+                        }
                         break;
                     }
+                    case REGISTER_ACTIVITY_DIAL:
+                        initConnectReport();//心跳开始,根据心跳返回结果开启各更新程序
+                        break;
                     default:
                         break;
                 }
@@ -209,6 +215,62 @@ public class MainService extends Service {
             }
         };
         serviceMessage = new Messenger(mHandler);
+    }
+
+    private  void initConnectReport() {
+        //xiaozd add
+        if (connectReportThread != null) {
+            connectReportThread.interrupt();
+            connectReportThread = null;
+        }
+        connectReportThread = new Thread() {
+            public void run() {
+                try {
+                    connectReport();//首次执行
+                    while (!isInterrupted()) {//检测线程是否已经中断
+                        sleep(DeviceConfig.CONNECT_REPORT_WAIT_TIME); //心跳间隔时间
+                        connectReport();
+                    }
+                } catch (InterruptedException e) {
+
+                }
+            }
+        };
+        connectReportThread.start();
+    }
+
+    /**
+     * 心跳接口
+     */
+    private void connectReport() {
+//        Log.e(TAG, "心跳执行" + i + "次");
+    /*    try {
+            String url = API.CONNECTREPORT;
+            String result = HttpApi.getInstance().loadHttpforGet(url, httpServerToken);
+            if (result != null) {
+                HttpApi.e("connectReportInfo()->" + result);
+                JSONObject resultObj = Ajax.getJSONObject(result);
+                int code = resultObj.getInt("code");
+                if (code == 0) {
+                    //比较返回数据与本地数据是否一致,并设置更新状态
+                    if (false) {
+                        //如果不一致，通知主线程
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                //在主线程调用方法更新对应的数据
+                            }
+                        });
+                    }
+                }
+            } else {
+                //服务器异常或没有网络
+                HttpApi.e("connectReportInfo()->服务器无响应");
+            }
+        } catch (Exception e) {
+            HttpApi.e("connectReportInfo()->服务器数据解析异常");
+            e.printStackTrace();
+        }*/
     }
 
     protected void init() {
@@ -236,6 +298,25 @@ public class MainService extends Service {
             try {
                 initClientInfo();
             } catch (Exception e) {
+                Log.v("MainService", "onDeviceStateChanged,result=" + e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * 进入离线版本
+     */
+    protected void initWhenOffline() {
+        HttpApi.i("进入离线模式");
+        if (initMacKey()) {
+            HttpApi.i("通过MAC地址验证");
+            try {
+                // TODO: 2018/5/8 loadInfoFromLocal(); //获取本地sp文件中的数据
+                // TODO: 2018/5/8 sendInitMessenger(MSG_LOADLOCAL_DATA);//在MainActivity中展示
+                //startDialActivity(false);  //xiaozd add
+                //rtcConnectTimeout();
+            } catch (Exception e) {
+                e.printStackTrace();
                 Log.v("MainService", "onDeviceStateChanged,result=" + e.getMessage());
             }
         }

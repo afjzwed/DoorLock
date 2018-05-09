@@ -321,7 +321,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 super.handleMessage(msg);
                 switch (msg.what) {
                     case MSG_LOGIN_AFTER:
-                        //登陆成功后 设置信息 初始化rtc
+                        //登陆成功后 设置信息 初始化rtc等
                         Log.i(TAG, "登陆成功后");
                         onLoginAfter(msg);
                         break;
@@ -383,10 +383,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     setCommunityName(user.getString("communityName"));
                     setLockName(user.getString("lockName"));
 
-                    enableReaderMode(); //登录成功后开启读卡
                     Log.e(TAG, "可以读卡");
+                    enableReaderMode();//登录成功后开启读卡
 
                     // TODO: 2018/5/8 登录成功后人脸识别对比开启
+//                    if (faceHandler != null) {
+//                        faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_CONTRAST, 1000);
+//                    }
+
+                    sendMainMessager(MainService.REGISTER_ACTIVITY_DIAL, null);//开始心跳包
 
                 } else if (code == 1) { //登录失败,MAC地址不存在服务器
                     //显示MAC地址并提示添加
@@ -472,7 +477,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     });
                 }
             }
-        }, 500, 1000);
+        }, 500, 1000*10);
     }
 
     /**
@@ -534,6 +539,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onDestroy();
         unbindService(serviceConnection);
         unregisterReceiver(receive);
+        disableReaderMode();
+        if (netTimer != null) {
+            netTimer.cancel();
+            netTimer = null;
+        }
     }
 
     /**
@@ -1043,7 +1053,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                         Log.e(TAG, "Token==" + token);
                                         Log.e(TAG, "file七牛储存地址："+curUrl);
                                         Log.e(TAG, "file本地地址："+file.getPath()+"file大小"+file.length());
-                                        uploadManager.put(file.getPath(), curUrl, token, new UpCompletionHandler() {
+                                        uploadManager.put(file.getPath(), curUrl, null, new UpCompletionHandler() {
                                             @Override
                                             public void complete(String key, ResponseInfo info, JSONObject response) {
                                                 //   Log.i(TAG,"qiniu"+key + ",\r\n " + info.toString()+ ",\r\n " +
