@@ -429,6 +429,9 @@ public class MainService extends Service {
         }
     }
 
+    /**
+     * 开启登录线程
+     */
     protected void initClientInfo() {
         new Thread() {
             public void run() {
@@ -437,7 +440,7 @@ public class MainService extends Service {
                     do {
                         result = getClientInfo();
                         if (!result) {
-                            sleep(1000 * 10);
+                            sleep(1000 * 10);//间隔10秒登录一次
                         }
                     } while (!result);
                 } catch (Exception e) {
@@ -468,7 +471,6 @@ public class MainService extends Service {
 
     /**
      * 登录接口
-     *
      * @return
      * @throws JSONException
      */
@@ -1184,7 +1186,6 @@ public class MainService extends Service {
 
     /**
      * 推送消息
-     *
      * @param pushList
      * @throws JSONException
      * @throws IOException
@@ -1211,32 +1212,6 @@ public class MainService extends Service {
         }
     }
     /****************************呼叫相关********************************/
-    /**
-     * 下载广告
-     *
-     * @return
-     */
-
-    protected void downloadAdvertisementFile(String file) throws Exception {
-        int lastIndex = file.lastIndexOf("/");
-        String fileName = file.substring(lastIndex + 1);
-        Log.i(TAG, "广告名字" + fileName);
-        String localFile = HttpUtils.getLocalFile(fileName);
-        if (localFile == null) {
-            Log.i(TAG, "本地不存在这个广告 准备下载广告");
-            localFile = HttpUtils.downloadFile(file);
-            if (localFile != null) {
-                Log.i(TAG, "加载下载后的广告广告  localFile=" + localFile);
-                if (localFile.endsWith(".temp")) {
-                    localFile = localFile.substring(0, localFile.length() - 5);
-                }
-                currentAdvertisementFiles.put(fileName, localFile);
-            }
-        } else {
-            Log.i(TAG, "本地存在这个广告 准备播放广告");
-            currentAdvertisementFiles.put(fileName, localFile);
-        }
-    }
 
     @Nullable
     @Override
@@ -1246,11 +1221,9 @@ public class MainService extends Service {
 
     /**
      * 发送消息到mainactivity
-     *
      * @param what
      * @param o
      */
-
     private void sendMessageToMainAcitivity(int what, Object o) {
         if (mainMessage != null) {
             Message message = Message.obtain();

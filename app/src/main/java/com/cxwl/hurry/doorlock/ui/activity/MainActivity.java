@@ -24,11 +24,14 @@ import android.os.IBinder;
 import android.os.Message;
 import android.os.Messenger;
 import android.os.RemoteException;
+import android.os.SystemClock;
+import android.provider.Settings;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.MenuItem;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
@@ -37,8 +40,10 @@ import android.widget.EditText;
 import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.PopupMenu;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.androidex.aexapplibs.appLibsService;
 import com.cxwl.hurry.doorlock.MainApplication;
@@ -49,6 +54,7 @@ import com.cxwl.hurry.doorlock.service.MainService;
 import com.cxwl.hurry.doorlock.utils.Ajax;
 import com.cxwl.hurry.doorlock.utils.HttpApi;
 import com.cxwl.hurry.doorlock.utils.HttpUtils;
+import com.cxwl.hurry.doorlock.utils.Intenet;
 import com.cxwl.hurry.doorlock.utils.NetWorkUtils;
 import com.cxwl.hurry.doorlock.utils.NfcReader;
 import com.cxwl.hurry.doorlock.utils.UploadUtil;
@@ -68,6 +74,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -106,22 +113,22 @@ import static com.cxwl.hurry.doorlock.utils.NfcReader.ACTION_NFC_CARDINFO;
  * MainActivity
  * Created by William on 2018/4/26
  */
-public class MainActivity extends AppCompatActivity implements View.OnClickListener, TakePictureCallback, NfcReader
-        .AccountCallback, NfcAdapter.ReaderCallback {
+public class MainActivity extends AppCompatActivity implements View.OnClickListener,
+        TakePictureCallback, NfcReader.AccountCallback, NfcAdapter.ReaderCallback {
 
     private static String TAG = "MainActivity";
     public static final int MSG_RTC_ONVIDEO_IN = 10011;//接收到视频呼叫
     public static final int MSG_ADVERTISE_IMAGE = 20001;//跟新背景图片
     public static int currentStatus = CALL_MODE;//当前状态
+    public static final int INPUT_SYSTEMSET_REQUESTCODE = 0X03;
 
     private TextView version_text;//版本名显示
     private View container;//根View
     private LinearLayout videoLayout;
     private RelativeLayout rl_nfc, rl;//录卡布局和网络检测提示布局
-    private GridView mGridView;
-    private ImageView iv_setting, bluetooth_image, iv_bind, imageView, wifi_image;
+    private ImageView iv_setting, imageView, wifi_image;
     private TextView headPaneTextView, tv_message, tv_battery, showMacText;
-    private EditText tv_input, et_blackno, et_unitno, tv_input_text;
+    private EditText et_blackno, et_unitno, tv_input_text;
 
     private Handler handler;
     private Messenger mainMessage;
@@ -149,13 +156,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private Receive receive; //本地广播
     private int netWorkFlag = -1;//当前网络是否可用标识 有网为1 无网为0
     private Timer netTimer = new Timer();//检测网络用定时器
-    private boolean checkTime = false;//是否校时过的标识,没有重置为false操作
 
     private WifiInfo wifiInfo = null;//获得的Wifi信息
     private int level;//信号强度值
     private WifiManager wifiManager = null;//Wifi管理器
 
     private UploadManager uploadManager;//七牛上传
+
+    private Thread clockRefreshThread = null;
 
     private Thread passwordTimeoutThread = null;//访客密码线程
     private String guestPassword = "";//访客输入的密码值
@@ -168,7 +176,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         //全屏设置，隐藏窗口所有装饰
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN);//清除FLAG
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager
+                .LayoutParams.FLAG_FULLSCREEN);
 
         {
             ActionBar ab = getActionBar();
@@ -187,8 +196,54 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         initMainService();
         initVoiceVolume();//初始化音量设置
         initAutoCamera();
+        startClockRefresh();//时间更新线程,在有心跳包后用心跳包代替
+
         initNet();
 
+    }
+
+    /**
+     * 开启界面时间(本地)更新线程 之后放到MainService中
+     */
+    private void startClockRefresh() {
+        clockRefreshThread = new Thread() {
+            public void run() {
+                try {
+                    setNewTime();
+                    while (true) {
+                        sleep(1000 * 60); //等待指定的一个时间(一分钟显示一次)
+                        if (!isInterrupted()) { //检查线程没有被停止
+                            setNewTime();
+                        }
+                    }
+                } catch (InterruptedException e) {
+                }
+                clockRefreshThread = null;
+            }
+        };
+        clockRefreshThread.start();
+    }
+
+    /**
+     * 设置界面时间(本地)
+     */
+    private void setNewTime() {
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                Date now = new Date();
+                SimpleDateFormat dateFormat = new SimpleDateFormat("E");//星期
+                String dayStr = dateFormat.format(now);
+                dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+                String dateStr = dateFormat.format(now);
+                dateFormat = new SimpleDateFormat("HH:mm");
+                String timeStr = dateFormat.format(now);
+
+                setTextView(R.id.tv_day, dayStr);
+                setTextView(R.id.tv_date, dateStr);
+                setTextView(R.id.tv_time, timeStr);
+            }
+        });
     }
 
     private void initQiniu() {
@@ -212,8 +267,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         AudioManager audioManager = (AudioManager) getSystemService(this.AUDIO_SERVICE);
         initVoiceVolume(audioManager, AudioManager.STREAM_MUSIC, DeviceConfig.VOLUME_STREAM_MUSIC);
         initVoiceVolume(audioManager, AudioManager.STREAM_RING, DeviceConfig.VOLUME_STREAM_RING);
-        initVoiceVolume(audioManager, AudioManager.STREAM_SYSTEM, DeviceConfig.VOLUME_STREAM_SYSTEM);
-        initVoiceVolume(audioManager, AudioManager.STREAM_VOICE_CALL, DeviceConfig.VOLUME_STREAM_VOICE_CALL);
+        initVoiceVolume(audioManager, AudioManager.STREAM_SYSTEM, DeviceConfig
+                .VOLUME_STREAM_SYSTEM);
+        initVoiceVolume(audioManager, AudioManager.STREAM_VOICE_CALL, DeviceConfig
+                .VOLUME_STREAM_VOICE_CALL);
     }
 
     /**
@@ -279,33 +336,23 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         rl_nfc = (RelativeLayout) findViewById(R.id.rl_nfc);//录卡布局
         et_blackno = (EditText) findViewById(R.id.et_blockno);//录卡时楼栋编号
         et_unitno = (EditText) findViewById(R.id.et_unitno);//录卡时房屋编号
-        iv_bind = (ImageView) findViewById(R.id.user_bind);//QQ物联标志
         imageView = (ImageView) findViewById(R.id.iv_erweima);//二维码
         wifi_image = (ImageView) findViewById(R.id.wifi_image); //wifi图标控件初始化
         iv_setting = (ImageView) findViewById(R.id.iv_setting);//左上角弹出菜单按钮
-        bluetooth_image = (ImageView) findViewById(R.id.bluetooth_image);//蓝牙按钮
         tv_message = (TextView) findViewById(R.id.tv_message);//录入卡提示信息
         tv_input_text = (EditText) findViewById(R.id.tv_input_text);//桌面会话状态的提示信息
         tv_battery = (TextView) findViewById(R.id.tv_battery);//显示蓝牙锁的电量
-        mGridView = (GridView) findViewById(R.id.gridView_binderlist);//QQ物联相关（应该用于显示绑定用户
         rl = (RelativeLayout) findViewById(R.id.net_view_rl);//网络检测提示布局
         showMacText = (TextView) findViewById(R.id.show_mac);//mac地址
-        tv_input = (EditText) findViewById(R.id.tv_input);//完全不知道干嘛用
         videoLayout = (LinearLayout) findViewById(R.id.ll_video);//用于添加视频通话的根布局
         //getBgBanners();// 网络获得轮播背景图片数据
 
         rl.setOnClickListener(this);
         iv_setting.setOnClickListener(this);
 
-        //QQ物联相关，注释
-//        mAdapter = new BinderListAdapter(this);
-//        mGridView.setAdapter(mAdapter);
-
         sendBroadcast(new Intent("com.android.action.hide_navigationbar"));//隱藏底部導航
         container.setSystemUiVisibility(13063);//设置状态栏显示与否,禁止頂部下拉
 
-//        Typeface typeFace = Typeface.createFromAsset(getAssets(), "fonts/GBK.TTF");//字体设置
-//        tv_input.setTypeface(typeFace);// com_log.setTypeface(typeFace);
         et_blackno.setOnFocusChangeListener(new View.OnFocusChangeListener() {
             @Override
             public void onFocusChange(View v, boolean hasFocus) {
@@ -443,9 +490,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 });
             } else {
                 Log.i(TAG, "有网");
-                // TODO: 2018/5/8   setStatusBarIcon(true); initSystemtime();
+                setStatusBarIcon(true);
+                initSystemtime();
             }
-            sendMainMessager(MainService.MAIN_ACTIVITY_INIT, NetWorkUtils.isNetworkAvailable(MainActivity
+            sendMainMessager(MainService.MAIN_ACTIVITY_INIT, NetWorkUtils.isNetworkAvailable
+                    (MainActivity
                     .this));
             initNetListen();
         }
@@ -478,14 +527,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     mHandler.post(new Runnable() {
                         @Override
                         public void run() {
-                            // TODO: 2018/5/8 下面暂时注释
-//                            if (netWorkFlag == 1) {
-//                                setStatusBarIcon(true);
-//                                rl.setVisibility(View.GONE);
-//                            } else {
-//                                setStatusBarIcon(false);
-//                                rl.setVisibility(View.VISIBLE);
-//                            }
+                            //主界面显示相关状态
+                            if (netWorkFlag == 1) {
+                                setStatusBarIcon(true);
+                                rl.setVisibility(View.GONE);
+                            } else {
+                                setStatusBarIcon(false);
+                                rl.setVisibility(View.VISIBLE);
+                            }
                         }
                     });
                 }
@@ -494,10 +543,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     /**
-     * 校时
+     * 校时(校正本地时间)  之后放在心跳包接口里做
      */
     private void initSystemtime() {
-        if (NetWorkUtils.isNetworkAvailable(this) && !checkTime) {
+        if (NetWorkUtils.isNetworkAvailable(this)) {
             new Thread(new Runnable() {
                 @Override
                 public void run() {
@@ -508,8 +557,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             String cmd = "date -s '[_update_time]'";
                             String time = d.format(c.getTime());
                             cmd = cmd.replace("[_update_time]", time);
+                            // TODO: 2018/5/9 这里的校时要用到工控相关hwservice,暂时不注释,之后解决
                             hwservice.execRootCommand(cmd);
-                            checkTime = true;
                             HttpApi.e("时间更新：" + time);
                         } else {
                             HttpApi.e("系统与服务器时间差小，不更新");
@@ -564,7 +613,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      */
     @SuppressLint("WifiManagerLeak")
     private void initNet() {
-        wifiManager = (WifiManager) MainApplication.getApplication().getSystemService(WIFI_SERVICE);//获得WifiManager
+        wifiManager = (WifiManager) MainApplication.getApplication().getSystemService
+                (WIFI_SERVICE);//获得WifiManager
         Timer timer = new Timer();
         timer.scheduleAtFixedRate(new TimerTask() {
             @Override
@@ -599,8 +649,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         }
                         break;
                     case NETWOKR_TYPE_ETHERNET:
+                        Message msg = new Message();
+                        msg.what = 11;
+                        mHandler.sendMessage(msg);
                         Log.i(TAG, "NETWOKR_TYPE_ETHERNET");
-
                         break;
                     case NETWOKR_TYPE_MOBILE:
                         Log.i(TAG, "gprs");
@@ -713,7 +765,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     Log.e("blockNo", "1===" + blockNo);
                 }
                 if (blockNo.length() == DeviceConfig.BLOCK_NO_LENGTH) {
-                    // TODO: 2018/5/9  检查楼栋 
+                    // TODO: 2018/5/9  检查楼栋
 //                    setDialValue(blockNo);
 //                    Message message = Message.obtain();
 //                    message.what = MainService.MSG_CHECK_BLOCKNO;
@@ -1125,10 +1177,71 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
             }
             case R.id.iv_setting: {
-//                initMenu();//初始化左上角弹出框
+                initMenu();//初始化左上角弹出框
                 break;
             }
         }
+    }
+
+    /**
+     * 初始化左上角弹出框
+     */
+    private void initMenu() {
+        PopupMenu popup = new PopupMenu(MainActivity.this, iv_setting);
+        popup.getMenuInflater().inflate(R.menu.poupup_menu_home, popup.getMenu());
+        popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+            @Override
+            public boolean onMenuItemClick(MenuItem item) {
+                switch (item.getItemId()) {
+                    case R.id.action_settings1:
+//                        Log.e(TAG,"menu 系統設置");
+
+                        Intent intent = new Intent(Settings.ACTION_SETTINGS);//跳轉到系統設置
+                        intent.putExtra("back", true);
+                        startActivityForResult(intent, INPUT_SYSTEMSET_REQUESTCODE);
+                        break;
+                    case R.id.action_catIP:
+                        Log.e(TAG, "menu 本机的IP");
+//                        Toast.makeText(MainActivity.this, "本机的IP：" + Intenet.getHostIP(), Toast
+//                                .LENGTH_LONG).show();
+                        break;
+                    case R.id.action_catVersion:
+                        Log.e(TAG, "menu 本机的固件版本");
+//                        Toast.makeText(MainActivity.this, "本机的固件版本：" + hwservice.getSdkVersion(),
+//                                Toast.LENGTH_LONG).show();
+                        break;
+                    case R.id.action_updateVersion:
+                        Log.e(TAG, "menu 更新");
+                        //点击，手动更新
+//                        Message message = Message.obtain();
+//                        message.what = MSG_UPDATE_VERSION;
+//                        try {
+//                            serviceMessenger.send(message);
+//                        } catch (RemoteException e) {
+//                            e.printStackTrace();
+//                        }
+                        break;
+                    case R.id.action_settings3://上传日志
+                        Log.e(TAG, "menu 上传日志");
+                        break;
+                    case R.id.action_settings7://重启
+                        Log.e(TAG, "menu 重启");
+//                        DoorLock.getInstance().runReboot();
+                        break;
+                    case R.id.action_settings10://退出
+//                        Log.e(TAG,"menu 退出");
+                        setResult(RESULT_OK);
+                        MainActivity.this.stopService(new Intent(MainActivity.this, MainService
+                                .class));
+                        finish();
+                        sendBroadcast(new Intent("com.android.action.display_navigationbar"));
+                        break;
+
+                }
+                return true;
+            }
+        });
+        popup.show();
     }
 /****************************拍照相关************************/
     /**
@@ -1202,7 +1315,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             final String url = DeviceConfig.SERVER_URL + "/app/upload/image";
                             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-mm-dd hh:mm:ss");
                             String date = sdf.format(new java.util.Date());
-                            final String curUrl = "upload/menjin/img/" + "android_" + date;
+                            final String curUrl = "upload/menjin/img/" + "android_" + date ;
                             if (checkTakePictureAvailable(uuid)) {
                                 new Thread() {
                                     @Override
@@ -1403,6 +1516,35 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         });
     }
 
+    /**
+     * 设置自定义状态栏的状态（WiFi标志）
+     *
+     * @param state true 显示  false 隐藏
+     */
+    private void setStatusBarIcon(boolean state) {
+        if (state) {
+            //显示
+            if (wifi_image.getVisibility() == View.INVISIBLE) {
+                mHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        wifi_image.setVisibility(View.VISIBLE);
+                    }
+                });
+            }
+        } else {
+            //隐藏
+            if (wifi_image.getVisibility() == View.VISIBLE) {
+                mHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        wifi_image.setVisibility(View.INVISIBLE);
+                    }
+                });
+            }
+        }
+    }
+
     private void toast(final String message) {
         handler.post(new Runnable() {
             @Override
@@ -1553,47 +1695,45 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             switch (msg.what) {
                 // 如果收到正确的消息就获取WifiInfo，改变图片并显示信号强度
                 // TODO: 2018/5/8 以下QQ物联相关暂时注释
-//                case 11:
-//                    wifi_image.setImageResource(R.mipmap.ethernet);
-////                    if (listTemp1 != null && listTemp1.length > 0) {
-////                        iv_bind.setImageDrawable(getResources().getDrawable(R.mipmap
-////                                .binder_default_head));
-////                    } else {
-////                        iv_bind.setImageDrawable(getResources().getDrawable(R.mipmap
-//// .bind_offline));
-////                    }
-//                    break;
-//                case 1:
-//                    wifi_image.setImageResource(R.mipmap.wifi02);
-//                    break;
-//                case 2:
-//                    wifi_image.setImageResource(R.mipmap.wifi02);
-//                    break;
-//                case 3:
-//                    wifi_image.setImageResource(R.mipmap.wifi03);
-//                    break;
-//                case 4:
-//                    wifi_image.setImageResource(R.mipmap.wifi04);
-//                    break;
-//                case 5:
-//                    wifi_image.setImageResource(R.mipmap.wifi05);
-//                    break;
-//                case 6://无网络连接
-//                    rl.setVisibility(View.VISIBLE);
-//                    break;
-//                case 7:
-//                    //提示用户无网络连接
-//                    rl.setVisibility(View.GONE);
-//                    break;
-//                default:
-//                    //以防万一
-//                    wifi_image.setImageResource(R.mipmap.wifi_05);
-//                    rl.setVisibility(View.VISIBLE);
+                case 11:
+                    wifi_image.setImageResource(R.mipmap.ethernet);
+//                    if (listTemp1 != null && listTemp1.length > 0) {
+//                        iv_bind.setImageDrawable(getResources().getDrawable(R.mipmap
+//                                .binder_default_head));
+//                    } else {
+//                        iv_bind.setImageDrawable(getResources().getDrawable(R.mipmap
+// .bind_offline));
+//                    }
+                    break;
+                case 1:
+                    wifi_image.setImageResource(R.mipmap.wifi02);
+                    break;
+                case 2:
+                    wifi_image.setImageResource(R.mipmap.wifi02);
+                    break;
+                case 3:
+                    wifi_image.setImageResource(R.mipmap.wifi03);
+                    break;
+                case 4:
+                    wifi_image.setImageResource(R.mipmap.wifi04);
+                    break;
+                case 5:
+                    wifi_image.setImageResource(R.mipmap.wifi05);
+                    break;
+                case 6://无网络连接
+                    rl.setVisibility(View.VISIBLE);
+                    break;
+                case 7:
+                    //提示用户无网络连接
+                    rl.setVisibility(View.GONE);
+                    break;
+                default:
+                    //以防万一
+                    wifi_image.setImageResource(R.mipmap.wifi_05);
+                    rl.setVisibility(View.VISIBLE);
             }
         }
-
     };
-
 
     public class Receive extends BroadcastReceiver {
         @Override

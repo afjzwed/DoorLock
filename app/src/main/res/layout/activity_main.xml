@@ -116,19 +116,6 @@
                 android:layout_height="0.1dp"></SurfaceView>
         </RelativeLayout>
 
-        <TextView
-            android:id="@+id/tv_com"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentBottom="true"
-            android:layout_alignParentLeft="true"
-            android:layout_marginBottom="60dp"
-            android:layout_marginLeft="120dp"
-            android:text="深圳市安卓工控设备有限公司"
-            android:textColor="#ffffff"
-            android:textSize="30dp"
-            android:textStyle="bold"
-            android:visibility="gone"/>
 
         <ImageView
             android:id="@+id/iv_erweima"
@@ -222,86 +209,9 @@
         </LinearLayout>
     </RelativeLayout>
 
-    <!--QQ物联-->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_weight="1.0"
-        android:orientation="vertical"
-        android:visibility="gone">
+    <!--QQ物联相关删除-->
 
-        <TextView
-            style="@style/Text_TitleBar_Style"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"
-            android:maxWidth="300dip"
-            android:singleLine="true"
-            android:text="绑定者列表"
-            android:textColor="@color/Text_BLACK"/>
-
-        <ImageView
-            android:layout_width="fill_parent"
-            android:layout_height="2dip"
-            android:scaleType="centerCrop"
-            android:src="@mipmap/window_seperator"/>
-
-        <GridView
-            android:id="@+id/gridView_binderlist"
-            android:layout_width="match_parent"
-            android:layout_height="354dp"
-            android:layout_weight="0.61"
-            android:numColumns="6"></GridView>
-
-        <Button
-            android:id="@+id/btn_eraseallbinders"
-            style="@style/Text_TitleBar_Style"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:onClick="eraseAllBinders"
-            android:text="解除所有绑定者"
-            android:textColor="@color/Text_BLUE"
-            android:visibility="gone"/>
-
-        <Button
-            android:id="@+id/btn_upload_log"
-            style="@style/Text_TitleBar_Style"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:onClick="uploadDeviceLog"
-            android:text="上传设备日志"
-            android:textColor="@color/Text_BLUE"
-            android:visibility="gone"/>
-
-    </LinearLayout>
-
-    <!--??-->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="100dp"
-        android:layout_gravity="bottom|left"
-        android:layout_marginBottom="20dp"
-        android:orientation="horizontal"
-        android:visibility="gone">
-
-        <EditText
-            android:id="@+id/tv_input"
-            style="@style/Text_TitleBar_Style"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_gravity="bottom"
-            android:layout_marginRight="40dp"
-            android:layout_weight="1"
-            android:background="#00000000"
-            android:focusable="false"
-            android:gravity="center|right"
-            android:maxLength="8"
-            android:numeric="integer"
-            android:textColor="@color/Text_WHITE"
-            android:textSize="40sp"
-            android:visibility="gone"/>
-
-    </LinearLayout>
+    <!--??删除-->
 
     <!--网络状态提醒-->
     <LinearLayout
@@ -324,16 +234,6 @@
                 android:clickable="true"
                 android:src="@mipmap/ic_launcher"/>
 
-
-            <ImageView
-                android:id="@+id/tv_log"
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:layout_marginLeft="5dp"
-                android:gravity="center"
-                android:src="@mipmap/new_logo_qq"
-                android:visibility="gone"/>
-
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
@@ -350,15 +250,6 @@
                 android:visibility="gone"/>
 
             <ImageView
-                android:id="@+id/bluetooth_image"
-                android:layout_width="50dp"
-                android:layout_height="40dp"
-                android:layout_gravity="top"
-                android:layout_marginRight="5dp"
-                android:layout_marginTop="5dp"
-                android:src="@mipmap/ble_button"/>
-
-            <ImageView
                 android:id="@+id/wifi_image"
                 android:layout_width="50dp"
                 android:layout_height="40dp"
@@ -367,14 +258,14 @@
                 android:layout_marginTop="5dp"
                 android:visibility="invisible"/>
 
-            <ImageView
-                android:id="@+id/user_bind"
-                android:layout_width="50dp"
-                android:layout_height="40dp"
-                android:layout_gravity="top"
-                android:layout_marginRight="5dp"
-                android:layout_marginTop="5dp"
-                android:visibility="invisible"/>
+            <!--<ImageView-->
+                <!--android:id="@+id/user_bind"-->
+                <!--android:layout_width="50dp"-->
+                <!--android:layout_height="40dp"-->
+                <!--android:layout_gravity="top"-->
+                <!--android:layout_marginRight="5dp"-->
+                <!--android:layout_marginTop="5dp"-->
+                <!--android:visibility="invisible"/>-->
 
             <TextView
                 android:id="@+id/tv_day"
