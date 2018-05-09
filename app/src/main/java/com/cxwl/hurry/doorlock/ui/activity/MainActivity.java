@@ -113,8 +113,8 @@ import static com.cxwl.hurry.doorlock.utils.NfcReader.ACTION_NFC_CARDINFO;
  * MainActivity
  * Created by William on 2018/4/26
  */
-public class MainActivity extends AppCompatActivity implements View.OnClickListener,
-        TakePictureCallback, NfcReader.AccountCallback, NfcAdapter.ReaderCallback {
+public class MainActivity extends AppCompatActivity implements View.OnClickListener, TakePictureCallback, NfcReader
+        .AccountCallback, NfcAdapter.ReaderCallback {
 
     private static String TAG = "MainActivity";
     public static final int MSG_RTC_ONVIDEO_IN = 10011;//接收到视频呼叫
@@ -176,8 +176,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         //全屏设置，隐藏窗口所有装饰
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN);//清除FLAG
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager
-                .LayoutParams.FLAG_FULLSCREEN);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
         {
             ActionBar ab = getActionBar();
@@ -197,11 +196,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         initVoiceVolume();//初始化音量设置
         initAutoCamera();
         startClockRefresh();//时间更新线程,在有心跳包后用心跳包代替
-
         initNet();
 
     }
-
+/*************************************************初始化一些基本东西start********************************************/
     /**
      * 开启界面时间(本地)更新线程 之后放到MainService中
      */
@@ -246,6 +244,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         });
     }
 
+    /**
+     * 初始化七牛
+     */
+
     private void initQiniu() {
         Configuration config = new Configuration.Builder().chunkSize(512 * 1024)        // 分片上传时，每片的大小。 默认256K
                 .putThreshhold(1024 * 1024)   // 启用分片上传阀值。默认512K
@@ -267,10 +269,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         AudioManager audioManager = (AudioManager) getSystemService(this.AUDIO_SERVICE);
         initVoiceVolume(audioManager, AudioManager.STREAM_MUSIC, DeviceConfig.VOLUME_STREAM_MUSIC);
         initVoiceVolume(audioManager, AudioManager.STREAM_RING, DeviceConfig.VOLUME_STREAM_RING);
-        initVoiceVolume(audioManager, AudioManager.STREAM_SYSTEM, DeviceConfig
-                .VOLUME_STREAM_SYSTEM);
-        initVoiceVolume(audioManager, AudioManager.STREAM_VOICE_CALL, DeviceConfig
-                .VOLUME_STREAM_VOICE_CALL);
+        initVoiceVolume(audioManager, AudioManager.STREAM_SYSTEM, DeviceConfig.VOLUME_STREAM_SYSTEM);
+        initVoiceVolume(audioManager, AudioManager.STREAM_VOICE_CALL, DeviceConfig.VOLUME_STREAM_VOICE_CALL);
     }
 
     /**
@@ -303,15 +303,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      * 初始化视频通话布局(用于天翼rtc？)
      */
     protected void initScreen() {
-        //callLayout=(LinearLayout) findViewById(R.id.call_pane);
-        //guestLayout=(LinearLayout) findViewById(R.id.guest_pane);
         headPaneTextView = (TextView) findViewById(R.id.header_pane);//可视对讲设备状态
         videoLayout = (LinearLayout) findViewById(R.id.ll_video);//用于添加视频通话的根布局
-
-//        videoPane = (LinearLayout) findViewById(R.id.video_pane);
-//        imagePane = (LinearLayout) findViewById(R.id.image_pane);
-//        remoteLayout = (LinearLayout) findViewById(R.id.ll_remote);
-
         setTextView(R.id.tv_community, MainService.communityName);
         setTextView(R.id.tv_lock, MainService.lockName);
     }
@@ -423,8 +416,73 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         };
         mainMessage = new Messenger(handler);
+
     }
 
+    /**
+     * 初始化服务
+     */
+    private void initMainService() {
+        Intent intent = new Intent(this, MainService.class);
+        bindService(intent, serviceConnection, Service.BIND_AUTO_CREATE);
+
+        // TODO: 2018/5/8 开门服务类暂时注释
+//        Intent dlIntent = new Intent(MainActivity.this, DoorLock.class);
+//        startService(dlIntent);//start方式启动锁Service
+    }
+
+    /**
+     * 服务连接监听
+     */
+
+    private ServiceConnection serviceConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            //获取Service端的Messenger
+            serviceMessage = new Messenger(service);
+            Log.i(TAG, "连接MainService成功" + (serviceMessage != null));
+            netWorkFlag = NetWorkUtils.isNetworkAvailable(MainActivity.this) ? 1 : 0;
+            if (netWorkFlag == 0) {
+                enableReaderMode();//无网时打开读卡
+                mHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        Log.i(TAG, "无网状态");
+                        // TODO: 2018/5/8    rl.setVisibility(View.VISIBLE);//界面上显示无网提示
+                    }
+                });
+            } else {
+                Log.i(TAG, "有网");
+                setStatusBarIcon(true);
+                initSystemtime();
+            }
+            sendMainMessager(MainService.MAIN_ACTIVITY_INIT, NetWorkUtils.isNetworkAvailable(MainActivity
+                    .this));
+            initNetListen();
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+
+        }
+    };
+
+    /**
+     * 获取版本名
+     *
+     * @return
+     */
+    private String getVersionName() {
+        String verName = "";
+        try {
+            verName = this.getPackageManager().
+                    getPackageInfo(this.getPackageName(), 0).versionName;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return verName;
+    }
+/*************************************************初始化一些基本东西end********************************************/
     /**
      * 登录成功后
      *
@@ -463,47 +521,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    private void initMainService() {
-        Intent intent = new Intent(this, MainService.class);
-        bindService(intent, serviceConnection, Service.BIND_AUTO_CREATE);
-
-        // TODO: 2018/5/8 开门服务类暂时注释
-//        Intent dlIntent = new Intent(MainActivity.this, DoorLock.class);
-//        startService(dlIntent);//start方式启动锁Service
-    }
-
-    private ServiceConnection serviceConnection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            //获取Service端的Messenger
-            serviceMessage = new Messenger(service);
-            Log.i(TAG, "连接MainService成功" + (serviceMessage != null));
-            netWorkFlag = NetWorkUtils.isNetworkAvailable(MainActivity.this) ? 1 : 0;
-            if (netWorkFlag == 0) {
-                enableReaderMode();//无网时打开读卡
-                mHandler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        Log.i(TAG, "无网状态");
-                        // TODO: 2018/5/8    rl.setVisibility(View.VISIBLE);//界面上显示无网提示
-                    }
-                });
-            } else {
-                Log.i(TAG, "有网");
-                setStatusBarIcon(true);
-                initSystemtime();
-            }
-            sendMainMessager(MainService.MAIN_ACTIVITY_INIT, NetWorkUtils.isNetworkAvailable
-                    (MainActivity
-                    .this));
-            initNetListen();
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-
-        }
-    };
 
     /**
      * 每隔一秒检查一次网络是否可用
@@ -613,8 +630,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      */
     @SuppressLint("WifiManagerLeak")
     private void initNet() {
-        wifiManager = (WifiManager) MainApplication.getApplication().getSystemService
-                (WIFI_SERVICE);//获得WifiManager
+        wifiManager = (WifiManager) MainApplication.getApplication().getSystemService(WIFI_SERVICE);//获得WifiManager
         Timer timer = new Timer();
         timer.scheduleAtFixedRate(new TimerTask() {
             @Override
@@ -668,6 +684,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }, 1000, 5000);
     }
 
+    /**********************************************按键相关start***************************/
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
         if (event.getAction() == KeyEvent.ACTION_DOWN) {
@@ -675,6 +692,59 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             onKeyDown(keyCode);
         }
         return false;
+    }
+
+    private int convertKeyCode(int keyCode) {
+        int value = -1;
+        if ((keyCode == KeyEvent.KEYCODE_0)) {
+            value = 0;
+        } else if ((keyCode == KeyEvent.KEYCODE_1)) {
+            value = 1;
+        } else if ((keyCode == KeyEvent.KEYCODE_2)) {
+            value = 2;
+        } else if ((keyCode == KeyEvent.KEYCODE_3)) {
+            value = 3;
+        } else if ((keyCode == KeyEvent.KEYCODE_4)) {
+            value = 4;
+        } else if ((keyCode == KeyEvent.KEYCODE_5)) {
+            value = 5;
+        } else if ((keyCode == KeyEvent.KEYCODE_6)) {
+            value = 6;
+        } else if ((keyCode == KeyEvent.KEYCODE_7)) {
+            value = 7;
+        } else if ((keyCode == KeyEvent.KEYCODE_8)) {
+            value = 8;
+        } else if ((keyCode == KeyEvent.KEYCODE_9)) {
+            value = 9;
+        }
+        return value;
+    }
+
+    /**
+     * 强制让控件获取焦点
+     *
+     * @param view
+     */
+    private void getFocus(View view) {
+        view.setFocusable(true);//普通物理方式获取焦点
+        view.setFocusableInTouchMode(true);//触摸模式获取焦点,不是触摸屏啊
+        view.requestFocus();//要求获取焦点
+
+        boolean focusable = view.isFocusable();
+        Log.e(TAG, "获取焦点 " + focusable);
+    }
+
+    /**
+     * 强制让控件失去焦点
+     *
+     * @param view
+     */
+    private void delFocus(View view) {
+        view.setFocusable(false);//普通物理方式获取焦点
+        view.setFocusableInTouchMode(false);//触摸模式获取焦点,不是触摸屏啊
+
+        boolean focusable = view.isFocusable();
+        Log.e(TAG, "失去焦点 " + focusable);
     }
 
     private String str;//输入框内容
@@ -698,7 +768,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         }
                     } else {//输入框有值走呼叫或密码
                         if (currentStatus == CALL_MODE) {//呼叫
-                            if (DeviceConfig.DEVICE_TYPE.equals("C")) {
+                            if ("C".equals(DeviceConfig.DEVICE_TYPE)) {
                                 if (blockNo.length() == DeviceConfig.BLOCK_LENGTH) {
                                     startDialing(blockNo);
                                 } else if (blockNo.length() == DeviceConfig.MOBILE_NO_LENGTH) {//手机号
@@ -755,8 +825,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    /**********************************************按键相关end***************************/
+
+    /*********************************密码房号等输入状态相关start*******************************************/
     private void callInput(int key) {
-        if (DeviceConfig.DEVICE_TYPE.equals("C")) {
+        if ("C".equals(DeviceConfig.DEVICE_TYPE)) {
             if (blockId == 0) {
                 if (blockNo.length() < DeviceConfig.BLOCK_LENGTH) {
                     blockNo = blockNo + key;
@@ -787,7 +860,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     /**
-     * 自动呼叫
+     * 输入的房号或手机号的输入  1
      *
      * @param key
      */
@@ -821,20 +894,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     }
 
-    private void passwordInput(int key) {
-        guestPassword = guestPassword + key;
-        setTempkeyValue(guestPassword);
-        // TODO: 2018/5/4 这个判断交给确认键去做,暂时注释
-//        if (guestPassword.length() == 6) {
-//            checkPassword();
-//        }
-    }
-
-    private void passwordInput() {
-        guestPassword = backKey(guestPassword);
-        setTempkeyValue(guestPassword);
-    }
-
+    /**
+     * 房号或手机号删除最后一位
+     */
     private void callInput() {
         if (DeviceConfig.DEVICE_TYPE.equals("C")) {
             if (blockId > 0) {
@@ -857,6 +919,35 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    /**
+     * 密码输入
+     *
+     * @param key
+     */
+    private void passwordInput(int key) {
+        guestPassword = guestPassword + key;
+        setTempkeyValue(guestPassword);
+        // TODO: 2018/5/4 这个判断交给确认键去做,暂时注释
+//        if (guestPassword.length() == 6) {
+//            checkPassword();
+//        }
+    }
+
+    /**
+     * 密码 删除最后一位
+     */
+    private void passwordInput() {
+        guestPassword = backKey(guestPassword);
+        setTempkeyValue(guestPassword);
+    }
+
+
+    /**
+     * 删除最后一位
+     *
+     * @param code
+     * @return
+     */
     private String backKey(String code) {
         if (code != null && code != "") {
             int length = code.length();
@@ -927,6 +1018,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    /**
+     * 输入密码 无操作 启动自动跳转到输入房号的状态的线程
+     */
     private void startTimeoutChecking() {
         passwordTimeoutThread = new Thread() {
             public void run() {
@@ -953,147 +1047,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         passwordTimeoutThread.start();
     }
 
+    /**
+     * 输入密码 无操作 停止自动跳转到输入房号的状态的线程
+     */
     protected void stopPasswordTimeoutChecking() {
         if (passwordTimeoutThread != null) {
             passwordTimeoutThread.interrupt();
             passwordTimeoutThread = null;
         }
     }
+/*********************************密码房号等输入状态相关end*******************************************/
 
-    /**
-     * 呼叫出现错误
-     *
-     * @param reason
-     */
-
-    protected void onCallMemberError(int reason) {
-        blockNo = "";
-        setDialValue("");
-        setCurrentStatus(CALL_MODE);
-        if (reason == MSG_CALLMEMBER_ERROR) {
-            Utils.DisplayToast(MainActivity.this, "您呼叫的房间号错误或者无注册用户");
-            Log.v("MainActivity", "无用户取消呼叫");
-            clearImageUuidAvaible(lastImageUuid);
-        } else if (reason == MSG_CALLMEMBER_TIMEOUT) {
-            Utils.DisplayToast(MainActivity.this, "您呼叫的房间号无人应答");
-        } else if (reason == MSG_CALLMEMBER_SERVER_ERROR) {
-            Utils.DisplayToast(MainActivity.this, "无法从服务器获取住户信息，请联系管理处");
-        }
-//        else if (reason == MSG_CALLMEMBER_DIRECT_TIMEOUT) {
-//            Utils.DisplayToast(MainActivity.this, "您呼叫的房间直拨电话无人应答");
-//        }
-        else if (reason == MSG_CALLMEMBER_NO_ONLINE) {
-            Utils.DisplayToast(MainActivity.this, "您呼叫的房间号无人在线");
-        }
-        //启动人脸识别
-//        if (faceHandler != null) {
-//            faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_CONTRAST, 1000);
-//        }
-    }
-
-    protected void startCancelCall() {
-        new Thread() {
-            @Override
-            public void run() {
-                //  stopCallCamera();
-                try {
-                    sleep(1000);
-                } catch (Exception e) {
-                }
-                sendMainMessager(MSG_CANCEL_CALL, "");
-//                if (faceHandler != null) {
-//                    faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_CONTRAST, 1000);
-//                }
-                try {
-                    sleep(1000);
-                } catch (Exception e) {
-                }
-                toast("您已经取消拨号");
-                resetDial();
-            }
-        }.start();
-    }
-
-    private void startDialing(String blockNo) {
-        //呼叫前，确认摄像头不被占用 红软
-
-
-        Log.i(TAG, "拍摄访客照片 并进行呼叫" + blockNo);
-        setCurrentStatus(CALLING_MODE);
-        //拍摄访客照片 并进行呼叫
-        takePicture(blockNo, true, MainActivity.this);
-    }
-
-
-    private int convertKeyCode(int keyCode) {
-        int value = -1;
-        if ((keyCode == KeyEvent.KEYCODE_0)) {
-            value = 0;
-        } else if ((keyCode == KeyEvent.KEYCODE_1)) {
-            value = 1;
-        } else if ((keyCode == KeyEvent.KEYCODE_2)) {
-            value = 2;
-        } else if ((keyCode == KeyEvent.KEYCODE_3)) {
-            value = 3;
-        } else if ((keyCode == KeyEvent.KEYCODE_4)) {
-            value = 4;
-        } else if ((keyCode == KeyEvent.KEYCODE_5)) {
-            value = 5;
-        } else if ((keyCode == KeyEvent.KEYCODE_6)) {
-            value = 6;
-        } else if ((keyCode == KeyEvent.KEYCODE_7)) {
-            value = 7;
-        } else if ((keyCode == KeyEvent.KEYCODE_8)) {
-            value = 8;
-        } else if ((keyCode == KeyEvent.KEYCODE_9)) {
-            value = 9;
-        }
-        return value;
-    }
-
-    /**
-     * 强制让控件获取焦点
-     *
-     * @param view
-     */
-    private void getFocus(View view) {
-        view.setFocusable(true);//普通物理方式获取焦点
-        view.setFocusableInTouchMode(true);//触摸模式获取焦点,不是触摸屏啊
-        view.requestFocus();//要求获取焦点
-
-        boolean focusable = view.isFocusable();
-        Log.e(TAG, "获取焦点 " + focusable);
-    }
-
-    /**
-     * 强制让控件失去焦点
-     *
-     * @param view
-     */
-    private void delFocus(View view) {
-        view.setFocusable(false);//普通物理方式获取焦点
-        view.setFocusableInTouchMode(false);//触摸模式获取焦点,不是触摸屏啊
-
-        boolean focusable = view.isFocusable();
-        Log.e(TAG, "失去焦点 " + focusable);
-    }
-
-
-    /**
-     * 获取版本名
-     *
-     * @return
-     */
-    private String getVersionName() {
-        String verName = "";
-        try {
-            verName = this.getPackageManager().
-                    getPackageInfo(this.getPackageName(), 0).versionName;
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return verName;
-    }
 
     /****************************天翼rtc********************/
     public void onRtcDisconnect() {
@@ -1169,81 +1133,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     /****************************天翼rtc********************/
 
-    @Override
-    public void onClick(View view) {
-        switch (view.getId()) {//跳转网络或网络设置
-            case R.id.net_view_rl: {
-
-                break;
-            }
-            case R.id.iv_setting: {
-                initMenu();//初始化左上角弹出框
-                break;
-            }
-        }
-    }
-
-    /**
-     * 初始化左上角弹出框
-     */
-    private void initMenu() {
-        PopupMenu popup = new PopupMenu(MainActivity.this, iv_setting);
-        popup.getMenuInflater().inflate(R.menu.poupup_menu_home, popup.getMenu());
-        popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
-            @Override
-            public boolean onMenuItemClick(MenuItem item) {
-                switch (item.getItemId()) {
-                    case R.id.action_settings1:
-//                        Log.e(TAG,"menu 系統設置");
-
-                        Intent intent = new Intent(Settings.ACTION_SETTINGS);//跳轉到系統設置
-                        intent.putExtra("back", true);
-                        startActivityForResult(intent, INPUT_SYSTEMSET_REQUESTCODE);
-                        break;
-                    case R.id.action_catIP:
-                        Log.e(TAG, "menu 本机的IP");
-//                        Toast.makeText(MainActivity.this, "本机的IP：" + Intenet.getHostIP(), Toast
-//                                .LENGTH_LONG).show();
-                        break;
-                    case R.id.action_catVersion:
-                        Log.e(TAG, "menu 本机的固件版本");
-//                        Toast.makeText(MainActivity.this, "本机的固件版本：" + hwservice.getSdkVersion(),
-//                                Toast.LENGTH_LONG).show();
-                        break;
-                    case R.id.action_updateVersion:
-                        Log.e(TAG, "menu 更新");
-                        //点击，手动更新
-//                        Message message = Message.obtain();
-//                        message.what = MSG_UPDATE_VERSION;
-//                        try {
-//                            serviceMessenger.send(message);
-//                        } catch (RemoteException e) {
-//                            e.printStackTrace();
-//                        }
-                        break;
-                    case R.id.action_settings3://上传日志
-                        Log.e(TAG, "menu 上传日志");
-                        break;
-                    case R.id.action_settings7://重启
-                        Log.e(TAG, "menu 重启");
-//                        DoorLock.getInstance().runReboot();
-                        break;
-                    case R.id.action_settings10://退出
-//                        Log.e(TAG,"menu 退出");
-                        setResult(RESULT_OK);
-                        MainActivity.this.stopService(new Intent(MainActivity.this, MainService
-                                .class));
-                        finish();
-                        sendBroadcast(new Intent("com.android.action.display_navigationbar"));
-                        break;
-
-                }
-                return true;
-            }
-        });
-        popup.show();
-    }
-/****************************拍照相关************************/
+/****************************拍照相关start************************/
     /**
      * 开始启动拍照
      */
@@ -1314,8 +1204,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             outputStream.close();
                             final String url = DeviceConfig.SERVER_URL + "/app/upload/image";
                             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-mm-dd hh:mm:ss");
-                            String date = sdf.format(new java.util.Date());
-                            final String curUrl = "upload/menjin/img/" + "android_" + date ;
+                            String date = sdf.format(new Date(System.currentTimeMillis()));
+                            final String curUrl = "upload/menjin/img/" + "android_" + date;
                             if (checkTakePictureAvailable(uuid)) {
                                 new Thread() {
                                     @Override
@@ -1323,12 +1213,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                         Log.i(TAG, "开始上传照片");
                                         String s = HttpApi.getInstance().loadHttpforGet(DeviceConfig.GET_QINIUTOKEN,
                                                 "");
-                                        JSONObject jsonObject = Ajax.getJSONObject(s);
                                         String token = "";
-                                        try {
-                                            token = (String) jsonObject.get("uptoken");
-                                        } catch (JSONException e) {
-                                            e.printStackTrace();
+                                        if (s != null && !"".equals(s)) {
+                                            JSONObject jsonObject = Ajax.getJSONObject(s);
+
+                                            try {
+                                                token = (String) jsonObject.get("uptoken");
+                                            } catch (JSONException e) {
+                                                e.printStackTrace();
+                                            }
                                         }
                                         Log.e(TAG, "Token==" + token);
                                         Log.e(TAG, "file七牛储存地址：" + curUrl);
@@ -1431,8 +1324,80 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         Log.v("MainActivity", "清除UUID" + uuid);
         uuidMaps.remove(uuid);
     }
-/****************************拍照相关************************/
-/****************************呼叫相关************************/
+/****************************拍照相关end************************/
+/****************************呼叫相关start************************/
+    /**
+     * 呼叫出现错误
+     *
+     * @param reason
+     */
+
+    protected void onCallMemberError(int reason) {
+        blockNo = "";
+        setDialValue("");
+        setCurrentStatus(CALL_MODE);
+        if (reason == MSG_CALLMEMBER_ERROR) {
+            Utils.DisplayToast(MainActivity.this, "您呼叫的房间号错误或者无注册用户");
+            Log.v("MainActivity", "无用户取消呼叫");
+            clearImageUuidAvaible(lastImageUuid);
+        } else if (reason == MSG_CALLMEMBER_TIMEOUT) {
+            Utils.DisplayToast(MainActivity.this, "您呼叫的房间号无人应答");
+        } else if (reason == MSG_CALLMEMBER_SERVER_ERROR) {
+            Utils.DisplayToast(MainActivity.this, "无法从服务器获取住户信息，请联系管理处");
+        }
+//        else if (reason == MSG_CALLMEMBER_DIRECT_TIMEOUT) {
+//            Utils.DisplayToast(MainActivity.this, "您呼叫的房间直拨电话无人应答");
+//        }
+        else if (reason == MSG_CALLMEMBER_NO_ONLINE) {
+            Utils.DisplayToast(MainActivity.this, "您呼叫的房间号无人在线");
+        }
+        //启动人脸识别
+//        if (faceHandler != null) {
+//            faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_CONTRAST, 1000);
+//        }
+    }
+
+    /**
+     * 删除键取消拨号
+     */
+    protected void startCancelCall() {
+        new Thread() {
+            @Override
+            public void run() {
+                //  stopCallCamera();
+                try {
+                    sleep(1000);
+                } catch (Exception e) {
+                }
+                sendMainMessager(MSG_CANCEL_CALL, "");
+//                if (faceHandler != null) {
+//                    faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_CONTRAST, 1000);
+//                }
+                try {
+                    sleep(1000);
+                } catch (Exception e) {
+                }
+                toast("您已经取消拨号");
+                resetDial();
+            }
+        }.start();
+    }
+
+    /**
+     * 开始呼叫
+     *
+     * @param blockNo
+     */
+    private void startDialing(String blockNo) {
+        //呼叫前，确认摄像头不被占用 红软
+
+
+        Log.i(TAG, "拍摄访客照片 并进行呼叫" + blockNo);
+        setCurrentStatus(CALLING_MODE);
+        //拍摄访客照片 并进行呼叫
+        takePicture(blockNo, true, MainActivity.this);
+    }
+
     /**
      * 开始呼叫
      */
@@ -1465,6 +1430,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    /**
+     * 发送访客图片地址
+     *
+     * @param thisValue
+     * @param fileUrl
+     * @param isCall
+     * @param uuid
+     */
     protected void startSendPictureDirectly(final String thisValue, final String fileUrl, final boolean isCall,
                                             String uuid) {
         if (fileUrl == null || fileUrl.length() == 0) {
@@ -1487,10 +1460,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             er.printStackTrace();
         }
     }
-/****************************呼叫相关************************/
+/****************************呼叫相关end************************/
 
 
-    /****************************设置一些状态************************/
+    /****************************设置一些状态start************************/
     synchronized void setCurrentStatus(int status) {
         currentStatus = status;
     }
@@ -1641,7 +1614,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    /****************************设置一些状态************************/
+    /****************************设置一些状态end************************/
 
     /**
      * 开启nfc读卡模式
@@ -1747,5 +1720,82 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         }
     }
+    /****************************点击事件相关start**************************************/
+    /****************************点击事件相关start**************************************/
+
+    @Override
+    public void onClick(View view) {
+        switch (view.getId()) {//跳转网络或网络设置
+            case R.id.net_view_rl: {
+
+                break;
+            }
+            case R.id.iv_setting: {
+                initMenu();//初始化左上角弹出框
+                break;
+            }
+        }
+    }
+
+    /**
+     * 初始化左上角弹出框
+     */
+    private void initMenu() {
+        PopupMenu popup = new PopupMenu(MainActivity.this, iv_setting);
+        popup.getMenuInflater().inflate(R.menu.poupup_menu_home, popup.getMenu());
+        popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+            @Override
+            public boolean onMenuItemClick(MenuItem item) {
+                switch (item.getItemId()) {
+                    case R.id.action_settings1:
+//                        Log.e(TAG,"menu 系統設置");
+
+                        Intent intent = new Intent(Settings.ACTION_SETTINGS);//跳轉到系統設置
+                        intent.putExtra("back", true);
+                        startActivityForResult(intent, INPUT_SYSTEMSET_REQUESTCODE);
+                        break;
+                    case R.id.action_catIP:
+                        Log.e(TAG, "menu 本机的IP");
+//                        Toast.makeText(MainActivity.this, "本机的IP：" + Intenet.getHostIP(), Toast
+//                                .LENGTH_LONG).show();
+                        break;
+                    case R.id.action_catVersion:
+                        Log.e(TAG, "menu 本机的固件版本");
+//                        Toast.makeText(MainActivity.this, "本机的固件版本：" + hwservice.getSdkVersion(),
+//                                Toast.LENGTH_LONG).show();
+                        break;
+                    case R.id.action_updateVersion:
+                        Log.e(TAG, "menu 更新");
+                        //点击，手动更新
+//                        Message message = Message.obtain();
+//                        message.what = MSG_UPDATE_VERSION;
+//                        try {
+//                            serviceMessenger.send(message);
+//                        } catch (RemoteException e) {
+//                            e.printStackTrace();
+//                        }
+                        break;
+                    case R.id.action_settings3://上传日志
+                        Log.e(TAG, "menu 上传日志");
+                        break;
+                    case R.id.action_settings7://重启
+                        Log.e(TAG, "menu 重启");
+//                        DoorLock.getInstance().runReboot();
+                        break;
+                    case R.id.action_settings10://退出
+//                        Log.e(TAG,"menu 退出");
+                        setResult(RESULT_OK);
+                        MainActivity.this.stopService(new Intent(MainActivity.this, MainService.class));
+                        finish();
+                        sendBroadcast(new Intent("com.android.action.display_navigationbar"));
+                        break;
+
+                }
+                return true;
+            }
+        });
+        popup.show();
+    }
+    /****************************点击事件相关end**************************************/
 
 }
