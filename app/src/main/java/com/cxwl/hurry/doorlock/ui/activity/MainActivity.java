@@ -26,6 +26,7 @@ import android.os.Messenger;
 import android.os.RemoteException;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.SurfaceHolder;
@@ -74,21 +75,27 @@ import java.util.UUID;
 
 import jni.util.Utils;
 
+import static com.cxwl.hurry.doorlock.config.DeviceConfig.DEVICE_KEYCODE_POUND;
+import static com.cxwl.hurry.doorlock.config.DeviceConfig.DEVICE_KEYCODE_STAR;
 import static com.cxwl.hurry.doorlock.utils.Constant.CALLING_MODE;
 import static com.cxwl.hurry.doorlock.utils.Constant.CALL_MODE;
+import static com.cxwl.hurry.doorlock.utils.Constant.ERROR_MODE;
 import static com.cxwl.hurry.doorlock.utils.Constant.MSG_CALLMEMBER_ERROR;
 import static com.cxwl.hurry.doorlock.utils.Constant.MSG_CALLMEMBER_NO_ONLINE;
 import static com.cxwl.hurry.doorlock.utils.Constant.MSG_CALLMEMBER_SERVER_ERROR;
 import static com.cxwl.hurry.doorlock.utils.Constant.MSG_CALLMEMBER_TIMEOUT;
 import static com.cxwl.hurry.doorlock.utils.Constant.MSG_CANCEL_CALL;
+import static com.cxwl.hurry.doorlock.utils.Constant.MSG_DISCONNECT_VIEDO;
 import static com.cxwl.hurry.doorlock.utils.Constant.MSG_INPUT_CARDINFO;
 import static com.cxwl.hurry.doorlock.utils.Constant.MSG_LOGIN_AFTER;
+import static com.cxwl.hurry.doorlock.utils.Constant.MSG_PASSWORD_CHECK;
 import static com.cxwl.hurry.doorlock.utils.Constant.MSG_RTC_DISCONNECT;
 import static com.cxwl.hurry.doorlock.utils.Constant.MSG_RTC_NEWCALL;
 import static com.cxwl.hurry.doorlock.utils.Constant.MSG_RTC_ONVIDEO;
 import static com.cxwl.hurry.doorlock.utils.Constant.MSG_RTC_REGISTER;
 import static com.cxwl.hurry.doorlock.utils.Constant.ONVIDEO_MODE;
 import static com.cxwl.hurry.doorlock.utils.Constant.PASSWORD_CHECKING_MODE;
+import static com.cxwl.hurry.doorlock.utils.Constant.PASSWORD_MODE;
 import static com.cxwl.hurry.doorlock.utils.NetWorkUtils.NETWOKR_TYPE_ETHERNET;
 import static com.cxwl.hurry.doorlock.utils.NetWorkUtils.NETWOKR_TYPE_MOBILE;
 import static com.cxwl.hurry.doorlock.utils.NetWorkUtils.NETWORK_TYPE_NONE;
@@ -99,8 +106,8 @@ import static com.cxwl.hurry.doorlock.utils.NfcReader.ACTION_NFC_CARDINFO;
  * MainActivity
  * Created by William on 2018/4/26
  */
-public class MainActivity extends AppCompatActivity implements View.OnClickListener,
-        TakePictureCallback, NfcReader.AccountCallback, NfcAdapter.ReaderCallback {
+public class MainActivity extends AppCompatActivity implements View.OnClickListener, TakePictureCallback, NfcReader
+        .AccountCallback, NfcAdapter.ReaderCallback {
 
     private static String TAG = "MainActivity";
     public static final int MSG_RTC_ONVIDEO_IN = 10011;//接收到视频呼叫
@@ -126,6 +133,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private SurfaceView localView = null;//rtc本地摄像头view
     private SurfaceView remoteView = null;//rtc远端视频view
     private String blockNo = "";//输入的房号
+    private int blockId;//输入的房号
     private HashMap<String, String> uuidMaps = new HashMap<String, String>();//储存uuid
     private String lastImageUuid = ""; //与拍照图片相对应
 
@@ -149,6 +157,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private UploadManager uploadManager;//七牛上传
 
+    private Thread passwordTimeoutThread = null;//访客密码线程
+    private String guestPassword = "";//访客输入的密码值
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         // TODO: 2018/5/8  此处hwservice实例化没以MainActivity继承AndroidExActivityBase实现
@@ -157,26 +168,25 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         //全屏设置，隐藏窗口所有装饰
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN);//清除FLAG
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager
-                .LayoutParams.FLAG_FULLSCREEN);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
         {
             ActionBar ab = getActionBar();
-            if (ab != null) ab.setDisplayHomeAsUpEnabled(true);//左上角显示应用程序图标
+            if (ab != null) {
+                ab.setDisplayHomeAsUpEnabled(true);//左上角显示应用程序图标
+            }
         }
         setContentView(R.layout.activity_main);
         hwservice.EnterFullScreen();//hwservice为appLibs的服务
 
         initView();//初始化View
-        initQiniu();
+        initQiniu();//初始化七牛
         initScreen();
         initHandle();
         initAexNfcReader();//初始化nfc本地广播
         initMainService();
         initVoiceVolume();//初始化音量设置
         initAutoCamera();
-
-
         initNet();
 
     }
@@ -202,10 +212,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         AudioManager audioManager = (AudioManager) getSystemService(this.AUDIO_SERVICE);
         initVoiceVolume(audioManager, AudioManager.STREAM_MUSIC, DeviceConfig.VOLUME_STREAM_MUSIC);
         initVoiceVolume(audioManager, AudioManager.STREAM_RING, DeviceConfig.VOLUME_STREAM_RING);
-        initVoiceVolume(audioManager, AudioManager.STREAM_SYSTEM, DeviceConfig
-                .VOLUME_STREAM_SYSTEM);
-        initVoiceVolume(audioManager, AudioManager.STREAM_VOICE_CALL, DeviceConfig
-                .VOLUME_STREAM_VOICE_CALL);
+        initVoiceVolume(audioManager, AudioManager.STREAM_SYSTEM, DeviceConfig.VOLUME_STREAM_SYSTEM);
+        initVoiceVolume(audioManager, AudioManager.STREAM_VOICE_CALL, DeviceConfig.VOLUME_STREAM_VOICE_CALL);
     }
 
     /**
@@ -357,6 +365,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         String obj = (String) msg.obj;
                         tv_message.setText(obj);
                         break;
+                    case MSG_PASSWORD_CHECK:
+                        Log.i(TAG, "服务器验证密码后的返回");
+                        onPasswordCheck((Integer) msg.obj);
+                        break;
                     default:
                         break;
                 }
@@ -368,6 +380,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     /**
      * 登录成功后
+     *
      * @param msg
      */
     private void onLoginAfter(Message msg) {
@@ -477,7 +490,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     });
                 }
             }
-        }, 500, 1000*10);
+        }, 500, 1000 * 10);
     }
 
     /**
@@ -551,7 +564,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      */
     @SuppressLint("WifiManagerLeak")
     private void initNet() {
-        wifiManager  =(WifiManager) MainApplication.getApplication().getSystemService(WIFI_SERVICE);//获得WifiManager
+        wifiManager = (WifiManager) MainApplication.getApplication().getSystemService(WIFI_SERVICE);//获得WifiManager
         Timer timer = new Timer();
         timer.scheduleAtFixedRate(new TimerTask() {
             @Override
@@ -612,37 +625,286 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         return false;
     }
 
+    private String str;//输入框内容
+
     private void onKeyDown(int keyCode) {
-        int key = convertKeyCode(keyCode);
-        if (key >= 0 && key != 10 && key != 11) {
-            //数字键
-            if (currentStatus == CALL_MODE) {
-                input(key);
+        Log.i(TAG, "默认按键key=" + keyCode);
+        if (nfcFlag) {
+            //  inputCardInfo(keyCode);//录入卡片信息
+        } else {
+            int key = convertKeyCode(keyCode);
+            Log.i(TAG, "按键key=" + key + "模式currentStatus" + currentStatus);
+            if (currentStatus == CALL_MODE || currentStatus == PASSWORD_MODE) {//处于呼叫模式或密码模式
+                // TODO: 2018/5/4 这里的判断得改成输入框是否有值,有值确认键走呼叫或密码,没值走切换模式
+                str = tv_input_text.getText().toString();
+                if (keyCode == DEVICE_KEYCODE_POUND) {//确认键
+                    if ("".equals(str)) {//输入框没值走切换模式
+                        if (currentStatus == CALL_MODE) {//呼叫模式下，按确认键切换成密码模式
+                            initPasswordStatus();
+                        } else {
+                            initDialStatus();
+                        }
+                    } else {//输入框有值走呼叫或密码
+                        if (currentStatus == CALL_MODE) {//呼叫
+                            if (DeviceConfig.DEVICE_TYPE.equals("C")) {
+                                if (blockNo.length() == DeviceConfig.BLOCK_LENGTH) {
+                                    startDialing(blockNo);
+                                } else if (blockNo.length() == DeviceConfig.MOBILE_NO_LENGTH) {//手机号
+                                    if (true) {//正则判断
+                                        startDialing(blockNo);
+                                    }
+                                }
+                            } else {
+                                if (blockNo.length() == DeviceConfig.UNIT_NO_LENGTH) {
+                                    startDialing(blockNo);
+                                } else if (blockNo.length() == DeviceConfig.MOBILE_NO_LENGTH) {//手机号
+                                    if (true) {//正则判断
+                                        startDialing(blockNo);
+                                    }
+                                }
+                            }
+                        } else {//密码开门
+                            if (guestPassword.length() == 6) {
+                                checkPassword();
+                            }
+                        }
+                    }
+                } else if (keyCode == DEVICE_KEYCODE_STAR) {//删除键
+                    if (currentStatus == CALL_MODE) {
+                        callInput();//房号或手机号删除一位
+                    } else {
+                        passwordInput();//密码删除一位
+                    }
+                    if (str == null || str.equals("")) {
+                        //跳转到登录界面
+//                        Intent intent = new Intent(this, InputCardInfoActivity.class);
+//                        startActivityForResult(intent, INPUT_CARDINFO_REQUESTCODE);
+                    }
+                } else if (key >= 0) {//数字键
+                    if (currentStatus == CALL_MODE) {
+                        callInput(key);
+                    } else {
+                        passwordInput(key);//密码开门
+                    }
+                }
+            } else if (currentStatus == ERROR_MODE) {
+                Utils.DisplayToast(MainActivity.this, "当前网络异常");
+            } else if (currentStatus == CALLING_MODE) {//处于正在呼叫模式
+                Log.v(TAG, "onKeyDown-->111");
+                if (keyCode == KeyEvent.KEYCODE_STAR || keyCode == DEVICE_KEYCODE_STAR) {
+                    Log.v(TAG, "onKeyDown-->222");
+                    startCancelCall();//取消呼叫
+                }
+            } else if (currentStatus == ONVIDEO_MODE) {
+                if (keyCode == KeyEvent.KEYCODE_STAR || keyCode == DEVICE_KEYCODE_STAR) {
+                    sendMainMessager(MSG_DISCONNECT_VIEDO, "");
+                }
             }
-        } else if (key == 10) {
-            //确定键
-            if (blockNo.length() == 0) {
-                //表示输入密码访问
-                toast("输入密码");
-            } else if (blockNo.length() == 4) {
-                //长度等于4并且按下确定键 表示呼叫房号
-                startDialing(blockNo);
-                toast("开始进行呼叫房号");
-            } else if (blockNo.length() == 11) {
-                //长度等于11并且按下确定键 表示呼叫手机号
-                toast("开始进行呼叫手机号");
+        }
+    }
+
+    private void callInput(int key) {
+        if (DeviceConfig.DEVICE_TYPE.equals("C")) {
+            if (blockId == 0) {
+                if (blockNo.length() < DeviceConfig.BLOCK_LENGTH) {
+                    blockNo = blockNo + key;
+                    setDialValue(blockNo);
+                    Log.i(TAG, "输入的楼栋编号长度不为6 blockNo" + blockNo);
+                    Log.e("blockNo", "1===" + blockNo);
+                }
+                if (blockNo.length() == DeviceConfig.BLOCK_NO_LENGTH) {
+                    // TODO: 2018/5/9  检查楼栋 
+//                    setDialValue(blockNo);
+//                    Message message = Message.obtain();
+//                    message.what = MainService.MSG_CHECK_BLOCKNO;
+//                    message.obj = blockNo;
+//                    Log.i(TAG, "输入的楼栋编号满足长度为6 blockNo=" + blockNo);
+//                    Log.e("blockNo", "2===" + blockNo);
+//                    try {
+//                        serviceMessenger.send(message);
+//                    } catch (RemoteException e) {
+//                        e.printStackTrace();
+//                    }
+                }
             } else {
-                toast("此房号或电话号码不存在");
+                unitNoInput(key);
             }
-        } else if (key == 11) {
-            //删除键
-            if (currentStatus == CALLING_MODE) {
-                startCancelCall();
+        } else {
+            unitNoInput(key);
+        }
+    }
+
+    /**
+     * 自动呼叫
+     *
+     * @param key
+     */
+    private void unitNoInput(int key) {
+        blockNo = blockNo + key;
+        setDialValue(blockNo);
+        // TODO: 2018/5/4 这个判断交给确认键去做,暂时注释
+//        if (DeviceConfig.DEVICE_TYPE.equals("C")) {
+//            if (blockNo.length() == DeviceConfig.BLOCK_LENGTH) {
+//                startDialing(blockNo);
+//            }
+//        } else {
+//            if (blockNo.length() == DeviceConfig.UNIT_NO_LENGTH) {
+//                startDialing(blockNo);
+//            }
+//        }
+
+
+//         TODO: 2018/5/3 暂时注释 测试呼叫手机号
+//        if (DeviceConfig.DEVICE_TYPE.equals("C")) {
+//            if (blockNo.length() == DeviceConfig.BLOCK_LENGTH) {
+//                startDialing(blockNo);
+//            }
+//        } else {
+//            if (blockNo.equals("0101") || blockNo.equals("9999")) {
+//                startDialing(blockNo);
+//            } else if (blockNo.length() == 11) {
+//                startDialing(blockNo);
+//            }
+//        }
+
+    }
+
+    private void passwordInput(int key) {
+        guestPassword = guestPassword + key;
+        setTempkeyValue(guestPassword);
+        // TODO: 2018/5/4 这个判断交给确认键去做,暂时注释
+//        if (guestPassword.length() == 6) {
+//            checkPassword();
+//        }
+    }
+
+    private void passwordInput() {
+        guestPassword = backKey(guestPassword);
+        setTempkeyValue(guestPassword);
+    }
+
+    private void callInput() {
+        if (DeviceConfig.DEVICE_TYPE.equals("C")) {
+            if (blockId > 0) {
+                if (blockNo.equals("")) {
+                    blockId = 0;
+                    blockNo = backKey(blockNo);
+                    setDialStatus("请输入楼栋编号");
+                    setDialValue(blockNo);
+                } else {
+                    blockNo = backKey(blockNo);
+                    setDialValue(blockNo);
+                }
+            } else {
+                blockNo = backKey(blockNo);
+                setDialValue(blockNo);
             }
-            if (blockNo.length() > 0) {
-                //删除当前一个数字
-                delInput();
+        } else {
+            blockNo = backKey(blockNo);
+            setDialValue(blockNo);
+        }
+    }
+
+    private String backKey(String code) {
+        if (code != null && code != "") {
+            int length = code.length();
+            if (length == 1) {
+                code = "";
+            } else {
+                code = code.substring(0, (length - 1));
             }
+        }
+        return code;
+    }
+
+    private void checkPassword() {
+        setCurrentStatus(PASSWORD_CHECKING_MODE);
+        String thisPassword = guestPassword;
+        guestPassword = "";
+        takePicture(thisPassword, false, this);
+    }
+
+    /**
+     * 桌面显示呼叫模式
+     */
+
+    private void initDialStatus() {
+        videoLayout.setVisibility(View.INVISIBLE);
+        setCurrentStatus(CALL_MODE);
+        blockNo = "";
+        blockId = 0;
+        if (DeviceConfig.DEVICE_TYPE.equals("C")) {
+            setDialStatus("请输入楼栋编号");
+        } else {
+            setDialStatus("请输入房屋编号");
+        }
+        setDialValue(blockNo);
+    }
+
+    /**
+     * 界面显示输入密码模式
+     */
+    private void initPasswordStatus() {
+        stopPasswordTimeoutChecking();
+        setDialStatus("请输入访客密码");
+        videoLayout.setVisibility(View.INVISIBLE);
+        setCurrentStatus(PASSWORD_MODE);
+        guestPassword = "";
+        setTempkeyValue(guestPassword);
+        startTimeoutChecking();
+    }
+
+    /**
+     * 密码验证后 是否成功等
+     *
+     * @param code
+     */
+    private void onPasswordCheck(int code) {
+        setCurrentStatus(PASSWORD_MODE);
+        setTempkeyValue("");
+        if (code == 0) {
+            Utils.DisplayToast(MainActivity.this, "您输入的密码验证成功");
+        } else {
+            if (code == 1) {
+                Utils.DisplayToast(MainActivity.this, "您输入的密码不存在");
+            } else if (code == 2) {
+                Utils.DisplayToast(MainActivity.this, "您输入的密码已经过期");
+            } else if (code < 0) {
+                Utils.DisplayToast(MainActivity.this, "密码验证不成功，请联系管理员");
+            }
+        }
+    }
+
+    private void startTimeoutChecking() {
+        passwordTimeoutThread = new Thread() {
+            public void run() {
+                try {
+                    sleep(DeviceConfig.PASSWORD_WAIT_TIME); //等待指定的一个等待时间
+                    if (!isInterrupted()) { //检查线程没有被停止
+                        if (currentStatus == PASSWORD_MODE) { //如果现在是密码输入状态
+                            if (TextUtils.isEmpty(guestPassword)) { //如果密码一直是空白的
+                                handler.post(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        initDialStatus();
+                                    }
+                                });
+                                stopPasswordTimeoutChecking();
+                            }
+                        }
+                    }
+                } catch (InterruptedException e) {
+                }
+                passwordTimeoutThread = null;
+            }
+        };
+        passwordTimeoutThread.start();
+    }
+
+    protected void stopPasswordTimeoutChecking() {
+        if (passwordTimeoutThread != null) {
+            passwordTimeoutThread.interrupt();
+            passwordTimeoutThread = null;
         }
     }
 
@@ -667,9 +929,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
 //        else if (reason == MSG_CALLMEMBER_DIRECT_TIMEOUT) {
 //            Utils.DisplayToast(MainActivity.this, "您呼叫的房间直拨电话无人应答");
-//        }else if (reason == MSG_CALLMEMBER_NO_ONLINE) {
-//            Utils.DisplayToast(MainActivity.this, "您呼叫的房间号无人在线");
 //        }
+        else if (reason == MSG_CALLMEMBER_NO_ONLINE) {
+            Utils.DisplayToast(MainActivity.this, "您呼叫的房间号无人在线");
+        }
         //启动人脸识别
 //        if (faceHandler != null) {
 //            faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_CONTRAST, 1000);
@@ -709,17 +972,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         takePicture(blockNo, true, MainActivity.this);
     }
 
-    private void input(int key) {
-        blockNo = blockNo + key;
-        Log.i(TAG, "input  blockNo=" + blockNo);
-        setDialValue(blockNo);
-    }
-
-    private void delInput() {
-        Log.i(TAG, "delInput  blockNo=" + blockNo);
-        blockNo = blockNo.substring(0, blockNo.length() - 1);
-        setDialValue(blockNo);
-    }
 
     private int convertKeyCode(int keyCode) {
         int value = -1;
@@ -743,84 +995,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             value = 8;
         } else if ((keyCode == KeyEvent.KEYCODE_9)) {
             value = 9;
-        } else if (keyCode == 66) {
-            value = 10;//确定键
-        } else if (keyCode == 67) {
-            value = 11;//删除键
         }
         return value;
     }
-
-    //    @Override
-//    public boolean onKeyDown(int keyCode, KeyEvent event) {
-//        if (keyCode == KeyEvent.KEYCODE_0) {
-//
-//            Log.e(TAG, "keyCode" + "0");
-//            return false;
-//        } else if (keyCode == KeyEvent.KEYCODE_1) {
-//            Log.e(TAG, "keyCode" + "1");
-//
-//            return false;
-//        } else if (keyCode == KeyEvent.KEYCODE_2) {
-//            Log.e(TAG, "keyCode" + "2");
-//            return false;
-//        } else if (keyCode == KeyEvent.KEYCODE_3) {
-//            Log.e(TAG, "keyCode" + "3");
-//            return false;
-//        } else if (keyCode == KeyEvent.KEYCODE_4) {
-//            Log.e(TAG, "keyCode" + "4");
-//            return false;
-//        } else if (keyCode == KeyEvent.KEYCODE_5) {
-//            Log.e(TAG, "keyCode" + "5");
-//            return false;
-//        } else if (keyCode == KeyEvent.KEYCODE_6) {
-//            Log.e(TAG, "keyCode" + "6");
-//            return false;
-//        } else if (keyCode == KeyEvent.KEYCODE_7) {
-//            Log.e(TAG, "keyCode" + "7");
-//            return false;
-//        } else if (keyCode == KeyEvent.KEYCODE_8) {
-//            Log.e(TAG, "keyCode" + "8");
-//        } else if (keyCode == KeyEvent.KEYCODE_9) {
-//            Log.e(TAG, "keyCode" + "9");
-//            return false;
-//        } else if (keyCode == KeyEvent.KEYCODE_A) {
-//            Log.e(TAG, "keyCode " + "A" + "管理处");
-//            startNewActivity(this, HurryDemoActivity.class, null);
-//            return false;
-//        } else if (keyCode == KeyEvent.KEYCODE_B) {
-//            Log.e(TAG, "keyCode " + "B" + "拨号");
-//            return false;
-//        } else if (keyCode == KeyEvent.KEYCODE_C) {
-//            Log.e(TAG, "keyCode " + "C" + "帮助");
-//            return false;
-//        } else if (keyCode == KeyEvent.KEYCODE_D) {
-//            Log.e(TAG, "keyCode " + "D" + "返回");
-//            return false;
-//        } else if (keyCode == KeyEvent.KEYCODE_DEL) {
-//            Log.e(TAG, "keyCode " + "*");
-//            return false;
-//        } else if (keyCode == KeyEvent.KEYCODE_STAR) {
-//            Log.e(TAG, "keyCode" + "*");
-//            return false;
-//        } else if (keyCode == KeyEvent.KEYCODE_POUND) {
-//            Log.e(TAG, "keyCode" + "");
-//            return false;
-//        } else if (keyCode == KeyEvent.KEYCODE_F4) {
-//            Log.e(TAG, "keyCode" + "️➡️");
-//            return false;
-//        } else if (keyCode == KeyEvent.KEYCODE_F3) {
-//            Log.e(TAG, "keyCode" + "⬅️️");
-//            return false;
-//        } else if (keyCode == KeyEvent.KEYCODE_F2) {
-//            Log.e(TAG, "keyCode" + "管理处");
-//            return false;
-//        } else if (keyCode == KeyEvent.KEYCODE_F1) {
-//            Log.e(TAG, "keyCode" + "帮助");
-//            return false;
-//        }
-//        return super.onKeyDown(keyCode, event);
-//    }
 
     /**
      * 强制让控件获取焦点
@@ -849,14 +1026,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         Log.e(TAG, "失去焦点 " + focusable);
     }
 
-    private void startNewActivity(Context context, Class<?> clz, Bundle bundle) {
-        Intent intent = new Intent();
-        intent.setClass(context, clz);
-        if (bundle != null) {
-            intent.putExtras(bundle);
-        }
-        context.startActivity(intent);
-    }
 
     /**
      * 获取版本名
@@ -922,8 +1091,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
         //创建远端view
         if (MainService.callConnection != null) {
-            remoteView = (SurfaceView) MainService.callConnection.createVideoView(false, this,
-                    true);
+            remoteView = (SurfaceView) MainService.callConnection.createVideoView(false, this, true);
         }
         if (remoteView != null) {
             remoteView.setVisibility(View.INVISIBLE);
@@ -966,8 +1134,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     /**
      * 开始启动拍照
      */
-    protected void takePicture(final String thisValue, final boolean isCall, final
-    TakePictureCallback callback) {
+    protected void takePicture(final String thisValue, final boolean isCall, final TakePictureCallback callback) {
         if (currentStatus == CALLING_MODE || currentStatus == PASSWORD_CHECKING_MODE) {
             final String uuid = getUUID(); //随机生成UUID
             lastImageUuid = uuid;
@@ -1035,7 +1202,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             final String url = DeviceConfig.SERVER_URL + "/app/upload/image";
                             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-mm-dd hh:mm:ss");
                             String date = sdf.format(new java.util.Date());
-                            final String curUrl = "upload/menjin/img/" + "android_" + date ;
+                            final String curUrl = "upload/menjin/img/" + "android_" + date;
                             if (checkTakePictureAvailable(uuid)) {
                                 new Thread() {
                                     @Override
@@ -1051,9 +1218,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                             e.printStackTrace();
                                         }
                                         Log.e(TAG, "Token==" + token);
-                                        Log.e(TAG, "file七牛储存地址："+curUrl);
-                                        Log.e(TAG, "file本地地址："+file.getPath()+"file大小"+file.length());
-                                        uploadManager.put(file.getPath(), curUrl, null, new UpCompletionHandler() {
+                                        Log.e(TAG, "file七牛储存地址：" + curUrl);
+                                        Log.e(TAG, "file本地地址：" + file.getPath() + "file大小" + file.length());
+                                        uploadManager.put(file.getPath(), curUrl, "", new UpCompletionHandler() {
                                             @Override
                                             public void complete(String key, ResponseInfo info, JSONObject response) {
                                                 //   Log.i(TAG,"qiniu"+key + ",\r\n " + info.toString()+ ",\r\n " +

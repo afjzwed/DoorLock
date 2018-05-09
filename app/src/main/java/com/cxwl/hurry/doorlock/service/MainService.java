@@ -25,6 +25,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.Iterator;
@@ -51,8 +52,10 @@ import static com.cxwl.hurry.doorlock.utils.Constant.MSG_CALLMEMBER_NO_ONLINE;
 import static com.cxwl.hurry.doorlock.utils.Constant.MSG_CALLMEMBER_SERVER_ERROR;
 import static com.cxwl.hurry.doorlock.utils.Constant.MSG_CALLMEMBER_TIMEOUT;
 import static com.cxwl.hurry.doorlock.utils.Constant.MSG_CANCEL_CALL;
+import static com.cxwl.hurry.doorlock.utils.Constant.MSG_GUEST_PASSWORD_CHECK;
 import static com.cxwl.hurry.doorlock.utils.Constant.MSG_LOGIN;
 import static com.cxwl.hurry.doorlock.utils.Constant.MSG_LOGIN_AFTER;
+import static com.cxwl.hurry.doorlock.utils.Constant.MSG_PASSWORD_CHECK;
 import static com.cxwl.hurry.doorlock.utils.Constant.MSG_RTC_DISCONNECT;
 import static com.cxwl.hurry.doorlock.utils.Constant.MSG_RTC_NEWCALL;
 import static com.cxwl.hurry.doorlock.utils.Constant.MSG_RTC_ONVIDEO;
@@ -119,6 +122,7 @@ public class MainService extends Service {
     Thread connectReportThread = null;//心跳包线程
 
     private boolean netWorkstate = false;
+    public String tempKey = "";
 
     @Override
     public void onCreate() {
@@ -180,13 +184,22 @@ public class MainService extends Service {
                         String[] parameters1 = (String[]) msg.obj;
                         if (parameters1[2].equals(imageUuid)) {
                             imageUrl = parameters1[1];
-                            Log.i(TAG, "访客图片地址"+imageUrl);
+                            Log.i(TAG, "访客图片地址" + imageUrl);
                             sendCallAppendImage();
                         }
                         break;
                     case MSG_CHECK_PASSWORD:
+                        Log.i(TAG, "开始检查密码");
+                        String[] parameters2 = (String[]) msg.obj;
+                        tempKey = parameters2[0];
+                        imageUrl = parameters2[1];
+                        imageUuid = parameters2[2];
+                        startCheckGuestPassword();
                         break;
-
+                    case MSG_GUEST_PASSWORD_CHECK:
+                        Log.i(TAG, "获取获取到服务器返回的密码");
+                        onCheckGuestPassword(msg.obj == null ? null : (JSONObject) msg.obj);
+                        break;
                     case MSG_CHECK_PASSWORD_PICTURE:
                         break;
                     case MSG_CARD_INCOME: {
@@ -217,7 +230,7 @@ public class MainService extends Service {
         serviceMessage = new Messenger(mHandler);
     }
 
-    private  void initConnectReport() {
+    private void initConnectReport() {
         //xiaozd add
         if (connectReportThread != null) {
             connectReportThread.interrupt();
@@ -237,6 +250,72 @@ public class MainService extends Service {
             }
         };
         connectReportThread.start();
+    }
+
+    /**
+     * 开启检查密码线程
+     */
+    private void startCheckGuestPassword() {
+        new Thread() {
+            public void run() {
+                checkGuestPassword();
+            }
+        }.start();
+    }
+
+    /**
+     * 验证密码
+     */
+    private void checkGuestPassword() {
+        try {
+            String url = DeviceConfig.SERVER_URL + "/app/device/openDoorByTempKey?from=";
+            url = url + this.key;
+            url = url + "&communityId=" + communityId;
+            url = url + "&blockId=" + this.blockId;
+            url = url + "&tempKey=" + this.tempKey;
+            if (imageUuid != null) {
+                url = url + "&imageUuid=" + URLEncoder.encode(this.imageUuid, "UTF-8");
+            }
+            if (imageUrl != null) {
+                url = url + "&imageUrl=" + URLEncoder.encode(this.imageUrl, "UTF-8");
+            }
+            try {
+                String result = HttpApi.getInstance().loadHttpforGet(url, httpServerToken);
+                if (result != null) {
+                    HttpApi.i("checkGuestPassword()->" + result);
+                    Message message = mHandler.obtainMessage();
+                    message.what = MSG_GUEST_PASSWORD_CHECK;
+                    message.obj = Ajax.getJSONObject(result);
+                    mHandler.sendMessage(message);
+                } else {
+                    HttpApi.i("checkGuestPassword()->服务器异常");
+                }
+            } catch (Exception e) {
+                Message message = mHandler.obtainMessage();
+                message.what = MSG_GUEST_PASSWORD_CHECK;
+                mHandler.sendMessage(message);
+                e.printStackTrace();
+            }
+        } catch (Exception e) {
+        }
+    }
+
+    private void onCheckGuestPassword(JSONObject result) {
+        try {
+            int code = 0;
+            if (result != null) {
+                code = result.getInt("code");
+                if (code == 0) {
+                    Log.e(TAG, "-----------------密码开门成功  开门开门------------------");
+                }
+            } else {
+                code = -1;
+                Log.e(TAG, "--------------------密码开门失败  --------------------");
+            }
+            sendMessageToMainAcitivity(MSG_PASSWORD_CHECK,code);
+
+        } catch (JSONException e) {
+        }
     }
 
     /**
