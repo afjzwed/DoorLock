@@ -1,13 +1,13 @@
 package com.cxwl.hurry.doorlock.config;
 
-import android.view.KeyEvent;
 
 /**
  * Created by simon on 2016/7/23.
  */
 public class DeviceConfig {
     /********residential*****/
-    public static final String SERVER_URL = "http://192.168.8.146:80";
+    public static final String SERVER_URL = "http://192.168.8.142:8084";
+    public static final String XINTIAO_URL = "/xdoor/device/connectReport";
 
     public static final String GET_QINIUTOKEN = "http://wy.iot.xin/qiniu/qiniu_getQiniuToken.action";
     //   public static final String SERVER_URL = "http://www.lockaxial.com";
@@ -35,7 +35,7 @@ public class DeviceConfig {
     public static int BLOCK_LENGTH = 6;//楼栋房屋号长度
 
 
-    public static final int DEVICE_KEYCODE_POUND = 66;//确认键
-    public static final int DEVICE_KEYCODE_STAR = 67;//删除键
+    public static final int DEVICE_KEYCODE_POUND = 30;//确认键
+    public static final int DEVICE_KEYCODE_STAR = 32;//删除键
     /*******************************/
 }

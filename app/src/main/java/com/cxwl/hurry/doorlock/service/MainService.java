@@ -15,6 +15,7 @@ import android.util.Log;
 import com.cxwl.hurry.doorlock.config.DeviceConfig;
 import com.cxwl.hurry.doorlock.db.Ka;
 import com.cxwl.hurry.doorlock.entity.DoorBean;
+import com.cxwl.hurry.doorlock.entity.XdoorBean;
 import com.cxwl.hurry.doorlock.http.API;
 import com.cxwl.hurry.doorlock.utils.Ajax;
 import com.cxwl.hurry.doorlock.utils.DbUtils;
@@ -22,6 +23,8 @@ import com.cxwl.hurry.doorlock.utils.HttpApi;
 import com.cxwl.hurry.doorlock.utils.HttpUtils;
 import com.cxwl.hurry.doorlock.utils.JsonUtil;
 import com.cxwl.hurry.doorlock.utils.MacUtils;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -30,9 +33,11 @@ import org.json.JSONObject;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import jni.http.HttpManager;
 import jni.http.HttpResult;
@@ -48,6 +53,7 @@ import rtc.sdk.iface.Device;
 import rtc.sdk.iface.DeviceListener;
 import rtc.sdk.iface.RtcClient;
 
+import static com.cxwl.hurry.doorlock.config.DeviceConfig.XINTIAO_URL;
 import static com.cxwl.hurry.doorlock.utils.Constant.CALL_VIDEO_CONNECTING;
 import static com.cxwl.hurry.doorlock.utils.Constant.CALL_WAITING;
 import static com.cxwl.hurry.doorlock.utils.Constant.MSG_CALLMEMBER_ERROR;
@@ -136,7 +142,6 @@ public class MainService extends Service {
         initDB();
         initMacKey();
 
-
     }
 
     /**
@@ -183,7 +188,7 @@ public class MainService extends Service {
                         startCallMember();
                         break;
                     case MSG_START_DIAL_PICTURE:
-                        Log.i(TAG, "开始发送呼叫访客图片地址");
+                        Log.i(TAG, "开始发送呼叫访客呼叫图片地址");
                         String[] parameters1 = (String[]) msg.obj;
                         if (parameters1[2].equals(imageUuid)) {
                             imageUrl = parameters1[1];
@@ -204,6 +209,12 @@ public class MainService extends Service {
                         onCheckGuestPassword(msg.obj == null ? null : (JSONObject) msg.obj);
                         break;
                     case MSG_CHECK_PASSWORD_PICTURE:
+                        Log.i(TAG, "开始发送访客密码图片地址到服务器");
+                        String[] parameters3 = (String[]) msg.obj;
+                        tempKey = parameters3[0];
+                        imageUrl = parameters3[1];
+                        imageUuid = parameters3[2];
+                        startCheckGuestPasswordAppendImage();
                         break;
                     case MSG_CARD_INCOME: {
                         // TODO: 2018/5/8 下面的方法中进行卡信息处理（判定及开门等）  onCardIncome((String) msg.obj);
@@ -234,6 +245,7 @@ public class MainService extends Service {
     }
 
     private void initConnectReport() {
+        //xiaozd add
         if (connectReportThread != null) {
             connectReportThread.interrupt();
             connectReportThread = null;
@@ -254,6 +266,44 @@ public class MainService extends Service {
         connectReportThread.start();
     }
 
+    private void startCheckGuestPasswordAppendImage() {
+        new Thread() {
+            public void run() {
+                checkGuestPasswordAppendImage();
+            }
+        }.start();
+    }
+
+    /**
+     * 验证密码是上传图片
+     */
+    private void checkGuestPasswordAppendImage() {
+        try {
+            String url = DeviceConfig.SERVER_URL + "/app/device/appendImage?";
+            if (imageUuid != null) {
+                url = url + "imageUuid=" + URLEncoder.encode(this.imageUuid, "UTF-8");
+            } else {
+                return;
+            }
+            if (imageUrl != null) {
+                url = url + "&imageUrl=" + URLEncoder.encode(this.imageUrl, "UTF-8");
+            } else {
+                return;
+            }
+            try {
+                String result = HttpApi.getInstance().loadHttpforGet(url, httpServerToken);
+                if (result != null) {
+                    HttpApi.i("checkGuestPasswordAppendImage()->" + result);
+                } else {
+                    HttpApi.i("checkGuestPasswordAppendImage()->服务器异常");
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        } catch (Exception e) {
+        }
+    }
+
     /**
      * 开启检查密码线程
      */
@@ -269,6 +319,22 @@ public class MainService extends Service {
      * 验证密码
      */
     private void checkGuestPassword() {
+        /**
+         * 访客使用临时密码开门验证：服务器检查锁门禁发来的临时密码，是否与之前颁发的密码一致，一致开门，不一致呵呵，并记录本次日志。
+
+         请求路径：xdoor/device/openDoorByTempKey
+         请求参数：String mac 地址，Integer xiangmu_id 项目ID，loudong_id楼栋ID，
+         String temp_key 临时密码
+         返回示例：
+         {
+         code:”0”,
+         msg:””,
+         data:”{
+         …
+         }”
+         }
+
+         */
         try {
             String url = DeviceConfig.SERVER_URL + "/app/device/openDoorByTempKey?from=";
             url = url + this.key;
@@ -314,22 +380,37 @@ public class MainService extends Service {
                 code = -1;
                 Log.e(TAG, "--------------------密码开门失败  --------------------");
             }
-            sendMessageToMainAcitivity(MSG_PASSWORD_CHECK,code);
+            sendMessageToMainAcitivity(MSG_PASSWORD_CHECK, code);
 
         } catch (JSONException e) {
         }
     }
 
-    int i  = 0;
+    int i = 0;
+
     /**
      * 心跳接口
      */
     private void connectReport() {
-        i++;
-        Log.e(TAG, "心跳执行" + i + "次");
+//        Log.e(TAG, "心跳执行" + i + "次");
+        /**
+         * 锁门禁向服务器发送的心跳包：每间隔一段时间发送一次（间隔时间由服务器返回,默认1分钟），服务器接到心跳包后，返回心跳发送间隔(s) ,服务器时间()
+         * ，卡最后更新时间（版本），广告最后更新时间（版本），人脸最后更新时间（版本），通告最后更新时间（版本）,离线密码，版本号，服务器记录本次心跳时间，用于后续判断锁门禁是否在线
+
+         请求路径：xdoor/device/connectReport
+         请求参数：String mac 地址，Integer xiangmu_id 项目ID，String date锁门禁时间(毫秒值)，String version版本号（APP版本)
+
+         */
         try {
-            String url = API.CONNECT_REPORT;
-            String result = HttpApi.getInstance().loadHttpforGet(url, httpServerToken);
+            String url = XINTIAO_URL;
+            JSONObject data = new JSONObject();
+//            data.put("username", mac);
+//            data.put("password", key);
+            data.put("mac", mac);
+            data.put("xiangmu_id", lockId);
+            String result = HttpApi.getInstance().loadHttpforPost(url, data, "");
+            i++;
+            Log.e(TAG, "心跳执行" + i + "次");
             if (result != null) {
                 HttpApi.e("connectReportInfo()->" + result);
                 JSONObject resultObj = Ajax.getJSONObject(result);
@@ -338,7 +419,12 @@ public class MainService extends Service {
                     //比较返回数据与本地数据是否一致,并设置更新状态
                     if (false) {
                         //如果不一致，通知主线程
-
+//                        runOnUiThread(new Runnable() {
+//                            @Override
+//                            public void run() {
+//                                //在主线程调用方法更新对应的数据
+//                            }
+//                        });
                     }
                 }
             } else {
@@ -349,6 +435,7 @@ public class MainService extends Service {
             HttpApi.e("connectReportInfo()->服务器数据解析异常");
             e.printStackTrace();
         }
+
     }
 
     protected void init() {
@@ -470,6 +557,7 @@ public class MainService extends Service {
 
     /**
      * 登录接口
+     *
      * @return
      * @throws JSONException
      */
@@ -478,19 +566,27 @@ public class MainService extends Service {
         try {
             String url = API.DEVICE_LOGIN;
             JSONObject data = new JSONObject();
-            data.put("mac", mac);
-            data.put("key", key);
-            Log.i(TAG, "登录传的参数" + "mac" + mac + "----key" + key);
-            String result = HttpApi.getInstance().loadHttpforPost(url, data, httpServerToken);
-
+            data.put("mac", "44:2c:05:e6:9c:c5");
+            data.put("key", "442c05e69cc5");
+            data.put("version", "1.0");
+            String post = HttpApi.getInstance().loadHttpforPost(url, data, httpServerToken);
+            Map<String, String> map = new HashMap<>();
+            map.put("mac", "44:2c:05:e6:9c:c5");
+            map.put("key", "442c05e69cc5");
+            map.put("version", "1.0");
+            String result = HttpApi.getInstance().loadHttpforGet(url, map, httpServerToken);
             if (null != result) {
                 String code = JsonUtil.getFieldValue(result, "code");
-                if (code.equals("0")) {
+                if ("0".equals(code)) {
                     resultValue = true;
                     String result1 = JsonUtil.getResult(result);
-                    DoorBean  doorBean = JsonUtil.parseJsonToBean(result1, DoorBean.class);
+                    DoorBean doorBean = JsonUtil.parseJsonToBean(result1, DoorBean.class);
                     Log.e(TAG, doorBean.toString());
                     //保存返回数据，通知主线程继续下一步逻辑
+                    Message message = mHandler.obtainMessage();
+                    message.what = MSG_LOGIN;
+                    message.obj = doorBean.getXdoor();
+                    mHandler.sendMessage(message);
                 }
             } else {
                 //服务器异常或没有网络
@@ -532,36 +628,54 @@ public class MainService extends Service {
      * @param msg
      */
     protected void onLogin(Message msg) {
-        Log.i(TAG, "登录成功后保存一些相关变量到本地");
-        JSONObject result = (JSONObject) msg.obj;
-        try {
-            int code = result.getInt("code");
-            JSONObject user = null;
-            if (code == 0) {
-                user = result.getJSONObject("user");
-                this.blockId = (Integer) user.get("blockId");
-                communityId = (Integer) user.get("communityId");
-                lockId = (Integer) user.get("rid");
-                lockName = user.getString("lockName");
-                communityName = user.getString("communityName");
-                if (this.blockId == 0) {
-                    DeviceConfig.DEVICE_TYPE = "C";
-                }
-                Log.i(TAG, "user=" + user.toString());
-                // 保存消息
-                //  saveInfoIntoLocal(communityId, blockId, lockId, communityName, lockName);
-            }
-            Message message = Message.obtain();
-            message.what = MSG_LOGIN_AFTER;
-            message.obj = result;
-            try {
-                mainMessage.send(message);
-            } catch (RemoteException e) {
-                e.printStackTrace();
-            }
-        } catch (JSONException e) {
-        }
-    }
+//        XdoorBean result = (XdoorBean) msg.obj;
+//        this.blockId = result.getLixian_mima();
+//        communityId = result.getXiangmu_id();
+//        lockId = result.getDanyuan_id();
+//        lockName = result.getName();
+//        communityName = result.getName();
+//        if (this.blockId == 0) {
+//            DeviceConfig.DEVICE_TYPE = "C";
+//        }
+//        // 保存消息
+//        //  saveInfoIntoLocal(communityId, blockId, lockId, communityName, lockName);
+//    }
+//
+//    Message message = Message.obtain();
+//    message.what =MSG_LOGIN_AFTER;
+//    message.obj =result;
+//
+//        mainMessage.send(message);
+
+
+//        lockName = result.ge();
+//        communityName = user.getString("communityName");
+//        Log.i(TAG, "登录成功后保存一些相关变量到本地");
+//        XdoorBean result = (XdoorBean) msg.obj;
+//
+//                this.blockId = result.getLoudong_id();
+//                communityId = result.getXiangmu_id();
+//                lockId = result.getDanyuan_id();
+//                lockName = result.getd();
+//                communityName = user.getString("communityName");
+//                if (this.blockId == 0) {
+//                    DeviceConfig.DEVICE_TYPE = "C";
+//                }
+//                Log.i(TAG, "user=" + user.toString());
+//                // 保存消息
+//                //  saveInfoIntoLocal(communityId, blockId, lockId, communityName, lockName);
+//            }
+//            Message message = Message.obtain();
+//        message.what = MSG_LOGIN_AFTER;
+//        message.obj = result;
+//            try {
+//                mainMessage.send(message);
+//            } catch (RemoteException e) {
+//                e.printStackTrace();
+//            }
+//        } catch (JSONException e) {
+//        }
+}
 
     /****************************初始化天翼操作********************************/
     public static Connection callConnection;
@@ -1198,6 +1312,7 @@ public class MainService extends Service {
 
     /**
      * 推送消息
+     *
      * @param pushList
      * @throws JSONException
      * @throws IOException
@@ -1223,6 +1338,7 @@ public class MainService extends Service {
             HttpApi.e("onPushCallMessage()->服务器异常");
         }
     }
+
     /****************************呼叫相关********************************/
 
     @Nullable
@@ -1233,6 +1349,7 @@ public class MainService extends Service {
 
     /**
      * 发送消息到mainactivity
+     *
      * @param what
      * @param o
      */

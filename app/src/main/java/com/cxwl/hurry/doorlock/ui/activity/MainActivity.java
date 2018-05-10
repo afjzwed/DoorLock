@@ -48,9 +48,11 @@ import android.widget.Toast;
 import com.androidex.aexapplibs.appLibsService;
 import com.cxwl.hurry.doorlock.MainApplication;
 import com.cxwl.hurry.doorlock.R;
+import com.cxwl.hurry.doorlock.callback.AdverErrorCallBack;
 import com.cxwl.hurry.doorlock.config.DeviceConfig;
 import com.cxwl.hurry.doorlock.interfac.TakePictureCallback;
 import com.cxwl.hurry.doorlock.service.MainService;
+import com.cxwl.hurry.doorlock.utils.AdvertiseHandler;
 import com.cxwl.hurry.doorlock.utils.Ajax;
 import com.cxwl.hurry.doorlock.utils.HttpApi;
 import com.cxwl.hurry.doorlock.utils.HttpUtils;
@@ -148,7 +150,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private SurfaceHolder autoCameraHolder = null;
     private SurfaceView autoCameraSurfaceView = null;
     private boolean mCamerarelease = true; //判断照相机是否释放
-
+    private AdvertiseHandler advertiseHandler = null;//广告播放类
     public appLibsService hwservice;//hwservice为安卓工控appLibs的服务
 
     private String cardId;//卡ID
@@ -199,6 +201,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         initAutoCamera();
         startClockRefresh();//时间更新线程,在有心跳包后用心跳包代替
         initNet();
+        initAdvertiseHandler();
 
     }
 /*************************************************初始化一些基本东西start********************************************/
@@ -244,6 +247,31 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 setTextView(R.id.tv_time, timeStr);
             }
         });
+    }
+
+    private TextView textViewGongGao;
+    private SurfaceView videoView;
+    private AdverErrorCallBack adverErrorCallBack;
+
+    protected void initAdvertiseHandler() {
+        if (advertiseHandler == null) {
+            advertiseHandler = new AdvertiseHandler();
+        }
+        videoView = (SurfaceView) findViewById(R.id.surface_view);
+        imageView = (ImageView) findViewById(R.id.image_view);
+        textViewGongGao = (TextView) findViewById(R.id.gonggao);
+        Log.v("UpdateAdvertise", "------>start Update Advertise<------");
+        advertiseHandler.init(textViewGongGao, videoView, imageView);
+        adverErrorCallBack = new AdverErrorCallBack() {
+            @Override
+            public void ErrorAdver() {
+                imageView.setVisibility(View.VISIBLE);
+            }
+        };
+//        advertiseHandler.initData(rows, dialMessenger, (currentStatus == ONVIDEO_MODE),
+//                adverErrorCallBack);
+        // TODO: 2018/4/27 随便找个位置增加通告接口，之后要改
+
     }
 
     /**
@@ -1186,11 +1214,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             try {
                 Camera.Parameters parameters = camera.getParameters();
                 parameters.setPreviewSize(320, 240);
-                try {
-                    camera.setParameters(parameters);
-                } catch (Exception err) {
-                    err.printStackTrace();
-                }
+                camera.setParameters(parameters);
                 camera.setPreviewDisplay(autoCameraHolder);
                 camera.startPreview();
                 camera.autoFocus(null);
@@ -1233,15 +1257,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                         uploadManager.put(file.getPath(), curUrl, "", new UpCompletionHandler() {
                                             @Override
                                             public void complete(String key, ResponseInfo info, JSONObject response) {
-                                                //   Log.i(TAG,"qiniu"+key + ",\r\n " + info.toString()+ ",\r\n " +
-                                                // response.toString());
                                                 if (info.isOK()) {
                                                     Log.e(TAG, "七牛上传图片成功");
 
                                                 } else {
                                                     Log.e(TAG, "七牛上传图片失败");
                                                 }
-                                                if (checkTakePictureAvailable(uuid)) {
+                                                if (checkTakePictureAvailable(uuid) && info.isOK()) {
                                                     Log.i(TAG, "开始发送图片");
                                                     callback.afterTakePickture(thisValue, curUrl, isCall, uuid);
                                                 } else {
@@ -1278,17 +1300,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             } catch (Exception e) {
                 try {
                     camera.stopPreview();
-                } catch (Exception err) {
-                }
-                try {
                     camera.release();
                     camera = null;
                     mCamerarelease = true;
+                    Log.v("MainActivity", "照相出异常清除UUID");
+                    clearImageUuidAvaible(uuid);
                 } catch (Exception err) {
                 }
-                callback.afterTakePickture(thisValue, null, isCall, uuid);
-                Log.v("MainActivity", "照相出异常清除UUID");
-                clearImageUuidAvaible(uuid);
+
             }
         }
     }
