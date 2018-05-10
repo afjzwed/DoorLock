@@ -14,10 +14,13 @@ import android.util.Log;
 
 import com.cxwl.hurry.doorlock.config.DeviceConfig;
 import com.cxwl.hurry.doorlock.db.Ka;
+import com.cxwl.hurry.doorlock.entity.DoorBean;
+import com.cxwl.hurry.doorlock.http.API;
 import com.cxwl.hurry.doorlock.utils.Ajax;
 import com.cxwl.hurry.doorlock.utils.DbUtils;
 import com.cxwl.hurry.doorlock.utils.HttpApi;
 import com.cxwl.hurry.doorlock.utils.HttpUtils;
+import com.cxwl.hurry.doorlock.utils.JsonUtil;
 import com.cxwl.hurry.doorlock.utils.MacUtils;
 
 import org.json.JSONArray;
@@ -231,7 +234,6 @@ public class MainService extends Service {
     }
 
     private void initConnectReport() {
-        //xiaozd add
         if (connectReportThread != null) {
             connectReportThread.interrupt();
             connectReportThread = null;
@@ -318,13 +320,15 @@ public class MainService extends Service {
         }
     }
 
+    int i  = 0;
     /**
      * 心跳接口
      */
     private void connectReport() {
-//        Log.e(TAG, "心跳执行" + i + "次");
-    /*    try {
-            String url = API.CONNECTREPORT;
+        i++;
+        Log.e(TAG, "心跳执行" + i + "次");
+        try {
+            String url = API.CONNECT_REPORT;
             String result = HttpApi.getInstance().loadHttpforGet(url, httpServerToken);
             if (result != null) {
                 HttpApi.e("connectReportInfo()->" + result);
@@ -334,12 +338,7 @@ public class MainService extends Service {
                     //比较返回数据与本地数据是否一致,并设置更新状态
                     if (false) {
                         //如果不一致，通知主线程
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                //在主线程调用方法更新对应的数据
-                            }
-                        });
+
                     }
                 }
             } else {
@@ -349,7 +348,7 @@ public class MainService extends Service {
         } catch (Exception e) {
             HttpApi.e("connectReportInfo()->服务器数据解析异常");
             e.printStackTrace();
-        }*/
+        }
     }
 
     protected void init() {
@@ -477,37 +476,50 @@ public class MainService extends Service {
     protected boolean getClientInfo() throws JSONException {
         boolean resultValue = false;
         try {
-            String url = DeviceConfig.SERVER_URL + "/app/auth/deviceLogin";
+            String url = API.DEVICE_LOGIN;
             JSONObject data = new JSONObject();
-//            data.put("username", mac);
-//            data.put("password", key);
-            data.put("lockMac", mac);
-            data.put("lockKey", key);
+            data.put("mac", mac);
+            data.put("key", key);
             Log.i(TAG, "登录传的参数" + "mac" + mac + "----key" + key);
             String result = HttpApi.getInstance().loadHttpforPost(url, data, httpServerToken);
-            if (result != null) {
-                HttpApi.i("登录接口返回参数getClientInfo()->" + result);
-                JSONObject resultObj = Ajax.getJSONObject(result);
-                int code = resultObj.getInt("code");
-                if (code == 0) {
+
+            if (null != result) {
+                String code = JsonUtil.getFieldValue(result, "code");
+                if (code.equals("0")) {
                     resultValue = true;
-                    try {
-                        httpServerToken = resultObj.getString("token");
-                    } catch (Exception e) {
-                        httpServerToken = null;
-                    }
-                    //初始化保存更新时间等
-                    //  initDeviceConfig(resultObj);
+                    String result1 = JsonUtil.getResult(result);
+                    DoorBean  doorBean = JsonUtil.parseJsonToBean(result1, DoorBean.class);
+                    Log.e(TAG, doorBean.toString());
+                    //保存返回数据，通知主线程继续下一步逻辑
                 }
-                Message message = mHandler.obtainMessage();
-                message.what = MSG_LOGIN;
-                resultObj.put("mac", this.mac);
-                message.obj = resultObj;
-                mHandler.sendMessage(message);
             } else {
                 //服务器异常或没有网络
-                HttpApi.e("登录接口返回参数getClientInfo()->服务器无响应");
+                HttpApi.e("getClientInfo()->服务器无响应");
             }
+
+//            if (result != null) {
+//                HttpApi.i("登录接口返回参数getClientInfo()->" + result);
+//                JSONObject resultObj = Ajax.getJSONObject(result);
+//                int code = resultObj.getInt("code");
+//                if (code == 0) {
+//                    resultValue = true;
+//                    try {
+//                        httpServerToken = resultObj.getString("token");
+//                    } catch (Exception e) {
+//                        httpServerToken = null;
+//                    }
+//                    //初始化保存更新时间等
+//                    //  initDeviceConfig(resultObj);
+//                }
+//                Message message = mHandler.obtainMessage();
+//                message.what = MSG_LOGIN;
+//                resultObj.put("mac", this.mac);
+//                message.obj = resultObj;
+//                mHandler.sendMessage(message);
+//            } else {
+//                //服务器异常或没有网络
+//                HttpApi.e("登录接口返回参数getClientInfo()->服务器无响应");
+//            }
         } catch (Exception e) {
             HttpApi.e("登录接口返回参数getClientInfo()->服务器数据解析异常");
         }

@@ -328,9 +328,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         version_text = (TextView) findViewById(R.id.version_text);
         version_text.setText(getVersionName());
         container = findViewById(R.id.container);
-        rl_nfc = (RelativeLayout) findViewById(R.id.rl_nfc);//录卡布局
-        et_blackno = (EditText) findViewById(R.id.et_blockno);//录卡时楼栋编号
-        et_unitno = (EditText) findViewById(R.id.et_unitno);//录卡时房屋编号
+
         imageView = (ImageView) findViewById(R.id.iv_erweima);//二维码
         wifi_image = (ImageView) findViewById(R.id.wifi_image); //wifi图标控件初始化
         iv_setting = (ImageView) findViewById(R.id.iv_setting);//左上角弹出菜单按钮
@@ -348,16 +346,20 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         sendBroadcast(new Intent("com.android.action.hide_navigationbar"));//隱藏底部導航
         container.setSystemUiVisibility(13063);//设置状态栏显示与否,禁止頂部下拉
 
-        et_blackno.setOnFocusChangeListener(new View.OnFocusChangeListener() {
-            @Override
-            public void onFocusChange(View v, boolean hasFocus) {
-                if (hasFocus) {
-                    isFlag = true;
-                } else {
-                    isFlag = false;
-                }
-            }
-        });
+        //录卡相关注释
+//        rl_nfc = (RelativeLayout) findViewById(R.id.rl_nfc);//录卡布局
+//        et_blackno = (EditText) findViewById(R.id.et_blockno);//录卡时楼栋编号
+//        et_unitno = (EditText) findViewById(R.id.et_unitno);//录卡时房屋编号
+//        et_blackno.setOnFocusChangeListener(new View.OnFocusChangeListener() {
+//            @Override
+//            public void onFocusChange(View v, boolean hasFocus) {
+//                if (hasFocus) {
+//                    isFlag = true;
+//                } else {
+//                    isFlag = false;
+//                }
+//            }
+//        });
 
     }
 
