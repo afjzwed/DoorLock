@@ -47,4 +47,12 @@ dependencies {
     compile(name: 'appLibs', ext: 'aar')//安卓工控
     //七牛
     compile 'com.qiniu:qiniu-android-sdk:7.3.+'
+    //以下6个都是虹软相关
+    compile files('libs/ageestimation.jar')
+    compile files('libs/facedetection.jar')
+    compile files('libs/facerecognition.jar')
+    compile files('libs/facetracking.jar')
+    compile files('libs/genderestimation.jar')
+    compile 'com.guo.android_extend:android-extend:1.0.1'
+
 }

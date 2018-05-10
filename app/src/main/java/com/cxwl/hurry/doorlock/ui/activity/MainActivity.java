@@ -177,6 +177,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         //全屏设置，隐藏窗口所有装饰
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN);//清除FLAG
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);//禁止软键盘弹出
 
         {
             ActionBar ab = getActionBar();
@@ -184,7 +185,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 ab.setDisplayHomeAsUpEnabled(true);//左上角显示应用程序图标
             }
         }
-        setContentView(R.layout.activity_main);
+//        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_new_main);
         hwservice.EnterFullScreen();//hwservice为appLibs的服务
 
         initView();//初始化View

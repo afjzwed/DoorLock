@@ -30,8 +30,8 @@
         android:marqueeRepeatLimit="marquee_forever"
         android:scrollHorizontally="true"
         android:text="我们发大水口附近我们发大水口附近防守打我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送法胜多负少防守打法爽肤水发送我们发大水口附近防守打我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送法胜多负少防守打法爽肤水发送我们发大水口附近防守打我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送法胜多负少防守打法爽肤水发送我们发大水口附近防守打我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送法胜多负少防守打法爽肤水发送我们发大水口附近防守打我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送法胜多负少防守打法爽肤水发送我们发大水口附近防守打我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送法胜多负少防守打法爽肤水发送防守打我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送法胜多负少防守打法爽肤水发送"
-        android:textSize="30sp"
-        android:textColor="@android:color/white"/>
+        android:textColor="@android:color/white"
+        android:textSize="30sp"/>
 
     <!--录卡布局-->
     <RelativeLayout
@@ -259,13 +259,13 @@
                 android:visibility="invisible"/>
 
             <!--<ImageView-->
-                <!--android:id="@+id/user_bind"-->
-                <!--android:layout_width="50dp"-->
-                <!--android:layout_height="40dp"-->
-                <!--android:layout_gravity="top"-->
-                <!--android:layout_marginRight="5dp"-->
-                <!--android:layout_marginTop="5dp"-->
-                <!--android:visibility="invisible"/>-->
+            <!--android:id="@+id/user_bind"-->
+            <!--android:layout_width="50dp"-->
+            <!--android:layout_height="40dp"-->
+            <!--android:layout_gravity="top"-->
+            <!--android:layout_marginRight="5dp"-->
+            <!--android:layout_marginTop="5dp"-->
+            <!--android:visibility="invisible"/>-->
 
             <TextView
                 android:id="@+id/tv_day"
@@ -352,12 +352,12 @@
         android:layout_marginBottom="10dp"
         android:layout_marginRight="5dp">
 
-        <SurfaceView
+        <com.guo.android_extend.widget.CameraSurfaceView
             android:id="@+id/surfaceView"
             android:layout_width="1dp"
             android:layout_height="1dp"/>
 
-        <SurfaceView
+        <com.guo.android_extend.widget.CameraSurfaceView
             android:id="@+id/glsurfaceView"
             android:layout_width="352dp"
             android:layout_height="200dp"/>
