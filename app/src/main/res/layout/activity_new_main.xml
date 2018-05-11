@@ -424,7 +424,7 @@
                 android:layout_width="1dp"
                 android:layout_height="1dp"/>
 
-            <com.guo.android_extend.widget.CameraSurfaceView
+            <com.guo.android_extend.widget.CameraGLSurfaceView
                 android:id="@+id/glsurfaceView"
                 android:layout_width="352dp"
                 android:layout_height="200dp"/>

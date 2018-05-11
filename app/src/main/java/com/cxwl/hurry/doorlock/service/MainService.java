@@ -53,22 +53,25 @@ import rtc.sdk.iface.Device;
 import rtc.sdk.iface.DeviceListener;
 import rtc.sdk.iface.RtcClient;
 
+
+import static com.cxwl.hurry.doorlock.config.Constant.CALL_VIDEO_CONNECTING;
+import static com.cxwl.hurry.doorlock.config.Constant.CALL_WAITING;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_CALLMEMBER_ERROR;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_CALLMEMBER_NO_ONLINE;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_CALLMEMBER_SERVER_ERROR;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_CALLMEMBER_TIMEOUT;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_CANCEL_CALL;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_GUEST_PASSWORD_CHECK;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_LOGIN;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_PASSWORD_CHECK;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_RTC_DISCONNECT;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_RTC_NEWCALL;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_RTC_ONVIDEO;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_RTC_REGISTER;
+import static com.cxwl.hurry.doorlock.config.Constant.RTC_APP_ID;
+import static com.cxwl.hurry.doorlock.config.Constant.RTC_APP_KEY;
 import static com.cxwl.hurry.doorlock.config.DeviceConfig.XINTIAO_URL;
-import static com.cxwl.hurry.doorlock.utils.Constant.CALL_VIDEO_CONNECTING;
-import static com.cxwl.hurry.doorlock.utils.Constant.CALL_WAITING;
-import static com.cxwl.hurry.doorlock.utils.Constant.MSG_CALLMEMBER_ERROR;
-import static com.cxwl.hurry.doorlock.utils.Constant.MSG_CALLMEMBER_NO_ONLINE;
-import static com.cxwl.hurry.doorlock.utils.Constant.MSG_CALLMEMBER_SERVER_ERROR;
-import static com.cxwl.hurry.doorlock.utils.Constant.MSG_CALLMEMBER_TIMEOUT;
-import static com.cxwl.hurry.doorlock.utils.Constant.MSG_CANCEL_CALL;
-import static com.cxwl.hurry.doorlock.utils.Constant.MSG_GUEST_PASSWORD_CHECK;
-import static com.cxwl.hurry.doorlock.utils.Constant.MSG_LOGIN;
-import static com.cxwl.hurry.doorlock.utils.Constant.MSG_LOGIN_AFTER;
-import static com.cxwl.hurry.doorlock.utils.Constant.MSG_PASSWORD_CHECK;
-import static com.cxwl.hurry.doorlock.utils.Constant.MSG_RTC_DISCONNECT;
-import static com.cxwl.hurry.doorlock.utils.Constant.MSG_RTC_NEWCALL;
-import static com.cxwl.hurry.doorlock.utils.Constant.MSG_RTC_ONVIDEO;
-import static com.cxwl.hurry.doorlock.utils.Constant.MSG_RTC_REGISTER;
+
 
 
 /**
@@ -102,12 +105,11 @@ public class MainService extends Service {
     RtcClient rtcClient;
     boolean isRtcInit = false; //RtcSDK初始化状态
     //天翼登陆参数
-    public static final String APP_ID = "71012";
-    public static final String APP_KEY = "71007b1c-6b75-4d6f-85aa-40c1f3b842ef";
     private String token;//天翼登陆所需的token；
     private Device device;//天翼登陆连接成功 发消息的类
     private DbUtils mDbUtils;//数据库操作
-    private Hashtable<String, String> currentAdvertisementFiles = new Hashtable<String, String>(); //广告数据地址
+    private Hashtable<String, String> currentAdvertisementFiles = new Hashtable<String, String>()
+            ; //广告数据地址
     private AudioManager audioManager;//音频管理器
 
     private ArrayList allUserList = new ArrayList();
@@ -155,7 +157,8 @@ public class MainService extends Service {
                     case MAIN_ACTIVITY_INIT:
                         mainMessage = msg.replyTo;
                         netWorkstate = (Boolean) msg.obj;
-                        Log.i(TAG, "MainActivity初始化完成  MainServic开始初始化" + (netWorkstate ? "有网" : "没网"));
+                        Log.i(TAG, "MainActivity初始化完成  MainServic开始初始化" + (netWorkstate ? "有网" :
+                                "没网"));
                         init();
                         break;
                     case MSG_RTC_REGISTER:
@@ -730,7 +733,7 @@ public class MainService extends Service {
         Log.i(TAG, "rtc平台获取token");
         RtcConst.UEAPPID_Current = RtcConst.UEAPPID_Self;//账号体系，包括私有、微博、QQ等，必须在获取token之前确定。
         JSONObject jsonobj = HttpManager.getInstance().CreateTokenJson(0, key, RtcHttpClient.grantedCapabiltyID, "");
-        HttpResult ret = HttpManager.getInstance().getCapabilityToken(jsonobj, APP_ID, APP_KEY);
+        HttpResult ret = HttpManager.getInstance().getCapabilityToken(jsonobj, RTC_APP_ID, RTC_APP_KEY);
         onResponseGetToken(ret);
     }
 
@@ -768,7 +771,7 @@ public class MainService extends Service {
                 JSONObject jargs = SdkSettings.defaultDeviceSetting();
                 jargs.put(RtcConst.kAccPwd, token);
                 //账号格式形如“账号体系-号码~应用id~终端类型”，以下主要设置账号内各部分内容，其中账号体系的值要在获取token之前确定，默认为私有账号
-                jargs.put(RtcConst.kAccAppID, APP_ID);//应用id
+                jargs.put(RtcConst.kAccAppID, RTC_APP_ID);//应用id
                 jargs.put(RtcConst.kAccUser, key); //号码
                 jargs.put(RtcConst.kAccType, RtcConst.UEType_Current);//终端类型
                 jargs.put(RtcConst.kAccRetry, 5);//设置重连时间
@@ -1312,7 +1315,6 @@ public class MainService extends Service {
 
     /**
      * 推送消息
-     *
      * @param pushList
      * @throws JSONException
      * @throws IOException
@@ -1349,7 +1351,6 @@ public class MainService extends Service {
 
     /**
      * 发送消息到mainactivity
-     *
      * @param what
      * @param o
      */
