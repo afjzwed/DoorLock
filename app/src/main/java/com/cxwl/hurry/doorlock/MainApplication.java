@@ -5,6 +5,7 @@ import android.app.Application;
 import com.cxwl.hurry.doorlock.db.DaoMaster;
 import com.cxwl.hurry.doorlock.db.DaoSession;
 import com.zhy.http.okhttp.OkHttpUtils;
+import com.zhy.http.okhttp.log.LoggerInterceptor;
 
 import java.util.concurrent.TimeUnit;
 
@@ -29,7 +30,7 @@ public class MainApplication  extends Application {
 
         //okhttp初始化
         OkHttpClient okHttpClient = new OkHttpClient.Builder()
-//                .addInterceptor(new LoggerInterceptor("TAG"))
+                .addInterceptor(new LoggerInterceptor("okhttp",true))
                 .connectTimeout(10000L, TimeUnit.MILLISECONDS)
                 .readTimeout(10000L, TimeUnit.MILLISECONDS)
                 //其他配置

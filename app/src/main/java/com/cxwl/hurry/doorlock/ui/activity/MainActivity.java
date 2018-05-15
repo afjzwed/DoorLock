@@ -66,6 +66,7 @@ import com.cxwl.hurry.doorlock.callback.AdverErrorCallBack;
 import com.cxwl.hurry.doorlock.config.Constant;
 import com.cxwl.hurry.doorlock.config.DeviceConfig;
 import com.cxwl.hurry.doorlock.db.Lian;
+import com.cxwl.hurry.doorlock.entity.XdoorBean;
 import com.cxwl.hurry.doorlock.interfac.TakePictureCallback;
 import com.cxwl.hurry.doorlock.service.MainService;
 import com.cxwl.hurry.doorlock.utils.AdvertiseHandler;
@@ -150,9 +151,8 @@ import static com.cxwl.hurry.doorlock.utils.NfcReader.ACTION_NFC_CARDINFO;
  * MainActivity
  * Created by William on 2018/4/26
  */
-public class MainActivity extends AppCompatActivity implements View.OnClickListener,
-        TakePictureCallback, NfcReader.AccountCallback, NfcAdapter.ReaderCallback,
-        CameraSurfaceView.OnCameraListener {
+public class MainActivity extends AppCompatActivity implements View.OnClickListener, TakePictureCallback, NfcReader
+        .AccountCallback, NfcAdapter.ReaderCallback, CameraSurfaceView.OnCameraListener {
 
     private static String TAG = "MainActivity";
     public static final int MSG_RTC_ONVIDEO_IN = 10011;//接收到视频呼叫
@@ -221,7 +221,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private AFT_FSDKFace mAFT_FSDKFace = null;//这个类用来保存检测到的人脸信息
     private Handler faceHandler;//人脸识别handler
     private boolean identification = false;//人脸识别可以开始对比的标识
-   private FRAbsLoop mFRAbsLoop = null;//人脸对比线程
+    private FRAbsLoop mFRAbsLoop = null;//人脸对比线程
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -231,8 +231,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         //全屏设置，隐藏窗口所有装饰
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN);//清除FLAG
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager
-                .LayoutParams.FLAG_FULLSCREEN);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
         getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
         //禁止软键盘弹出
 
@@ -366,10 +365,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         AudioManager audioManager = (AudioManager) getSystemService(this.AUDIO_SERVICE);
         initVoiceVolume(audioManager, AudioManager.STREAM_MUSIC, DeviceConfig.VOLUME_STREAM_MUSIC);
         initVoiceVolume(audioManager, AudioManager.STREAM_RING, DeviceConfig.VOLUME_STREAM_RING);
-        initVoiceVolume(audioManager, AudioManager.STREAM_SYSTEM, DeviceConfig
-                .VOLUME_STREAM_SYSTEM);
-        initVoiceVolume(audioManager, AudioManager.STREAM_VOICE_CALL, DeviceConfig
-                .VOLUME_STREAM_VOICE_CALL);
+        initVoiceVolume(audioManager, AudioManager.STREAM_SYSTEM, DeviceConfig.VOLUME_STREAM_SYSTEM);
+        initVoiceVolume(audioManager, AudioManager.STREAM_VOICE_CALL, DeviceConfig.VOLUME_STREAM_VOICE_CALL);
     }
 
     /**
@@ -491,9 +488,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         Log.i(TAG, "视频通话断开");
                         onRtcDisconnect();
                         //启动人脸识别
-//                        if (faceHandler != null) {
-//                            faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_CONTRAST, 3000);
-//                        }
+                        if (faceHandler != null) {
+                            faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_CONTRAST, 3000);
+                        }
                         break;
                     case MSG_RTC_NEWCALL:
                         //收到新的来电
@@ -506,6 +503,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         break;
                     case MSG_CALLMEMBER_NO_ONLINE:
                         Log.e(TAG, "呼叫用户不在线");
+                        onCallMemberError(msg.what);
+                        break;
+                    case MSG_CALLMEMBER_SERVER_ERROR:
+                        Log.e(TAG, "服务器错误");
                         onCallMemberError(msg.what);
                         break;
                     case MSG_INPUT_CARDINFO:
@@ -569,8 +570,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 setStatusBarIcon(true);
                 initSystemtime();
             }
-            sendMainMessager(MainService.MAIN_ACTIVITY_INIT, NetWorkUtils.isNetworkAvailable
-                    (MainActivity
+            sendMainMessager(MainService.MAIN_ACTIVITY_INIT, NetWorkUtils.isNetworkAvailable(MainActivity
                     .this));
             initNetListen();
         }
@@ -605,34 +605,27 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      */
     private void onLoginAfter(Message msg) {
         if (msg.obj != null) {
-            JSONObject result = (JSONObject) msg.obj;
-            try {
-                int code = result.getInt("code");
-                if (code == 0) {//登录成功
-                    //初始化token
-                    sendMainMessager(MSG_RTC_REGISTER, null);
-                    //初始化社区信息
-                    JSONObject user = result.getJSONObject("user");
-                    setCommunityName(user.getString("communityName"));
-                    setLockName(user.getString("lockName"));
+            XdoorBean result = (XdoorBean) msg.obj;
+            sendMainMessager(MSG_RTC_REGISTER, null);
+            //初始化社区信息
+            setCommunityName(result.getXiangmu_name() == null ? "欣社区" : result.getXiangmu_name());
+            setLockName(result.getDanyuan_name() == null ? "1单元" : result.getDanyuan_name());
 
-                    Log.e(TAG, "可以读卡");
-                    enableReaderMode();//登录成功后开启读卡
+            Log.e(TAG, "可以读卡");
+            enableReaderMode();//登录成功后开启读卡
 
-                    if (faceHandler != null) {
-                        faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_CONTRAST, 1000);
-                    }
-
-                    sendMainMessager(MainService.REGISTER_ACTIVITY_DIAL, null);//开始心跳包
-
-                } else if (code == 1) { //登录失败,MAC地址不存在服务器
-                    //显示MAC地址并提示添加
-                    showMacaddress(result.getString("mac"));
-                }
-            } catch (Exception e) {
-
+            if (faceHandler != null) {
+                faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_CONTRAST, 1000);
             }
+
+            sendMainMessager(MainService.REGISTER_ACTIVITY_DIAL, null);//开始心跳包
+
         }
+//                else if (code == 1) { //登录失败,MAC地址不存在服务器
+//                    //显示MAC地址并提示添加
+//                    showMacaddress(result.getString("mac"));
+//                }
+
     }
 
     /**
@@ -743,8 +736,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      */
     @SuppressLint("WifiManagerLeak")
     private void initNet() {
-        wifiManager = (WifiManager) MainApplication.getApplication().getSystemService
-                (WIFI_SERVICE);//获得WifiManager
+        wifiManager = (WifiManager) MainApplication.getApplication().getSystemService(WIFI_SERVICE);//获得WifiManager
         Timer timer = new Timer();
         timer.scheduleAtFixedRate(new TimerTask() {
             @Override
@@ -891,13 +883,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                     }
                                 }
                             } else {
-                                if (blockNo.length() == DeviceConfig.UNIT_NO_LENGTH) {
-                                    startDialing(blockNo);
-                                } else if (blockNo.length() == DeviceConfig.MOBILE_NO_LENGTH) {//手机号
-                                    if (true) {//正则判断
-                                        startDialing(blockNo);
-                                    }
-                                }
+//                                if (blockNo.length() == DeviceConfig.UNIT_NO_LENGTH) {
+//                                    startDialing(blockNo);
+//                                } else if (blockNo.length() == DeviceConfig.MOBILE_NO_LENGTH) {//手机号
+//                                    if (true) {//正则判断
+//                                        startDialing(blockNo);
+//                                    }
+//                                }
+                                startDialing(blockNo);
                             }
                         } else {//密码开门
                             if (guestPassword.length() == 6) {
@@ -1219,8 +1212,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
         //创建远端view
         if (MainService.callConnection != null) {
-            remoteView = (SurfaceView) MainService.callConnection.createVideoView(false, this,
-                    true);
+            remoteView = (SurfaceView) MainService.callConnection.createVideoView(false, this, true);
         }
         if (remoteView != null) {
             remoteView.setVisibility(View.INVISIBLE);
@@ -1250,8 +1242,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     /**
      * 开始启动拍照
      */
-    protected void takePicture(final String thisValue, final boolean isCall, final
-    TakePictureCallback callback) {
+    protected void takePicture(final String thisValue, final boolean isCall, final TakePictureCallback callback) {
         if (currentStatus == CALLING_MODE || currentStatus == PASSWORD_CHECKING_MODE) {
             final String uuid = getUUID(); //随机生成UUID
             lastImageUuid = uuid;
@@ -1277,15 +1268,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    private synchronized void doTakePicture(final String thisValue, final boolean isCall, final
-    String uuid, final TakePictureCallback callback) {
+    private synchronized void doTakePicture(final String thisValue, final boolean isCall, final String uuid, final
+    TakePictureCallback callback) {
         mCamerarelease = false;
         try {
             camera = Camera.open();
 
         } catch (Exception e) {
         }
-        Log.v("MainActivity", "打开相机");
+        Log.v(TAG, "打开相机");
         if (camera == null) {
             try {
                 camera = Camera.open(0);
@@ -1307,8 +1298,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         try {
                             Log.v("MainActivity", "拍照成功");
                             Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
-                            final File file = new File(Environment.getExternalStorageDirectory(),
-                                    System.currentTimeMillis() + ".jpg");
+                            final File file = new File(Environment.getExternalStorageDirectory(), System
+                                    .currentTimeMillis() + ".jpg");
                             FileOutputStream outputStream = new FileOutputStream(file);
                             bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream);
                             outputStream.close();
@@ -1321,8 +1312,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                     @Override
                                     public void run() {
                                         Log.i(TAG, "开始上传照片");
-                                        String s = HttpApi.getInstance().loadHttpforGet
-                                                (DeviceConfig.GET_QINIUTOKEN, "");
+                                        String s = HttpApi.getInstance().loadHttpforGet(DeviceConfig.GET_QINIUTOKEN,
+                                                "");
                                         String token = "";
                                         if (s != null && !"".equals(s)) {
                                             JSONObject jsonObject = Ajax.getJSONObject(s);
@@ -1335,24 +1326,19 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                         }
                                         Log.e(TAG, "Token==" + token);
                                         Log.e(TAG, "file七牛储存地址：" + curUrl);
-                                        Log.e(TAG, "file本地地址：" + file.getPath() + "file大小" + file
-                                                .length());
-                                        uploadManager.put(file.getPath(), curUrl, "", new
-                                                UpCompletionHandler() {
+                                        Log.e(TAG, "file本地地址：" + file.getPath() + "file大小" + file.length());
+                                        uploadManager.put(file.getPath(), curUrl, "", new UpCompletionHandler() {
                                             @Override
-                                            public void complete(String key, ResponseInfo info,
-                                                                 JSONObject response) {
+                                            public void complete(String key, ResponseInfo info, JSONObject response) {
                                                 if (info.isOK()) {
                                                     Log.e(TAG, "七牛上传图片成功");
 
                                                 } else {
                                                     Log.e(TAG, "七牛上传图片失败");
                                                 }
-                                                if (checkTakePictureAvailable(uuid) && info.isOK
-                                                        ()) {
+                                                if (checkTakePictureAvailable(uuid) && info.isOK()) {
                                                     Log.i(TAG, "开始发送图片");
-                                                    callback.afterTakePickture(thisValue, curUrl,
-                                                            isCall, uuid);
+                                                    callback.afterTakePickture(thisValue, curUrl, isCall, uuid);
                                                 } else {
                                                     Log.v("MainActivity", "上传照片成功,但已取消");
                                                 }
@@ -1462,9 +1448,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             Utils.DisplayToast(MainActivity.this, "您呼叫的房间号无人在线");
         }
         //启动人脸识别
-//        if (faceHandler != null) {
-//            faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_CONTRAST, 1000);
-//        }
+        if (faceHandler != null) {
+            faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_CONTRAST, 3000);
+        }
     }
 
     /**
@@ -1500,7 +1486,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      */
     private void startDialing(String blockNo) {
         //呼叫前，确认摄像头不被占用 红软
-
+//呼叫前，确认摄像头不被占用
+        if (faceHandler != null) {
+            faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_PAUSE, 0);
+        }
 
         Log.i(TAG, "拍摄访客照片 并进行呼叫" + blockNo);
         setCurrentStatus(CALLING_MODE);
@@ -1511,8 +1500,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     /**
      * 开始呼叫
      */
-    protected void startDialorPasswordDirectly(final String thisValue, final String fileUrl,
-                                               final boolean isCall, String uuid) {
+    protected void startDialorPasswordDirectly(final String thisValue, final String fileUrl, final boolean isCall,
+                                               String uuid) {
         if (currentStatus == CALLING_MODE || currentStatus == PASSWORD_CHECKING_MODE) {
             Message message = Message.obtain();
             String[] parameters = new String[3];
@@ -1548,8 +1537,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      * @param isCall
      * @param uuid
      */
-    protected void startSendPictureDirectly(final String thisValue, final String fileUrl, final
-    boolean isCall, String uuid) {
+    protected void startSendPictureDirectly(final String thisValue, final String fileUrl, final boolean isCall,
+                                            String uuid) {
         if (fileUrl == null || fileUrl.length() == 0) {
             return;
         }
@@ -1660,6 +1649,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         handler.post(new Runnable() {
             @Override
             public void run() {
+                Log.e(TAG, "设置社区" + thisValue);
                 setTextView(R.id.tv_community, thisValue);
             }
         });
@@ -1675,6 +1665,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         handler.post(new Runnable() {
             @Override
             public void run() {
+                Log.e(TAG, "设置单元" + thisValue);
                 setTextView(R.id.tv_lock, thisValue);
             }
         });
@@ -1894,10 +1885,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     case R.id.action_settings10://退出
 //                        Log.e(TAG,"menu 退出");
                         setResult(RESULT_OK);
-                        MainActivity.this.stopService(new Intent(MainActivity.this, MainService
-                                .class));
+                        MainActivity.this.stopService(new Intent(MainActivity.this, MainService.class));
                         finish();
                         sendBroadcast(new Intent("com.android.action.display_navigationbar"));
+                        break;
+                    default:
                         break;
 
                 }
@@ -1930,8 +1922,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         //人脸跟踪初始化引擎，设置检测角度、范围，数量。创建对象后，必须先于其他成员函数调用，否则其他成员函数会返回 MERR_BAD_STATE
         //orientsPriority 指定检测的角度 scale 指定支持检测的最小人脸尺寸(16) maxFaceNum 最多能检测到的人脸个数(5)
-        AFT_FSDKError err = engine.AFT_FSDK_InitialFaceEngine(arc_appid, ft_key, AFT_FSDKEngine
-                .AFT_OPF_0_HIGHER_EXT, 16, 5);
+        AFT_FSDKError err = engine.AFT_FSDK_InitialFaceEngine(arc_appid, ft_key, AFT_FSDKEngine.AFT_OPF_0_HIGHER_EXT,
+                16, 5);
         Log.d(TAG, "AFT_FSDK_InitialFaceEngine =" + err.getCode());
         err = engine.AFT_FSDK_GetVersion(version);//获取版本信息
         Log.d(TAG, "AFT_FSDK_GetVersion:" + version.toString() + "," + err.getCode());
@@ -1941,8 +1933,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         faceHandler = new Handler(new Handler.Callback() {
             @Override
             public boolean handleMessage(Message msg) {
-                Log.v(TAG, "face" + "handleMessage-->" + msg.what + "/" + Thread.currentThread()
-                        .getName());
+                Log.v(TAG, "face" + "handleMessage-->" + msg.what + "/" + Thread.currentThread().getName());
                 switch (msg.what) {
                     case MSG_FACE_DETECT_CHECK:
                         identification = true;
@@ -2103,8 +2094,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public Object onPreview(byte[] data, int width, int height, int format, long timestamp) {
 //        Log.e(TAG, "相机" + "onPreview");
         //检测输入的图像中存在的人脸，输出结果和初始化时设置的参数有密切关系,检测到的人脸会add到此result
-        AFT_FSDKError err = engine.AFT_FSDK_FaceFeatureDetect(data, width, height, AFT_FSDKEngine
-                .CP_PAF_NV21, result);
+        AFT_FSDKError err = engine.AFT_FSDK_FaceFeatureDetect(data, width, height, AFT_FSDKEngine.CP_PAF_NV21, result);
 //        Log.d(TAG, "AFT_FSDK_FaceFeatureDetect =" + err.getCode());
 //        Log.d(TAG, "Face=" + result.size());
 //        for (AFT_FSDKFace face : result) {
@@ -2137,7 +2127,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      */
     @Override
     public void onBeforeRender(CameraFrameData data) {
-        Log.e(TAG, "相机" + "onBeforeRender");
+//        Log.e(TAG, "相机" + "onBeforeRender");
     }
 
     /**
@@ -2147,7 +2137,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      */
     @Override
     public void onAfterRender(CameraFrameData data) {
-        Log.e(TAG, "相机" + "onAfterRender");
+//        Log.e(TAG, "相机" + "onAfterRender");
         if (null == data.getParams()) {
             Log.e(TAG, "相机" + "getParams" + "为空");
         }
@@ -2243,9 +2233,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 //检测输入图像中的人脸特征信息，输出结果保存在 AFR_FSDKFace feature
                 //data 输入的图像数据,width 图像宽度,height 图像高度,format 图像格式,face 已检测到的脸框,ori 已检测到的脸角度,
                 // feature 检测到的人脸特征信息
-                AFR_FSDKError error = engine.AFR_FSDK_ExtractFRFeature(mImageNV21, mWidth,
-                        mHeight, AFR_FSDKEngine.CP_PAF_NV21, mAFT_FSDKFace.getRect(),
-                        mAFT_FSDKFace.getDegree(), result);
+                AFR_FSDKError error = engine.AFR_FSDK_ExtractFRFeature(mImageNV21, mWidth, mHeight, AFR_FSDKEngine
+                        .CP_PAF_NV21, mAFT_FSDKFace.getRect(), mAFT_FSDKFace.getDegree(), result);
                 //Log.d(TAG, "AFR_FSDK_ExtractFRFeature cost :" + (System.currentTimeMillis() -
                 // time) + "ms");
                 //Log.d(TAG, "Face=" + result.getFeatureData()[0] + "," + result.getFeatureData()

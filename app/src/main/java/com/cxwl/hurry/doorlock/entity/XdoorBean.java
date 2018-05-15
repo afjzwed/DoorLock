@@ -19,7 +19,7 @@ public class XdoorBean {
      * lixian_mima : 123456
      * version : null
      */
-
+//"danyuan_name":null,"loudong_name":null,"xiangmu_name":null
     private int id;
     private String name;
     private String key;
@@ -32,6 +32,33 @@ public class XdoorBean {
     private String gongsi_id;
     private String lixian_mima;
     private Object version;
+    private String danyuan_name;
+    private String loudong_name;
+    private String xiangmu_name;
+
+    public String getDanyuan_name() {
+        return danyuan_name;
+    }
+
+    public void setDanyuan_name(String danyuan_name) {
+        this.danyuan_name = danyuan_name;
+    }
+
+    public String getLoudong_name() {
+        return loudong_name;
+    }
+
+    public void setLoudong_name(String loudong_name) {
+        this.loudong_name = loudong_name;
+    }
+
+    public String getXiangmu_name() {
+        return xiangmu_name;
+    }
+
+    public void setXiangmu_name(String xiangmu_name) {
+        this.xiangmu_name = xiangmu_name;
+    }
 
     public int getId() {
         return id;

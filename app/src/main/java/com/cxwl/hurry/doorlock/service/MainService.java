@@ -1,13 +1,12 @@
 package com.cxwl.hurry.doorlock.service;
 
+import android.app.Activity;
 import android.app.Service;
 import android.content.Intent;
-import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.Rect;
 import android.media.AudioManager;
-import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -29,6 +28,7 @@ import com.cxwl.hurry.doorlock.config.DeviceConfig;
 import com.cxwl.hurry.doorlock.db.Ka;
 import com.cxwl.hurry.doorlock.entity.DoorBean;
 import com.cxwl.hurry.doorlock.entity.XdoorBean;
+import com.cxwl.hurry.doorlock.entity.YeZhuBean;
 import com.cxwl.hurry.doorlock.http.API;
 import com.cxwl.hurry.doorlock.utils.Ajax;
 import com.cxwl.hurry.doorlock.utils.BitmapUtils;
@@ -37,14 +37,10 @@ import com.cxwl.hurry.doorlock.utils.HttpApi;
 import com.cxwl.hurry.doorlock.utils.HttpUtils;
 import com.cxwl.hurry.doorlock.utils.JsonUtil;
 import com.cxwl.hurry.doorlock.utils.MacUtils;
-import com.cxwl.hurry.doorlock.utils.SPUtil;
-import com.google.gson.Gson;
-import com.google.gson.JsonObject;
 import com.guo.android_extend.image.ImageConverter;
 import com.zhy.http.okhttp.OkHttpUtils;
 import com.zhy.http.okhttp.callback.StringCallback;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -52,11 +48,9 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
 import jni.http.HttpManager;
 import jni.http.HttpResult;
@@ -83,9 +77,9 @@ import static com.cxwl.hurry.doorlock.config.Constant.MSG_CALLMEMBER_SERVER_ERRO
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_CALLMEMBER_TIMEOUT;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_CANCEL_CALL;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_DOWNLOAD;
-import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_INFO;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_GUEST_PASSWORD_CHECK;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_LOGIN;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_LOGIN_AFTER;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_PASSWORD_CHECK;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_RTC_DISCONNECT;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_RTC_NEWCALL;
@@ -132,11 +126,10 @@ public class MainService extends Service {
     private String token;//天翼登陆所需的token；
     private Device device;//天翼登陆连接成功 发消息的类
     private DbUtils mDbUtils;//数据库操作
-    private Hashtable<String, String> currentAdvertisementFiles = new Hashtable<String, String>()
-            ; //广告数据地址
+    private Hashtable<String, String> currentAdvertisementFiles = new Hashtable<String, String>(); //广告数据地址
     private AudioManager audioManager;//音频管理器
 
-    private ArrayList allUserList = new ArrayList();
+    private ArrayList<YeZhuBean> allUserList = new ArrayList<>();
     private ArrayList triedUserList = new ArrayList();
     private ArrayList onlineUserList = new ArrayList();
     private ArrayList offlineUserList = new ArrayList();
@@ -193,8 +186,7 @@ public class MainService extends Service {
                     case MAIN_ACTIVITY_INIT:
                         mainMessage = msg.replyTo;
                         netWorkstate = (Boolean) msg.obj;
-                        Log.i(TAG, "MainActivity初始化完成  MainServic开始初始化" + (netWorkstate ? "有网" :
-                                "没网"));
+                        Log.i(TAG, "MainActivity初始化完成  MainServic开始初始化" + (netWorkstate ? "有网" : "没网"));
                         init();
                         break;
                     case MSG_RTC_REGISTER:
@@ -325,6 +317,7 @@ public class MainService extends Service {
             connectReportThread = null;
         }
         connectReportThread = new Thread() {
+            @Override
             public void run() {
                 try {
                     connectReport();//首次执行
@@ -593,58 +586,9 @@ public class MainService extends Service {
      * 开启登录线程
      */
     protected void initClientInfo() {
-        try {
-            String url = API.DEVICE_LOGIN;
-//            String url = API.CONNECT_REPORT;
-            JSONObject data = new JSONObject();
-            data.put("mac", mac);
-            data.put("key", key);
-            data.put("version", getVersionName());
 
-            OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse
-                    ("application/json; charset=utf-8")).tag(this).build().execute(new StringCallback() {
-                @Override
-                public void onError(Call call, Exception e, int id) {
-                    Log.e(TAG, "服务器异常或没有网络 " + e.toString());
-                    initClientInfo();
-                }
+        getClientInfo();
 
-                @Override
-                public void onResponse(String response, int id) {
-                    Log.e("wh response", response);
-                    if (null != response) {
-                        String code = JsonUtil.getFieldValue(response, "code");
-                        if ("0".equals(code)) {
-                            String result = JsonUtil.getResult(response);
-                            DoorBean doorBean = JsonUtil.parseJsonToBean(result, DoorBean.class);
-                            httpServerToken = doorBean.getToken();
-                            Log.e(TAG, doorBean.toString());
-                            //保存返回数据，通知主线程继续下一步逻辑
-                            Message message = mHandler.obtainMessage();
-                            message.what = MSG_LOGIN;
-                            message.obj = doorBean;
-                            mHandler.sendMessage(message);
-
-                        }
-                    } else {
-                        //服务器异常或没有网络
-                        HttpApi.e("getClientInfo()->服务器无响应");
-                    }
-                }
-            });
-        } catch (Exception e) {
-            HttpApi.e("getClientInfo()->服务器数据解析异常");
-            e.printStackTrace();
-        }
-    }
-
-    private String getVersionName() throws Exception {
-        // 获取packagemanager的实例
-        PackageManager packageManager = getPackageManager();
-        // getPackageName()是你当前类的包名，0代表是获取版本信息
-        PackageInfo packInfo = packageManager.getPackageInfo(getPackageName(), 0);
-        String version = packInfo.versionName;
-        return version;
     }
 
     private void textDB() {
@@ -673,29 +617,28 @@ public class MainService extends Service {
      * @return
      * @throws JSONException
      */
-    protected boolean getClientInfo() throws JSONException {
-        final boolean[] resultValue = {false};
+    protected void getClientInfo() {
         try {
             String url = API.DEVICE_LOGIN;
             JSONObject data = new JSONObject();
             data.put("mac", "44:2c:05:e6:9c:c5");
             data.put("key", "442c05e69cc5");
             data.put("version", "1.0");
-            OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse
-                    ("application/json; charset=utf-8")).tag(this).build().execute(new StringCallback() {
+            OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse("application/json; "
+                    + "charset=utf-8")).tag(this).build().execute(new StringCallback() {
                 @Override
                 public void onError(Call call, Exception e, int id) {
                     Log.e(TAG, "e " + e.toString());
-
+                    getClientInfo();
                 }
 
                 @Override
                 public void onResponse(String response, int id) {
                     Log.e("wh response", response);
+                    Log.i(TAG, response);
                     if (null != response) {
                         String code = JsonUtil.getFieldValue(response, "code");
                         if ("0".equals(code)) {
-                            resultValue[0] = true;
                             String result1 = JsonUtil.getResult(response);
                             DoorBean doorBean = JsonUtil.parseJsonToBean(result1, DoorBean.class);
                             httpServerToken = doorBean.getToken();
@@ -703,12 +646,13 @@ public class MainService extends Service {
                             //保存返回数据，通知主线程继续下一步逻辑
                             Message message = mHandler.obtainMessage();
                             message.what = MSG_LOGIN;
-                            message.obj = doorBean;
+                            message.obj = doorBean.getXdoor();
                             mHandler.sendMessage(message);
                         }
                     } else {
                         //服务器异常或没有网络
                         HttpApi.e("getClientInfo()->服务器无响应");
+                        getClientInfo();
                     }
 
                 }
@@ -716,7 +660,6 @@ public class MainService extends Service {
         } catch (Exception e) {
             HttpApi.e("登录接口返回参数getClientInfo()->服务器数据解析异常");
         }
-        return resultValue[0];
     }
 
     /**
@@ -725,60 +668,50 @@ public class MainService extends Service {
      * @param msg
      */
     protected void onLogin(Message msg) {
-//        XdoorBean result = (XdoorBean) msg.obj;
-//        this.blockId = result.getLixian_mima();
-//        communityId = result.getXiangmu_id();
-//        lockId = result.getDanyuan_id();
-//        lockName = result.getName();
-//        communityName = result.getName();
-//        if (this.blockId == 0) {
-//            DeviceConfig.DEVICE_TYPE = "C";
-//        }
-//        // 保存消息
-//        //  saveInfoIntoLocal(communityId, blockId, lockId, communityName, lockName);
-//    }
-//
-//    Message message = Message.obtain();
-//    message.what =MSG_LOGIN_AFTER;
-//    message.obj =result;
-//
-//        mainMessage.send(message);
-
-
-//        lockName = result.ge();
-//        communityName = user.getString("communityName");
-//        Log.i(TAG, "登录成功后保存一些相关变量到本地");
-//        XdoorBean result = (XdoorBean) msg.obj;
-//
-//                this.blockId = result.getLoudong_id();
-//                communityId = result.getXiangmu_id();
-//                lockId = result.getDanyuan_id();
-//                lockName = result.getd();
-//                communityName = user.getString("communityName");
-//                if (this.blockId == 0) {
-//                    DeviceConfig.DEVICE_TYPE = "C";
-//                }
-//                Log.i(TAG, "user=" + user.toString());
-//                // 保存消息
-//                //  saveInfoIntoLocal(communityId, blockId, lockId, communityName, lockName);
-//            }
-//            Message message = Message.obtain();
-//        message.what = MSG_LOGIN_AFTER;
-//        message.obj = result;
-//            try {
-//                mainMessage.send(message);
-//            } catch (RemoteException e) {
-//                e.printStackTrace();
-//            }
-//        } catch (JSONException e) {
-//        }
+        //"id":1,"name":"大门","key":"442c05e69cc5","ip":"123456","mac":"44:2c:05:e6:9c:c5","type":"0",
+        // "danyuan_id":"1","loudong_id":"1","xiangmu_id":346,"gongsi_id":"1","lixian_mima":"123456","version":null,
+        // "xintiao_time":null
+        XdoorBean result = (XdoorBean) msg.obj;
+        this.blockId = Integer.parseInt(result.getLoudong_id());
+        communityId = result.getXiangmu_id();
+        //目前服务器返回为空
+        communityName = result.getXiangmu_name() == null ? "欣社区" : result.getXiangmu_name();
+        lockId = Integer.parseInt(result.getDanyuan_id());
+        lockName = result.getDanyuan_name() == null ? lockId + "单元" : result.getDanyuan_name();
+        if (this.blockId == 0) {
+            DeviceConfig.DEVICE_TYPE = "C";
+        }
+        // 保存消息  需要操作
+        saveInfoIntoLocal(communityId, blockId, lockId, communityName, lockName);
+        Message message = Message.obtain();
+        message.what = MSG_LOGIN_AFTER;
+        message.obj = result;
+        try {
+            mainMessage.send(message);
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
     }
 
-    /**
-     * 登录后保存信息到本地
-     */
-    private void saveInfoIntoLocal() {
+    protected void loadInfoFromLocal() {
+        SharedPreferences sharedPreferences = getSharedPreferences("residential", Activity.MODE_PRIVATE);
+        communityId = sharedPreferences.getInt("communityId", 0);
+        blockId = sharedPreferences.getInt("blockId", 0);
+        lockId = sharedPreferences.getInt("lockId", 0);
+        communityName = sharedPreferences.getString("communityName", "");
+        lockName = sharedPreferences.getString("lockName", "");
+    }
 
+    protected void saveInfoIntoLocal(int communityId, int blockId, int lockId, String communityName, String lockName) {
+        SharedPreferences sharedPreferences = getSharedPreferences("residential", Activity.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        //SPUtil.put(getApplicationContext(),);
+        editor.putInt("communityId", communityId);
+        editor.putInt("blockId", blockId);
+        editor.putInt("lockId", lockId);
+        editor.putString("communityName", communityName);
+        editor.putString("lockName", lockName);
+        editor.commit();
     }
 
     /****************************初始化天翼操作********************************/
@@ -833,10 +766,8 @@ public class MainService extends Service {
     private void getTokenFromServer() {
         Log.i(TAG, "rtc平台获取token");
         RtcConst.UEAPPID_Current = RtcConst.UEAPPID_Self;//账号体系，包括私有、微博、QQ等，必须在获取token之前确定。
-        JSONObject jsonobj = HttpManager.getInstance().CreateTokenJson(0, key, RtcHttpClient
-                .grantedCapabiltyID, "");
-        HttpResult ret = HttpManager.getInstance().getCapabilityToken(jsonobj, RTC_APP_ID,
-                RTC_APP_KEY);
+        JSONObject jsonobj = HttpManager.getInstance().CreateTokenJson(0, key, RtcHttpClient.grantedCapabiltyID, "");
+        HttpResult ret = HttpManager.getInstance().getCapabilityToken(jsonobj, RTC_APP_ID, RTC_APP_KEY);
         onResponseGetToken(ret);
     }
 
@@ -850,8 +781,7 @@ public class MainService extends Service {
             try {
                 String code = jsonrsp.getString(RtcConst.kcode);
                 String reason = jsonrsp.getString(RtcConst.kreason);
-                Log.v("MainService", "Response getCapabilityToken code:" + code + " reason:" +
-                        reason);
+                Log.v("MainService", "Response getCapabilityToken code:" + code + " reason:" + reason);
                 if (code.equals("0")) {
                     token = jsonrsp.getString(RtcConst.kcapabilityToken);
                     Log.i(TAG, "获取token成功 token=" + token);
@@ -1152,8 +1082,7 @@ public class MainService extends Service {
                     }
                     if (!username.equals(acceptMember)) {
                         Log.v("MainService", "--->取消" + username);
-                        String userUrl = RtcRules.UserToRemoteUri_new(username, RtcConst
-                                .UEType_Any);
+                        String userUrl = RtcRules.UserToRemoteUri_new(username, RtcConst.UEType_Any);
                         Log.e(TAG, "发送取消呼叫的消息");
                         device.sendIm(userUrl, "cmd/json", command.toString());
                     }
@@ -1213,12 +1142,9 @@ public class MainService extends Service {
      * 开始发消息呼叫业主
      */
     private void startCallMember() {
-        final String callUuid = this.imageUuid;
-        new Thread() {
-            public void run() {
-                callMember(callUuid);
-            }
-        }.start();
+        String callUuid = this.imageUuid;
+        callMember(callUuid);
+
     }
 
     /**
@@ -1226,39 +1152,62 @@ public class MainService extends Service {
      *
      * @param callUuid
      */
-    private void callMember(String callUuid) {
+    private void callMember(final String callUuid) {
         try {
-            String url = DeviceConfig.SERVER_URL + "/app/device/callAllMembers?from=";
-            url = url + this.key;
-            url = url + "&communityId=" + communityId;
-            if (DeviceConfig.DEVICE_TYPE.equals("C")) {
-                url = url + "&blockId=" + this.inputBlockId;
-            } else {
-                url = url + "&blockId=" + this.blockId;
-            }
-            url = url + "&unitNo=" + this.unitNo;
-            try {
-                String result = HttpApi.getInstance().loadHttpforGet(url, httpServerToken);
-                if (result != null && isCurrentCallWorking(callUuid)) {
-                    HttpApi.i("callMember()->" + result);
+            String url = API.CALLALL_MEMBERS;
+            JSONObject data = new JSONObject();
+            data.put("mac", "44:2c:05:e6:9c:c5");
+            data.put("hujiaohao", this.unitNo);
+
+            OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse("application/json; "
+                    + "charset=utf-8")).addHeader("Authorization", httpServerToken).tag(this).build().execute(new StringCallback() {
+                @Override
+                public void onError(Call call, Exception e, int id) {
+                    Log.e(TAG, "服务器异常或没有网络 " + e.toString());
                     Message message = mHandler.obtainMessage();
                     message.what = MSG_CALLMEMBER;
-                    Object[] objects = new Object[2];
-                    objects[0] = callUuid;
-                    objects[1] = Ajax.getJSONObject(result);
-                    message.obj = objects;
                     mHandler.sendMessage(message);
-                } else {
-                    HttpApi.e("callMember->服务器异常");
                 }
-            } catch (Exception e) {
-                Message message = mHandler.obtainMessage();
-                message.what = MSG_CALLMEMBER;
-                mHandler.sendMessage(message);
-                e.printStackTrace();
-            }
+
+                @Override
+                public void onResponse(String response, int id) {
+                    Log.e("wh response", response);
+
+                    if (null != response) {
+                        String code = JsonUtil.getFieldValue(response, "code");
+                        if ("0".equals(code) && isCurrentCallWorking(callUuid)) {
+                            //发到主线程给天翼RTC使用
+                            String result1 = JsonUtil.getResult(response);
+                            HttpApi.i("获取成员接口请求成功 callMember()->" + response);
+                            Message message = mHandler.obtainMessage();
+                            message.what = MSG_CALLMEMBER;
+                            Object[] objects = new Object[2];
+                            objects[0] = callUuid;
+                            objects[1] = result1;
+                            message.obj = objects;
+                            mHandler.sendMessage(message);
+                        } else {
+                            Message message = mHandler.obtainMessage();
+                            message.what = MSG_CALLMEMBER;
+                            mHandler.sendMessage(message);
+                        }
+                    } else {
+                        Message message = mHandler.obtainMessage();
+                        message.what = MSG_CALLMEMBER;
+                        mHandler.sendMessage(message);
+                        //服务器异常或没有网络
+                        HttpApi.e("getClientInfo()->服务器无响应");
+                    }
+                }
+            });
         } catch (Exception e) {
+            HttpApi.e("getClientInfo()->服务器数据解析异常");
+            Message message = mHandler.obtainMessage();
+            message.what = MSG_CALLMEMBER;
+            mHandler.sendMessage(message);
+            e.printStackTrace();
         }
+
     }
 
     /**
@@ -1274,6 +1223,7 @@ public class MainService extends Service {
     protected synchronized void onCallMember(Message msg) {
         try {
             if (msg.obj == null) {
+                Log.e(TAG, "呼叫错误");
                 Message message = Message.obtain();
                 message.what = MSG_CALLMEMBER_SERVER_ERROR;
                 try {
@@ -1285,13 +1235,12 @@ public class MainService extends Service {
             }
             Object[] objects = (Object[]) msg.obj;
             final String callUuid = (String) objects[0];
-            JSONObject result = (JSONObject) objects[1];
-            HttpApi.i("拨号中->网络请求在线列表");
-            JSONArray userList = (JSONArray) result.get("userList");
-            JSONArray unitDeviceList = (JSONArray) result.get("unitDeviceList");
+            String result = (String) objects[1];
             HttpApi.i("拨号中->网络请求在线列表" + (result != null ? result.toString() : ""));
-            if ((userList != null && userList.length() > 0) || (unitDeviceList != null &&
-                    unitDeviceList.length() > 0)) {
+            String yezhu = JsonUtil.getFieldValue(result, "yezhu");
+            Log.e(TAG, "yezhu");
+            List<YeZhuBean> userList =JsonUtil.parseJsonToList(yezhu, YeZhuBean.class);
+            if ((userList != null && userList.size() > 0)) {
                 Log.v("MainService", "收到新的呼叫，清除呼叫数据，UUID=" + callUuid);
                 HttpApi.i("拨号中->清除呼叫数据");
                 allUserList.clear();
@@ -1300,15 +1249,8 @@ public class MainService extends Service {
                 offlineUserList.clear();
                 rejectUserList.clear();
                 callConnectState = CALL_VIDEO_CONNECTING;
-                if (unitDeviceList != null) {
-                    for (int i = 0; i < unitDeviceList.length(); i++) {
-                        allUserList.add(unitDeviceList.get(i));
-                    }
-                }
-                if (userList != null) {
-                    for (int i = 0; i < userList.length(); i++) {
-                        allUserList.add(userList.get(i));
-                    }
+                for (int i = 0; i < userList.size(); i++) {
+                    allUserList.add(userList.get(i));
                 }
                 //呼叫模式并行
                 HttpApi.i("拨号中->准备拨号Parall");
@@ -1350,11 +1292,11 @@ public class MainService extends Service {
                 data.put("communityName", communityName);
                 data.put("lockName", lockName);
                 if (allUserList.size() > 0) {
-                    JSONObject userObject = (JSONObject) allUserList.remove(0);
-                    String username = (String) userObject.get("username");
-                    if (username.length() == 17) {
-                        username = username.replaceAll(":", "");
-                    }
+                    YeZhuBean userObject = (YeZhuBean) allUserList.remove(0);
+                    String username = userObject.getYezhu_dianhua();
+//                    if (username.length() == 17) {
+//                        username = username.replaceAll(":", "");
+//                    }
                     String userUrl = RtcRules.UserToRemoteUri_new(username, RtcConst.UEType_Any);
                     HttpApi.i("拨号中->准备拨号userUrl = " + userUrl);
                     HttpApi.i("拨号中->准备拨号data = " + data.toString());
@@ -1420,7 +1362,6 @@ public class MainService extends Service {
 
     /**
      * 推送消息
-     *
      * @param pushList
      * @throws JSONException
      * @throws IOException
@@ -1457,7 +1398,6 @@ public class MainService extends Service {
 
     /**
      * 发送消息到mainactivity
-     *
      * @param what
      * @param o
      */

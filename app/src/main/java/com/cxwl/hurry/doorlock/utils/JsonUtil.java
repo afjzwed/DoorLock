@@ -77,13 +77,13 @@ public class JsonUtil {
      * params: new TypeToken<List<yourbean>>(){}.getType(),
      *
      * @param json
-     * @param type new TypeToken<List<yourbean>>(){}.getType()
      * @return
      */
-    public static List<?> parseJsonToList(String json, Type type) {
+    public static <T> List<T> parseJsonToList(String json,  Class<T> cls) {
         Gson gson = new Gson();
 //        Type type1 = new TypeToken<List<?>>() {
-        List<?> list = gson.fromJson(json, type);
+        List<T> list = gson.fromJson(json,  new TypeToken<List<T>>() {
+        }.getType());
         return list;
     }
 
