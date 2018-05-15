@@ -113,6 +113,8 @@ import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_DETECT_CHECK;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_DETECT_CONTRAST;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_DETECT_INPUT;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_DETECT_PAUSE;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_DOWNLOAD;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_INFO;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_ID_CARD_DETECT_INPUT;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_ID_CARD_DETECT_PAUSE;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_ID_CARD_DETECT_RESTART;
@@ -514,6 +516,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     case MSG_PASSWORD_CHECK:
                         Log.i(TAG, "服务器验证密码后的返回");
                         onPasswordCheck((Integer) msg.obj);
+                        break;
+                    case MSG_FACE_INFO:
+                        //人脸识别录入
+                        faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_PAUSE, 100);
+                        faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_INPUT, 100);
                         break;
                     default:
                         break;
@@ -1921,7 +1928,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mSurfaceView.setupGLSurafceView(mGLSurfaceView, true, true, 0);
         mSurfaceView.debug_print_fps(true, false);
 
-        //初始化引擎，设置检测角度、范围，数量。创建对象后，必须先于其他成员函数调用，否则其他成员函数会返回 MERR_BAD_STATE
+        //人脸跟踪初始化引擎，设置检测角度、范围，数量。创建对象后，必须先于其他成员函数调用，否则其他成员函数会返回 MERR_BAD_STATE
         //orientsPriority 指定检测的角度 scale 指定支持检测的最小人脸尺寸(16) maxFaceNum 最多能检测到的人脸个数(5)
         AFT_FSDKError err = engine.AFT_FSDK_InitialFaceEngine(arc_appid, ft_key, AFT_FSDKEngine
                 .AFT_OPF_0_HIGHER_EXT, 16, 5);
@@ -2147,7 +2154,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mGLSurfaceView.getGLES2Render().draw_rect((Rect[]) data.getParams(), Color.GREEN, 2);
     }
 
-
     /**
      * 开始人脸录入
      */
@@ -2158,8 +2164,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             @Override
             public void run() {
                 // TODO: 2018/5/11  下载人脸识别用图片并录入
+
             }
         }).start();
+
+        sendMainMessager(MSG_FACE_DOWNLOAD, null);
     }
 
     class FRAbsLoop extends AbsLoop {
@@ -2246,8 +2255,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 float max = 0.0f;//匹配度的值
                 String name = null;
                 //下面暂时注释
-                /*//遍历本地信息表
-                for (FaceDB.FaceRegist fr : mResgist) {
+                //遍历本地信息表
+                /*for (FaceDB.FaceRegist fr : mResgist) {
                     Log.v(FACE_TAG, "loop:" + mResgist.size() + "/" + fr.mFaceList.size());
                     if (fr.mName.length() > 11) {
                         continue;

@@ -2,7 +2,12 @@ package com.cxwl.hurry.doorlock.service;
 
 import android.app.Service;
 import android.content.Intent;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.Rect;
 import android.media.AudioManager;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -12,19 +17,30 @@ import android.os.RemoteException;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
+import com.arcsoft.facedetection.AFD_FSDKEngine;
+import com.arcsoft.facedetection.AFD_FSDKError;
+import com.arcsoft.facedetection.AFD_FSDKFace;
+import com.arcsoft.facedetection.AFD_FSDKVersion;
+import com.arcsoft.facerecognition.AFR_FSDKEngine;
+import com.arcsoft.facerecognition.AFR_FSDKError;
+import com.arcsoft.facerecognition.AFR_FSDKFace;
+import com.arcsoft.facerecognition.AFR_FSDKVersion;
 import com.cxwl.hurry.doorlock.config.DeviceConfig;
 import com.cxwl.hurry.doorlock.db.Ka;
 import com.cxwl.hurry.doorlock.entity.DoorBean;
 import com.cxwl.hurry.doorlock.entity.XdoorBean;
 import com.cxwl.hurry.doorlock.http.API;
 import com.cxwl.hurry.doorlock.utils.Ajax;
+import com.cxwl.hurry.doorlock.utils.BitmapUtils;
 import com.cxwl.hurry.doorlock.utils.DbUtils;
 import com.cxwl.hurry.doorlock.utils.HttpApi;
 import com.cxwl.hurry.doorlock.utils.HttpUtils;
 import com.cxwl.hurry.doorlock.utils.JsonUtil;
 import com.cxwl.hurry.doorlock.utils.MacUtils;
+import com.cxwl.hurry.doorlock.utils.SPUtil;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import com.guo.android_extend.image.ImageConverter;
 import com.zhy.http.okhttp.OkHttpUtils;
 import com.zhy.http.okhttp.callback.StringCallback;
 
@@ -32,6 +48,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
@@ -65,6 +82,8 @@ import static com.cxwl.hurry.doorlock.config.Constant.MSG_CALLMEMBER_NO_ONLINE;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_CALLMEMBER_SERVER_ERROR;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_CALLMEMBER_TIMEOUT;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_CANCEL_CALL;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_DOWNLOAD;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_INFO;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_GUEST_PASSWORD_CHECK;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_LOGIN;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_PASSWORD_CHECK;
@@ -74,8 +93,9 @@ import static com.cxwl.hurry.doorlock.config.Constant.MSG_RTC_ONVIDEO;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_RTC_REGISTER;
 import static com.cxwl.hurry.doorlock.config.Constant.RTC_APP_ID;
 import static com.cxwl.hurry.doorlock.config.Constant.RTC_APP_KEY;
+import static com.cxwl.hurry.doorlock.config.Constant.arc_appid;
+import static com.cxwl.hurry.doorlock.config.Constant.ft_key;
 import static com.cxwl.hurry.doorlock.config.DeviceConfig.XINTIAO_URL;
-
 
 
 /**
@@ -132,12 +152,24 @@ public class MainService extends Service {
     public String imageUrl = null;//对应呼叫访客图片地址
     public String imageUuid = null;//图片对应的uuid
 
-    Thread timeoutCheckThread = null;//自动取消呼叫的定时器
+    private Thread timeoutCheckThread = null;//自动取消呼叫的定时器
 
-    Thread connectReportThread = null;//心跳包线程
+    private Thread connectReportThread = null;//心跳包线程
 
-    private boolean netWorkstate = false;
+    private boolean netWorkstate = false;//是否有网的标识
     public String tempKey = "";
+
+    private AFD_FSDKEngine engine_afd = new AFD_FSDKEngine();//这个类实现了人脸检测的功能
+    private AFD_FSDKVersion version_afd = new AFD_FSDKVersion();//这个类用来保存版本信息
+    private List<AFD_FSDKFace> result_afd = new ArrayList<AFD_FSDKFace>();//检测到的人脸信息集合
+    private AFD_FSDKError err_afd = new AFD_FSDKError();//这个类用来保存虹软错误
+
+    private AFR_FSDKVersion version_afr = new AFR_FSDKVersion();//保存版本信息(人脸识别)
+    private AFR_FSDKEngine engine_afr = new AFR_FSDKEngine();//这个类实现了人脸识别的功能
+    private AFR_FSDKFace result_afr = new AFR_FSDKFace();//识别到的人脸信息
+    private AFR_FSDKError err_afr = new AFR_FSDKError();//这个类用来保存虹软错误
+
+    private AFR_FSDKFace mAFR_FSDKFace;//用于保存到数据库中的人脸特征信息
 
     @Override
     public void onCreate() {
@@ -229,9 +261,9 @@ public class MainService extends Service {
                         break;
                     }
                     case MSG_UPDATE_NETWORKSTATE: {
-                        boolean obj1 = (boolean) msg.obj;
-                        Log.e(TAG, "initWhenConnected obj1" + obj1);
-                        if (obj1) {
+                        netWorkstate = (boolean) msg.obj;
+                        Log.e(TAG, "initWhenConnected obj1" + netWorkstate);
+                        if (netWorkstate) {
                             initWhenConnected(); //开始在线版本
                         } else {
                             // TODO: 2018/5/8   initWhenOffline(); //开始离线版本
@@ -241,6 +273,38 @@ public class MainService extends Service {
                     case REGISTER_ACTIVITY_DIAL:
                         initConnectReport();//心跳开始,根据心跳返回结果开启各更新程序
                         break;
+                    case MSG_FACE_DOWNLOAD: {
+                        // TODO: 2018/5/15 接收从MainActivity传来的人脸URL,循环下载并录入
+
+                        //在这里初始化人脸检测和识别相关类，之后抽取方法
+                        //人脸检测初始化引擎，设置检测角度、范围，数量。创建对象后，必须先于其他成员函数调用
+                        err_afd = engine_afd.AFD_FSDK_InitialFaceEngine(arc_appid, ft_key,
+                                AFD_FSDKEngine.AFD_OPF_0_HIGHER_EXT, 16, 5);
+
+                        //人脸识别初始化引擎，设置检测角度、范围，数量。创建对象后，必须先于其他成员函数调用
+                        err_afr = engine_afr.AFR_FSDK_InitialEngine(arc_appid, ft_key);
+
+
+                        if (err_afd.getCode() != AFD_FSDKError.MOK) {//FD初始化失败
+                            Log.e(TAG, "FD初始化失败，错误码：" + err_afd.getCode());
+                        } else if (err_afr.getCode() != AFD_FSDKError.MOK) {
+                            Log.e(TAG, "FR初始化失败，错误码：" + err_afr.getCode());
+                        } else {
+                            err_afd = engine_afd.AFD_FSDK_GetVersion(version_afd);
+                            err_afr = engine_afr.AFR_FSDK_GetVersion(version_afr);
+                            Log.d(TAG, "AFD_FSDK_GetVersion =" + version_afd.toString() + ", " +
+                                    err_afd.getCode());
+                            new Thread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    for (int i = 0; i < 100; i++) {
+                                        downLoadFace();
+                                    }
+                                }
+                            }).start();
+                        }
+                        break;
+                    }
                     default:
                         break;
                 }
@@ -249,6 +313,7 @@ public class MainService extends Service {
         };
         serviceMessage = new Messenger(mHandler);
     }
+
 
     /**
      * 开启心跳线程
@@ -528,20 +593,58 @@ public class MainService extends Service {
      * 开启登录线程
      */
     protected void initClientInfo() {
-        new Thread() {
-            public void run() {
-                boolean result = false;
-                try {
-                    do {
-                        result = getClientInfo();
-                        if (!result) {
-                            sleep(1000 * 10);//间隔10秒登录一次
-                        }
-                    } while (!result);
-                } catch (Exception e) {
+        try {
+            String url = API.DEVICE_LOGIN;
+//            String url = API.CONNECT_REPORT;
+            JSONObject data = new JSONObject();
+            data.put("mac", mac);
+            data.put("key", key);
+            data.put("version", getVersionName());
+
+            OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse
+                    ("application/json; charset=utf-8")).tag(this).build().execute(new StringCallback() {
+                @Override
+                public void onError(Call call, Exception e, int id) {
+                    Log.e(TAG, "服务器异常或没有网络 " + e.toString());
+                    initClientInfo();
                 }
-            }
-        }.start();
+
+                @Override
+                public void onResponse(String response, int id) {
+                    Log.e("wh response", response);
+                    if (null != response) {
+                        String code = JsonUtil.getFieldValue(response, "code");
+                        if ("0".equals(code)) {
+                            String result = JsonUtil.getResult(response);
+                            DoorBean doorBean = JsonUtil.parseJsonToBean(result, DoorBean.class);
+                            httpServerToken = doorBean.getToken();
+                            Log.e(TAG, doorBean.toString());
+                            //保存返回数据，通知主线程继续下一步逻辑
+                            Message message = mHandler.obtainMessage();
+                            message.what = MSG_LOGIN;
+                            message.obj = doorBean;
+                            mHandler.sendMessage(message);
+
+                        }
+                    } else {
+                        //服务器异常或没有网络
+                        HttpApi.e("getClientInfo()->服务器无响应");
+                    }
+                }
+            });
+        } catch (Exception e) {
+            HttpApi.e("getClientInfo()->服务器数据解析异常");
+            e.printStackTrace();
+        }
+    }
+
+    private String getVersionName() throws Exception {
+        // 获取packagemanager的实例
+        PackageManager packageManager = getPackageManager();
+        // getPackageName()是你当前类的包名，0代表是获取版本信息
+        PackageInfo packInfo = packageManager.getPackageInfo(getPackageName(), 0);
+        String version = packInfo.versionName;
+        return version;
     }
 
     private void textDB() {
@@ -583,6 +686,7 @@ public class MainService extends Service {
                 @Override
                 public void onError(Call call, Exception e, int id) {
                     Log.e(TAG, "e " + e.toString());
+
                 }
 
                 @Override
@@ -599,7 +703,7 @@ public class MainService extends Service {
                             //保存返回数据，通知主线程继续下一步逻辑
                             Message message = mHandler.obtainMessage();
                             message.what = MSG_LOGIN;
-                            message.obj = doorBean.getXdoor();
+                            message.obj = doorBean;
                             mHandler.sendMessage(message);
                         }
                     } else {
@@ -668,7 +772,14 @@ public class MainService extends Service {
 //            }
 //        } catch (JSONException e) {
 //        }
-}
+    }
+
+    /**
+     * 登录后保存信息到本地
+     */
+    private void saveInfoIntoLocal() {
+
+    }
 
     /****************************初始化天翼操作********************************/
     public static Connection callConnection;
@@ -722,8 +833,10 @@ public class MainService extends Service {
     private void getTokenFromServer() {
         Log.i(TAG, "rtc平台获取token");
         RtcConst.UEAPPID_Current = RtcConst.UEAPPID_Self;//账号体系，包括私有、微博、QQ等，必须在获取token之前确定。
-        JSONObject jsonobj = HttpManager.getInstance().CreateTokenJson(0, key, RtcHttpClient.grantedCapabiltyID, "");
-        HttpResult ret = HttpManager.getInstance().getCapabilityToken(jsonobj, RTC_APP_ID, RTC_APP_KEY);
+        JSONObject jsonobj = HttpManager.getInstance().CreateTokenJson(0, key, RtcHttpClient
+                .grantedCapabiltyID, "");
+        HttpResult ret = HttpManager.getInstance().getCapabilityToken(jsonobj, RTC_APP_ID,
+                RTC_APP_KEY);
         onResponseGetToken(ret);
     }
 
@@ -737,7 +850,8 @@ public class MainService extends Service {
             try {
                 String code = jsonrsp.getString(RtcConst.kcode);
                 String reason = jsonrsp.getString(RtcConst.kreason);
-                Log.v("MainService", "Response getCapabilityToken code:" + code + " reason:" + reason);
+                Log.v("MainService", "Response getCapabilityToken code:" + code + " reason:" +
+                        reason);
                 if (code.equals("0")) {
                     token = jsonrsp.getString(RtcConst.kcapabilityToken);
                     Log.i(TAG, "获取token成功 token=" + token);
@@ -1038,7 +1152,8 @@ public class MainService extends Service {
                     }
                     if (!username.equals(acceptMember)) {
                         Log.v("MainService", "--->取消" + username);
-                        String userUrl = RtcRules.UserToRemoteUri_new(username, RtcConst.UEType_Any);
+                        String userUrl = RtcRules.UserToRemoteUri_new(username, RtcConst
+                                .UEType_Any);
                         Log.e(TAG, "发送取消呼叫的消息");
                         device.sendIm(userUrl, "cmd/json", command.toString());
                     }
@@ -1175,8 +1290,8 @@ public class MainService extends Service {
             JSONArray userList = (JSONArray) result.get("userList");
             JSONArray unitDeviceList = (JSONArray) result.get("unitDeviceList");
             HttpApi.i("拨号中->网络请求在线列表" + (result != null ? result.toString() : ""));
-            if ((userList != null && userList.length() > 0) || (unitDeviceList != null && unitDeviceList.length() >
-                    0)) {
+            if ((userList != null && userList.length() > 0) || (unitDeviceList != null &&
+                    unitDeviceList.length() > 0)) {
                 Log.v("MainService", "收到新的呼叫，清除呼叫数据，UUID=" + callUuid);
                 HttpApi.i("拨号中->清除呼叫数据");
                 allUserList.clear();
@@ -1305,6 +1420,7 @@ public class MainService extends Service {
 
     /**
      * 推送消息
+     *
      * @param pushList
      * @throws JSONException
      * @throws IOException
@@ -1341,6 +1457,7 @@ public class MainService extends Service {
 
     /**
      * 发送消息到mainactivity
+     *
      * @param what
      * @param o
      */
@@ -1356,4 +1473,94 @@ public class MainService extends Service {
             }
         }
     }
+
+    /****************************虹软相关*********************************************/
+
+    private boolean downLoadFace() {
+        boolean abc = false;
+        try {
+            String file = "/app/download/face/20180421121538";
+            int lastIndex = file.lastIndexOf("/");
+            String fileName = file.substring(lastIndex + 1);
+            //根据文件名返回本地路径
+            String localFile = HttpUtils.getLocalFile(fileName);
+            if (localFile == null) {
+                //如果本地没有对应文件,则下载文件至本地
+                localFile = HttpUtils.downloadFile(file);
+                if (localFile != null) {
+                    if (localFile.endsWith(".temp")) {
+                        localFile = localFile.substring(0, localFile.length() - 5);
+                    }
+                    Log.e("wh", "fileName " + fileName + " localFile " + localFile);
+                    File file1 = new File(localFile + ".temp");
+                    if (file1.exists()) {
+                        File file2 = new File(localFile + ".jpg");
+                        Log.e("wh", "file2 " + file2.getPath());
+                        file1.renameTo(file2);//重命名,去掉.temp
+                        file1.renameTo(new File(localFile + ".jpg"));
+                        String path = file2.getPath();
+                        Log.e("wh", "图片路径" + path);
+                        if (file1 != null) {
+                            // TODO: 2018/5/15 这里捕捉人脸信息并录入
+                            abc = getFaceInfo(file2.getPath());
+                        }
+                    }
+                }
+            } else {
+                //文件已存在，不重复下载
+            }
+        } catch (Exception e) {
+        }
+        return abc;
+    }
+
+    private boolean getFaceInfo(String mFilePath) {
+
+        Bitmap mBitmap = BitmapUtils.decodeImage(mFilePath);
+
+        byte[] data = new byte[mBitmap.getWidth() * mBitmap.getHeight() * 3 / 2];
+        ImageConverter convert = new ImageConverter();
+        convert.initial(mBitmap.getWidth(), mBitmap.getHeight(), ImageConverter.CP_PAF_NV21);
+        if (convert.convert(mBitmap, data)) {
+            Log.d(TAG, "convert ok!");
+        }
+        convert.destroy();
+
+        //这个函数功能为检测输入的图像中存在的人脸,data 输入的图像数据,width 图像宽度,height 图像高度,format 图像格式,List<AFD_FSDKFace>
+        // list 检测到的人脸会放到到该列表里
+        err_afd = engine_afd.AFD_FSDK_StillImageFaceDetection(data, mBitmap.getWidth(), mBitmap
+                .getHeight(), AFD_FSDKEngine.CP_PAF_NV21, result_afd);
+        Log.d(TAG, "AFD_FSDK_StillImageFaceDetection =" + err_afd.getCode() + "<" + result_afd
+                .size());
+
+        if (!result_afd.isEmpty() && result_afd.size() != 0) {//人脸数据结果不为空
+            //检测输入图像中的人脸特征信息，输出结果保存在 AFR_FSDKFace feature
+            err_afr = engine_afr.AFR_FSDK_ExtractFRFeature(data, mBitmap.getWidth(), mBitmap
+                    .getHeight(), AFR_FSDKEngine.CP_PAF_NV21, new Rect(result_afd.get(0).getRect
+                    ()), result_afd.get(0).getDegree(), result_afr);
+            Log.d("com.arcsoft", "Face=" + result_afr.getFeatureData()[0] + "," + result_afr
+                    .getFeatureData()[1] + "," + result_afr.getFeatureData()[2] + "," + err_afr
+                    .getCode());
+            if (err_afr.getCode() == err_afr.MOK) {//人脸特征检测成功
+                mAFR_FSDKFace = result_afr.clone();
+                // TODO: 2018/5/15 保存mAFR_FSDKFace人脸信息，操作数据库
+                if (true) {//保存成功
+                    return true;
+                } else {
+                    return false;
+                }
+            } else {
+                //人脸特征无法检测
+                Log.e(TAG, "人脸特征无法检测");
+                return true;
+            }
+
+        } else {
+            //没有人脸数据
+            Log.e(TAG, "没有人脸数据");
+            return true;
+        }
+    }
+
+    /****************************虹软相关*********************************************/
 }

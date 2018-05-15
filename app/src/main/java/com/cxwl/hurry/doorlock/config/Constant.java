@@ -23,6 +23,9 @@ public class Constant {
     public static final int MSG_ID_CARD_DETECT_INPUT = 11105;//身份证识别重新开始
 
     public static final int MSG_FACE_DETECT_CHECK=-1;//人脸识别重置标志位
+
+    public static final int MSG_FACE_INFO = 11106;//获取人脸照片URL
+    public static final int MSG_FACE_DOWNLOAD =11107;//下载照片并录入人脸
     /********************虹软相关*********************/
 
     /********************天翼RTC相关******************/
