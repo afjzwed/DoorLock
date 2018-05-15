@@ -51,6 +51,11 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.androidex.aexapplibs.appLibsService;
+import com.arcsoft.facerecognition.AFR_FSDKEngine;
+import com.arcsoft.facerecognition.AFR_FSDKError;
+import com.arcsoft.facerecognition.AFR_FSDKFace;
+import com.arcsoft.facerecognition.AFR_FSDKMatching;
+import com.arcsoft.facerecognition.AFR_FSDKVersion;
 import com.arcsoft.facetracking.AFT_FSDKEngine;
 import com.arcsoft.facetracking.AFT_FSDKError;
 import com.arcsoft.facetracking.AFT_FSDKFace;
@@ -58,17 +63,21 @@ import com.arcsoft.facetracking.AFT_FSDKVersion;
 import com.cxwl.hurry.doorlock.MainApplication;
 import com.cxwl.hurry.doorlock.R;
 import com.cxwl.hurry.doorlock.callback.AdverErrorCallBack;
+import com.cxwl.hurry.doorlock.config.Constant;
 import com.cxwl.hurry.doorlock.config.DeviceConfig;
+import com.cxwl.hurry.doorlock.db.Lian;
 import com.cxwl.hurry.doorlock.interfac.TakePictureCallback;
 import com.cxwl.hurry.doorlock.service.MainService;
 import com.cxwl.hurry.doorlock.utils.AdvertiseHandler;
 import com.cxwl.hurry.doorlock.utils.Ajax;
+import com.cxwl.hurry.doorlock.utils.DbUtils;
 import com.cxwl.hurry.doorlock.utils.HttpApi;
 import com.cxwl.hurry.doorlock.utils.HttpUtils;
 import com.cxwl.hurry.doorlock.utils.Intenet;
 import com.cxwl.hurry.doorlock.utils.NetWorkUtils;
 import com.cxwl.hurry.doorlock.utils.NfcReader;
 import com.cxwl.hurry.doorlock.utils.UploadUtil;
+import com.guo.android_extend.java.AbsLoop;
 import com.guo.android_extend.widget.CameraFrameData;
 import com.guo.android_extend.widget.CameraGLSurfaceView;
 import com.guo.android_extend.widget.CameraSurfaceView;
@@ -195,6 +204,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private Thread passwordTimeoutThread = null;//访客密码线程
     private String guestPassword = "";//访客输入的密码值
 
+    private DbUtils mDbUtils;//数据库操作
+
     private int mWidth, mHeight;//屏幕宽高
     private CameraSurfaceView mSurfaceView;//用于人脸识别（单独使用则渲染直接走系统流程，配合CameraGLSurfaceView
     // 这个渲染显示的控件来用的的话，。CameraGLSurfaceView 这个类里使用了GLRender
@@ -207,7 +218,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private byte[] mImageNV21 = null;//图像数据
     private AFT_FSDKFace mAFT_FSDKFace = null;//这个类用来保存检测到的人脸信息
     private Handler faceHandler;//人脸识别handler
-    private boolean identification = false;//人脸识别可以开始的标识
+    private boolean identification = false;//人脸识别可以开始对比的标识
+   private FRAbsLoop mFRAbsLoop = null;//人脸对比线程
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -233,6 +245,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         hwservice.EnterFullScreen();//hwservice为appLibs的服务
 
         initView();//初始化View
+        initDB();//初始化数据库
         initQiniu();//初始化七牛
         initScreen();
         initHandle();
@@ -401,6 +414,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         autoCameraSurfaceView = (SurfaceView) findViewById(R.id.autoCameraSurfaceview);
         autoCameraHolder = autoCameraSurfaceView.getHolder();
         autoCameraHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
+    }
+
+    /**
+     * 初始化数据库
+     */
+    private void initDB() {
+        mDbUtils = DbUtils.getInstans();
     }
 
     /**
@@ -592,10 +612,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     Log.e(TAG, "可以读卡");
                     enableReaderMode();//登录成功后开启读卡
 
-                    // TODO: 2018/5/8 登录成功后人脸识别对比开启
-//                    if (faceHandler != null) {
-//                        faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_CONTRAST, 1000);
-//                    }
+                    if (faceHandler != null) {
+                        faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_CONTRAST, 1000);
+                    }
 
                     sendMainMessager(MainService.REGISTER_ACTIVITY_DIAL, null);//开始心跳包
 
@@ -1922,29 +1941,32 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         identification = true;
 //                        idOperation =true;
                         break;
-                    case MSG_FACE_DETECT_INPUT://人脸识别录入(拿到网络图片后发出人脸识别暂停，然后一张张录入)
+                    case MSG_FACE_DETECT_INPUT://人脸识别录入(拿到网络图片后发出人脸识别暂停，然后发出录入消息)
+                        Log.e(TAG, "人脸" + "识别录入");
                         // TODO: 2018/5/11  这里要传入整个网络图片的所有地址过来给faceDetectInput方法使用
                         faceDetectInput();
                         break;
                     case MSG_FACE_DETECT_CONTRAST://人脸识别对比
-//                        identification = true;
-//                        if (mFRAbsLoop != null) {
-//                            mFRAbsLoop.resumeThread();
-//                        }
-//                        if (mSurfaceView.getVisibility() != View.VISIBLE) {
-//                            mGLSurfaceView.setVisibility(View.VISIBLE);
-//                            mSurfaceView.setVisibility(View.VISIBLE);
-//                        }
+                        Log.e(TAG, "人脸" + "识别对比");
+                        identification = true;
+                        if (mFRAbsLoop != null) {
+                            mFRAbsLoop.resumeThread();
+                        }
+                        if (mSurfaceView.getVisibility() != View.VISIBLE) {
+                            mGLSurfaceView.setVisibility(View.VISIBLE);
+                            mSurfaceView.setVisibility(View.VISIBLE);
+                        }
                         break;
                     case MSG_FACE_DETECT_PAUSE://人脸识别暂停
-//                        identification = false;
-//                        if (mFRAbsLoop != null) {
-//                            mFRAbsLoop.pauseThread();
-//                        }
-//                        if (mSurfaceView.getVisibility() != View.GONE) {
-//                            mGLSurfaceView.setVisibility(View.GONE);
-//                            mSurfaceView.setVisibility(View.GONE);
-//                        }
+                        Log.e(TAG, "人脸" + "识别暂停");
+                        identification = false;
+                        if (mFRAbsLoop != null) {
+                            mFRAbsLoop.pauseThread();
+                        }
+                        if (mSurfaceView.getVisibility() != View.GONE) {
+                            mGLSurfaceView.setVisibility(View.GONE);
+                            mSurfaceView.setVisibility(View.GONE);
+                        }
                         break;
                     //身份证的都注释
                     case MSG_ID_CARD_DETECT_RESTART:
@@ -1966,6 +1988,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 return false;
             }
         });
+
+        mFRAbsLoop = new FRAbsLoop();
+        mFRAbsLoop.start();
+
+        // TODO: 2018/5/14 获取人脸信息本地数据库,判断是否为空
+        if (true) {//人脸信息本地数据库不为空
+            identification = true;//可以人脸对比
+        } else {//人脸信息本地数据库为空
+            identification = false;//不可以人脸对比
+        }
     }
 
     /**
@@ -2122,12 +2154,142 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private void faceDetectInput() {
         //// TODO: 2018/5/11 要发送消息给MainService，交由MainService去处理下载流程和录入流程
         // TODO: 2018/5/11 拿到所有网络图片路径后开始，一张张录入,开子线程
-       new Thread(new Runnable() {
-           @Override
-           public void run() {
-               // TODO: 2018/5/11  下载人脸识别用图片并录入
-           }
-       }).start();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                // TODO: 2018/5/11  下载人脸识别用图片并录入
+            }
+        }).start();
+    }
+
+    class FRAbsLoop extends AbsLoop {
+
+        AFR_FSDKVersion version = new AFR_FSDKVersion();
+        AFR_FSDKEngine engine = new AFR_FSDKEngine();
+        AFR_FSDKFace result = new AFR_FSDKFace();
+
+        // TODO: 2018/5/14 这里拿到本地数据库脸信息表
+//        List<FaceDB.FaceRegist> mResgist = ArcsoftManager.getInstance().mFaceDB.mRegister;
+        List<Lian> mFaceList = new ArrayList<>();
+//        List<ASAE_FSDKFace> face1 = new ArrayList<>();
+//        List<ASGE_FSDKFace> face2 = new ArrayList<>();
+
+
+        private final Object lock = new Object();
+        private boolean pause = false;
+
+        /**
+         * 调用这个方法实现暂停线程
+         */
+        void pauseThread() {
+            pause = true;
+        }
+
+        /**
+         * 调用这个方法实现恢复线程的运行
+         */
+        void resumeThread() {
+            pause = false;
+            synchronized (lock) {
+                lock.notifyAll();
+            }
+        }
+
+        /**
+         * 注意：这个方法只能在run方法里调用，不然会阻塞主线程，导致页面无响应
+         */
+        void onPause() {
+            synchronized (lock) {
+                try {
+                    lock.wait();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        @Override
+        public void setup() {
+            AFR_FSDKError error = engine.AFR_FSDK_InitialEngine(arc_appid, ft_key);
+            //Log.v(FACE_TAG, "AFR_FSDK_InitialEngine = " + error.getCode());
+            error = engine.AFR_FSDK_GetVersion(version);
+            //Log.v(FACE_TAG, "FR=" + version.toString() + "," + error.getCode()); //(210, 178 -
+            // 478, 446), degree =
+            // 1　780, 2208 - 1942, 3370
+        }
+
+        @Override
+        public void loop() {
+//            Log.v(FACE_TAG, "loop1:" + mImageNV21 + "/" + identification);
+            while (pause) {
+                onPause();
+            }
+            try {
+                Thread.sleep(1 * 1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            if (mImageNV21 != null && identification) {//摄像头检测到人脸信息且处于人脸识别状态
+                long time = System.currentTimeMillis();
+                //检测输入图像中的人脸特征信息，输出结果保存在 AFR_FSDKFace feature
+                //data 输入的图像数据,width 图像宽度,height 图像高度,format 图像格式,face 已检测到的脸框,ori 已检测到的脸角度,
+                // feature 检测到的人脸特征信息
+                AFR_FSDKError error = engine.AFR_FSDK_ExtractFRFeature(mImageNV21, mWidth,
+                        mHeight, AFR_FSDKEngine.CP_PAF_NV21, mAFT_FSDKFace.getRect(),
+                        mAFT_FSDKFace.getDegree(), result);
+                //Log.d(TAG, "AFR_FSDK_ExtractFRFeature cost :" + (System.currentTimeMillis() -
+                // time) + "ms");
+                //Log.d(TAG, "Face=" + result.getFeatureData()[0] + "," + result.getFeatureData()
+                // [1] + "," + result
+                // .getFeatureData()[2] + "," + error.getCode());
+                AFR_FSDKMatching score = new AFR_FSDKMatching();//这个类用来保存特征信息匹配度
+                float max = 0.0f;//匹配度的值
+                String name = null;
+                //下面暂时注释
+                /*//遍历本地信息表
+                for (FaceDB.FaceRegist fr : mResgist) {
+                    Log.v(FACE_TAG, "loop:" + mResgist.size() + "/" + fr.mFaceList.size());
+                    if (fr.mName.length() > 11) {
+                        continue;
+                    }
+                    for (AFR_FSDKFace face : fr.mFaceList) {
+                        //比较两份人脸特征信息的匹配度(result 脸部特征信息对象,face 脸部特征信息对象,score 匹配度对象)
+                        error = engine.AFR_FSDK_FacePairMatching(result, face, score);
+                        Log.d(TAG, "Score:" + score.getScore());
+                        // + error.getCode());
+                        if (max < score.getScore()) {
+                            max = score.getScore();//匹配度赋值
+                            name = fr.mName;
+                            if (max > 0.618f) {//匹配度的值高于设定值,退出循环
+                                break;
+                            }
+                        }
+                    }
+                }
+
+
+                //Log.v(FACE_TAG, "fit Score:" + max + ", NAME:" + name);
+                if (max > 0.618f) {//匹配度的值高于设定值,发出消息,开门
+                    //fr success.
+                    final float max_score = max;
+                    //Log.v(FACE_TAG, "置信度：" + (float) ((int) (max_score * 1000)) / 1000.0);
+                    Message message = Message.obtain();
+                    message.what = MainService.MSG_FACE_OPENLOCK;
+                    try {
+                        serviceMessenger.send(message);
+                    } catch (RemoteException e) {
+                        e.printStackTrace();
+                    }
+                }*/
+                mImageNV21 = null;
+            }
+        }
+
+        @Override
+        public void over() {
+            AFR_FSDKError error = engine.AFR_FSDK_UninitialEngine();//销毁引擎，释放内存资源
+            //Log.v(FACE_TAG, "AFR_FSDK_UninitialEngine : " + error.getCode());
+        }
     }
     /****************************虹软相关end*********************************************/
 

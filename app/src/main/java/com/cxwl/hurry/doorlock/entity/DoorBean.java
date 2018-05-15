@@ -5,26 +5,26 @@ package com.cxwl.hurry.doorlock.entity;
  */
 
 public class DoorBean {
-
     /**
      * id : 1
-     * ka : 2018-05-09 17:20:55.0
-     * ka_gx : 2018-05-09 17:20:50.0
+     * ka : 2018-05-09 17:20:55
+     * ka_gx : 2018-05-09 17:20:50
      * lian : 1
-     * lian_gx : 2018-05-09 17:20:42.0
+     * lian_gx : 2018-05-09 17:20:42
      * guanggao : 1
-     * guanggao_gx : 2018-05-09 17:56:49.0
+     * guanggao_gx : 2018-05-09 17:56:49
      * tonggao : 1
-     * tonggao_gx : 2018-05-09 17:20:46.0
+     * tonggao_gx : 2018-05-09 17:20:46
      * mac : 44:2c:05:e6:9c:c5
      * xiangmu_id : 1
-     * xdoor : {"id":1,"name":"1","key":"442c05e69cc5","ip":"1","mac":"44:2c:05:e6:9c:c5",
-     * "type":"1","danyuan_id":1,"loudong_id":1,"xiangmu_id":1,"gongsi_id":1,
+     * xdoor : {"id":1,"name":"大门","key":"442c05e69cc5","ip":"123456","mac":"44:2c:05:e6:9c:c5",
+     * "type":"0","danyuan_id":"1","loudong_id":"1","xiangmu_id":346,"gongsi_id":"1",
      * "lixian_mima":"123456","version":null}
      * xintiao_time : 300
-     * fuwuqi_time : 1525935607487
+     * fuwuqi_time : 1526283866147
      * lixian_mima : 123456
      * version : null
+     * token : 7a8f37cf-d8eb-4dad-9bfa-e1b3401d37f0
      */
 
     private int id;
@@ -42,7 +42,8 @@ public class DoorBean {
     private int xintiao_time;
     private String fuwuqi_time;
     private String lixian_mima;
-    private Object version;
+    private String version;
+    private String token;
 
     public int getId() {
         return id;
@@ -164,12 +165,20 @@ public class DoorBean {
         this.lixian_mima = lixian_mima;
     }
 
-    public Object getVersion() {
+    public String getVersion() {
         return version;
     }
 
-    public void setVersion(Object version) {
+    public void setVersion(String version) {
         this.version = version;
+    }
+
+    public String getToken() {
+        return token;
+    }
+
+    public void setToken(String token) {
+        this.token = token;
     }
 
     @Override
@@ -180,6 +189,7 @@ public class DoorBean {
                 tonggao + '\'' + ", tonggao_gx='" + tonggao_gx + '\'' + ", mac='" + mac + '\'' +
                 ", xiangmu_id=" + xiangmu_id + ", xdoor=" + xdoor + ", xintiao_time=" +
                 xintiao_time + ", fuwuqi_time='" + fuwuqi_time + '\'' + ", lixian_mima='" +
-                lixian_mima + '\'' + ", version=" + version + '}';
+                lixian_mima + '\'' + ", version='" + version + '\'' + ", token='" + token + '\''
+                + '}';
     }
 }

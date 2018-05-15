@@ -7,14 +7,14 @@ package com.cxwl.hurry.doorlock.entity;
 public class XdoorBean {
     /**
      * id : 1
-     * name : 1
+     * name : 大门
      * key : 442c05e69cc5
-     * ip : 1
+     * ip : 123456
      * mac : 44:2c:05:e6:9c:c5
-     * type : 1
+     * type : 0
      * danyuan_id : 1
      * loudong_id : 1
-     * xiangmu_id : 1
+     * xiangmu_id : 346
      * gongsi_id : 1
      * lixian_mima : 123456
      * version : null
@@ -26,10 +26,10 @@ public class XdoorBean {
     private String ip;
     private String mac;
     private String type;
-    private int danyuan_id;
-    private int loudong_id;
+    private String danyuan_id;
+    private String loudong_id;
     private int xiangmu_id;
-    private int gongsi_id;
+    private String gongsi_id;
     private String lixian_mima;
     private Object version;
 
@@ -81,19 +81,19 @@ public class XdoorBean {
         this.type = type;
     }
 
-    public int getDanyuan_id() {
+    public String getDanyuan_id() {
         return danyuan_id;
     }
 
-    public void setDanyuan_id(int danyuan_id) {
+    public void setDanyuan_id(String danyuan_id) {
         this.danyuan_id = danyuan_id;
     }
 
-    public int getLoudong_id() {
+    public String getLoudong_id() {
         return loudong_id;
     }
 
-    public void setLoudong_id(int loudong_id) {
+    public void setLoudong_id(String loudong_id) {
         this.loudong_id = loudong_id;
     }
 
@@ -105,11 +105,11 @@ public class XdoorBean {
         this.xiangmu_id = xiangmu_id;
     }
 
-    public int getGongsi_id() {
+    public String getGongsi_id() {
         return gongsi_id;
     }
 
-    public void setGongsi_id(int gongsi_id) {
+    public void setGongsi_id(String gongsi_id) {
         this.gongsi_id = gongsi_id;
     }
 
@@ -133,8 +133,8 @@ public class XdoorBean {
     public String toString() {
         return "XdoorBean{" + "id=" + id + ", name='" + name + '\'' + ", key='" + key + '\'' + "," +
                 " ip='" + ip + '\'' + ", mac='" + mac + '\'' + ", type='" + type + '\'' + ", " +
-                "danyuan_id=" + danyuan_id + ", loudong_id=" + loudong_id + ", xiangmu_id=" +
-                xiangmu_id + ", gongsi_id=" + gongsi_id + ", lixian_mima='" + lixian_mima + '\''
-                + ", version=" + version + '}';
+                "danyuan_id='" + danyuan_id + '\'' + ", loudong_id='" + loudong_id + '\'' + ", " +
+                "xiangmu_id=" + xiangmu_id + ", gongsi_id='" + gongsi_id + '\'' + ", " +
+                "lixian_mima='" + lixian_mima + '\'' + ", version=" + version + '}';
     }
 }

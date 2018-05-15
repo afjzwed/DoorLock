@@ -25,6 +25,8 @@ import com.cxwl.hurry.doorlock.utils.JsonUtil;
 import com.cxwl.hurry.doorlock.utils.MacUtils;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import com.zhy.http.okhttp.OkHttpUtils;
+import com.zhy.http.okhttp.callback.StringCallback;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -42,6 +44,8 @@ import java.util.Map;
 import jni.http.HttpManager;
 import jni.http.HttpResult;
 import jni.http.RtcHttpClient;
+import okhttp3.Call;
+import okhttp3.MediaType;
 import rtc.sdk.clt.RtcClientImpl;
 import rtc.sdk.common.RtcConst;
 import rtc.sdk.common.SdkSettings;
@@ -141,7 +145,7 @@ public class MainService extends Service {
         Log.i(TAG, "service启动");
         audioManager = (AudioManager) getSystemService(Service.AUDIO_SERVICE);
         initHandler();
-        initDB();
+        // TODO: 2018/5/14 放在MainActivity中  initDB();
         initMacKey();
 
     }
@@ -165,7 +169,6 @@ public class MainService extends Service {
                         //登陆成功后
                         Log.i(TAG, "登陆成功后 rtc注册");
                         initTYSDK();// rtc注册
-
                         break;
                     case MSG_CALLMEMBER:
                         //呼叫成员
@@ -247,6 +250,9 @@ public class MainService extends Service {
         serviceMessage = new Messenger(mHandler);
     }
 
+    /**
+     * 开启心跳线程
+     */
     private void initConnectReport() {
         //xiaozd add
         if (connectReportThread != null) {
@@ -565,64 +571,48 @@ public class MainService extends Service {
      * @throws JSONException
      */
     protected boolean getClientInfo() throws JSONException {
-        boolean resultValue = false;
+        final boolean[] resultValue = {false};
         try {
             String url = API.DEVICE_LOGIN;
             JSONObject data = new JSONObject();
             data.put("mac", "44:2c:05:e6:9c:c5");
             data.put("key", "442c05e69cc5");
             data.put("version", "1.0");
-            String post = HttpApi.getInstance().loadHttpforPost(url, data, httpServerToken);
-            Map<String, String> map = new HashMap<>();
-            map.put("mac", "44:2c:05:e6:9c:c5");
-            map.put("key", "442c05e69cc5");
-            map.put("version", "1.0");
-            String result = HttpApi.getInstance().loadHttpforGet(url, map, httpServerToken);
-            if (null != result) {
-                String code = JsonUtil.getFieldValue(result, "code");
-                if ("0".equals(code)) {
-                    resultValue = true;
-                    String result1 = JsonUtil.getResult(result);
-                    DoorBean doorBean = JsonUtil.parseJsonToBean(result1, DoorBean.class);
-                    Log.e(TAG, doorBean.toString());
-                    //保存返回数据，通知主线程继续下一步逻辑
-                    Message message = mHandler.obtainMessage();
-                    message.what = MSG_LOGIN;
-                    message.obj = doorBean.getXdoor();
-                    mHandler.sendMessage(message);
+            OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse
+                    ("application/json; charset=utf-8")).tag(this).build().execute(new StringCallback() {
+                @Override
+                public void onError(Call call, Exception e, int id) {
+                    Log.e(TAG, "e " + e.toString());
                 }
-            } else {
-                //服务器异常或没有网络
-                HttpApi.e("getClientInfo()->服务器无响应");
-            }
 
-//            if (result != null) {
-//                HttpApi.i("登录接口返回参数getClientInfo()->" + result);
-//                JSONObject resultObj = Ajax.getJSONObject(result);
-//                int code = resultObj.getInt("code");
-//                if (code == 0) {
-//                    resultValue = true;
-//                    try {
-//                        httpServerToken = resultObj.getString("token");
-//                    } catch (Exception e) {
-//                        httpServerToken = null;
-//                    }
-//                    //初始化保存更新时间等
-//                    //  initDeviceConfig(resultObj);
-//                }
-//                Message message = mHandler.obtainMessage();
-//                message.what = MSG_LOGIN;
-//                resultObj.put("mac", this.mac);
-//                message.obj = resultObj;
-//                mHandler.sendMessage(message);
-//            } else {
-//                //服务器异常或没有网络
-//                HttpApi.e("登录接口返回参数getClientInfo()->服务器无响应");
-//            }
+                @Override
+                public void onResponse(String response, int id) {
+                    Log.e("wh response", response);
+                    if (null != response) {
+                        String code = JsonUtil.getFieldValue(response, "code");
+                        if ("0".equals(code)) {
+                            resultValue[0] = true;
+                            String result1 = JsonUtil.getResult(response);
+                            DoorBean doorBean = JsonUtil.parseJsonToBean(result1, DoorBean.class);
+                            httpServerToken = doorBean.getToken();
+                            Log.e(TAG, doorBean.toString());
+                            //保存返回数据，通知主线程继续下一步逻辑
+                            Message message = mHandler.obtainMessage();
+                            message.what = MSG_LOGIN;
+                            message.obj = doorBean.getXdoor();
+                            mHandler.sendMessage(message);
+                        }
+                    } else {
+                        //服务器异常或没有网络
+                        HttpApi.e("getClientInfo()->服务器无响应");
+                    }
+
+                }
+            });
         } catch (Exception e) {
             HttpApi.e("登录接口返回参数getClientInfo()->服务器数据解析异常");
         }
-        return resultValue;
+        return resultValue[0];
     }
 
     /**

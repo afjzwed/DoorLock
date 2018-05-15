@@ -39,12 +39,17 @@ dependencies {
     compile 'com.android.support:appcompat-v7:26.+'
     compile 'com.android.support.constraint:constraint-layout:1.0.2'
     testCompile 'junit:junit:4.12'
+    //greendao数据库
     compile 'org.greenrobot:greendao:3.1.0'
     compile 'org.greenrobot:greendao-generator:3.1.0'
-    compile 'com.squareup.okhttp3:okhttp:3.8.1'
+    //网络框架
+//    compile 'com.squareup.okhttp3:okhttp:3.8.1'
+    compile 'com.zhy:okhttputils:2.6.2'
+    compile 'com.squareup.okio:okio:1.5.0'
+    //gson解析
     compile 'com.google.code.gson:gson:2.7'
-
-    compile(name: 'appLibs', ext: 'aar')//安卓工控
+    //安卓工控
+    compile(name: 'appLibs', ext: 'aar')
     //七牛
     compile 'com.qiniu:qiniu-android-sdk:7.3.+'
     //以下6个都是虹软相关

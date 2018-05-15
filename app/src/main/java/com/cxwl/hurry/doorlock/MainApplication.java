@@ -4,6 +4,11 @@ import android.app.Application;
 
 import com.cxwl.hurry.doorlock.db.DaoMaster;
 import com.cxwl.hurry.doorlock.db.DaoSession;
+import com.zhy.http.okhttp.OkHttpUtils;
+
+import java.util.concurrent.TimeUnit;
+
+import okhttp3.OkHttpClient;
 
 /**
  * Application
@@ -18,9 +23,18 @@ public class MainApplication  extends Application {
     public void onCreate() {
         application = this;
 
-//        ArcsoftManager.getInstance().initArcsoft(this);//虹软人脸识别初始化
+        // TODO: 2018/5/14 这个不用了，人脸识别的数据存本地数据库 ArcsoftManager.getInstance().initArcsoft(this);//虹软人脸识别初始化
 
         super.onCreate();
+
+        //okhttp初始化
+        OkHttpClient okHttpClient = new OkHttpClient.Builder()
+//                .addInterceptor(new LoggerInterceptor("TAG"))
+                .connectTimeout(10000L, TimeUnit.MILLISECONDS)
+                .readTimeout(10000L, TimeUnit.MILLISECONDS)
+                //其他配置
+                .build();
+        OkHttpUtils.initClient(okHttpClient);
     }
     static DaoSession mDaoSessin;
     public static DaoSession getGreenDaoSession() {

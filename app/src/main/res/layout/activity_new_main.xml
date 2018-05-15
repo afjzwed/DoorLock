@@ -190,6 +190,7 @@
                         android:gravity="center_vertical"
                         android:hint="确认键切换房号/密码"
                         android:textColor="#ffffff"
+                        android:maxLength="11"
                         android:textColorHint="#878686"
                         android:textSize="20sp"
                         android:textStyle="bold"/>
