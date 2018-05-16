@@ -79,13 +79,6 @@ public class JsonUtil {
      * @param json
      * @return
      */
-    public static <T> List<T> parseJsonToList(String json,  Class<T> cls) {
-        Gson gson = new Gson();
-//        Type type1 = new TypeToken<List<?>>() {
-        List<T> list = gson.fromJson(json,  new TypeToken<List<T>>() {
-        }.getType());
-        return list;
-    }
 
     public static <T> List<T> fromJsonArray(String json, Class<T> clazz) throws Exception {
         List<T> lst = new ArrayList<T>();

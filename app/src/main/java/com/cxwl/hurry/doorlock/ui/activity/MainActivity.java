@@ -520,7 +520,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         break;
                     case MSG_PASSWORD_CHECK:
                         Log.i(TAG, "服务器验证密码后的返回");
-                        onPasswordCheck((Integer) msg.obj);
+                        onPasswordCheck((String) msg.obj);
                         break;
                     case MSG_FACE_INFO:
                         //人脸识别录入
@@ -529,6 +529,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         break;
                     case MSG_LOCK_OPENED:
                         // TODO: 2018/5/16   //做UI显示，并开启其他的任务
+                        Log.i(TAG, "开锁");
+                        onLockOpened();
                         break;
                     default:
                         break;
@@ -538,6 +540,25 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         };
         mainMessage = new Messenger(handler);
 
+    }
+
+    /**
+     * 开门
+     */
+    private void onLockOpened() {
+        blockNo = "";
+        setDialValue("");
+        setTempkeyValue("");
+        if (currentStatus != PASSWORD_MODE && currentStatus != PASSWORD_CHECKING_MODE) {
+            setCurrentStatus(CALL_MODE);
+        }
+        Toast.makeText(this,"门开了门开了",Toast.LENGTH_LONG).show();
+
+        identification = false;
+        if (faceHandler != null) {
+            faceHandler.removeMessages(-1);
+            faceHandler.sendEmptyMessageDelayed(-1, 10 * 1000);
+        }
     }
 
     /**
@@ -1106,19 +1127,20 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      *
      * @param code
      */
-    private void onPasswordCheck(int code) {
+    private void onPasswordCheck(String code) {
         setCurrentStatus(PASSWORD_MODE);
         setTempkeyValue("");
-        if (code == 0) {
+        if ("0".equals(code)) {
             Utils.DisplayToast(MainActivity.this, "您输入的密码验证成功");
         } else {
-            if (code == 1) {
-                Utils.DisplayToast(MainActivity.this, "您输入的密码不存在");
-            } else if (code == 2) {
-                Utils.DisplayToast(MainActivity.this, "您输入的密码已经过期");
-            } else if (code < 0) {
-                Utils.DisplayToast(MainActivity.this, "密码验证不成功，请联系管理员");
-            }
+//            if (code == 1) {
+//                Utils.DisplayToast(MainActivity.this, "您输入的密码不存在");
+//            } else if (code == 2) {
+//                Utils.DisplayToast(MainActivity.this, "您输入的密码已经过期");
+//            } else if (code < 0) {
+//                Utils.DisplayToast(MainActivity.this, "密码验证不成功，请联系管理员");
+//            }
+            Utils.DisplayToast(MainActivity.this, "密码验证不成功，请联系管理员");
         }
     }
 

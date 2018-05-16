@@ -9,8 +9,12 @@ public interface API {
 
     String DEVICE_LOGIN = HTTP_HOST + "/xdoor/device/deviceLogin";//登录
 
-    String CONNECT_REPORT = HTTP_HOST+"/xdoor/device/connectReport";//心跳
+    String CONNECT_REPORT = HTTP_HOST + "/xdoor/device/connectReport";//心跳
 
     String CALLALL_MEMBERS = HTTP_HOST+"/xdoor/device/callAllMembers";//获取成员
+
+    String OPENDOOR_BYTEMPKEY = HTTP_HOST+"/xdoor/device/openDoorByTempKey";//密码验证
+
+    String LOG = HTTP_HOST+"/xdoor/device/createAccessLog";//日志提交
 
 }
