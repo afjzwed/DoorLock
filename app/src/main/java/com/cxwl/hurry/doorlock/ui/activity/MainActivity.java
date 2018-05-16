@@ -119,6 +119,7 @@ import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_INFO;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_ID_CARD_DETECT_INPUT;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_ID_CARD_DETECT_PAUSE;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_ID_CARD_DETECT_RESTART;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_LOCK_OPENED;
 import static com.cxwl.hurry.doorlock.config.Constant.arc_appid;
 import static com.cxwl.hurry.doorlock.config.Constant.ft_key;
 import static com.cxwl.hurry.doorlock.config.DeviceConfig.DEVICE_KEYCODE_POUND;
@@ -151,8 +152,9 @@ import static com.cxwl.hurry.doorlock.utils.NfcReader.ACTION_NFC_CARDINFO;
  * MainActivity
  * Created by William on 2018/4/26
  */
-public class MainActivity extends AppCompatActivity implements View.OnClickListener, TakePictureCallback, NfcReader
-        .AccountCallback, NfcAdapter.ReaderCallback, CameraSurfaceView.OnCameraListener {
+public class MainActivity extends AppCompatActivity implements View.OnClickListener,
+        TakePictureCallback, NfcReader.AccountCallback, NfcAdapter.ReaderCallback,
+        CameraSurfaceView.OnCameraListener {
 
     private static String TAG = "MainActivity";
     public static final int MSG_RTC_ONVIDEO_IN = 10011;//接收到视频呼叫
@@ -365,8 +367,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         AudioManager audioManager = (AudioManager) getSystemService(this.AUDIO_SERVICE);
         initVoiceVolume(audioManager, AudioManager.STREAM_MUSIC, DeviceConfig.VOLUME_STREAM_MUSIC);
         initVoiceVolume(audioManager, AudioManager.STREAM_RING, DeviceConfig.VOLUME_STREAM_RING);
-        initVoiceVolume(audioManager, AudioManager.STREAM_SYSTEM, DeviceConfig.VOLUME_STREAM_SYSTEM);
-        initVoiceVolume(audioManager, AudioManager.STREAM_VOICE_CALL, DeviceConfig.VOLUME_STREAM_VOICE_CALL);
+        initVoiceVolume(audioManager, AudioManager.STREAM_SYSTEM, DeviceConfig
+                .VOLUME_STREAM_SYSTEM);
+        initVoiceVolume(audioManager, AudioManager.STREAM_VOICE_CALL, DeviceConfig
+                .VOLUME_STREAM_VOICE_CALL);
     }
 
     /**
@@ -523,6 +527,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_PAUSE, 100);
                         faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_INPUT, 100);
                         break;
+                    case MSG_LOCK_OPENED:
+                        // TODO: 2018/5/16   //做UI显示，并开启其他的任务
+                        break;
                     default:
                         break;
                 }
@@ -570,7 +577,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 setStatusBarIcon(true);
                 initSystemtime();
             }
-            sendMainMessager(MainService.MAIN_ACTIVITY_INIT, NetWorkUtils.isNetworkAvailable(MainActivity
+            sendMainMessager(MainService.MAIN_ACTIVITY_INIT, NetWorkUtils.isNetworkAvailable
+                    (MainActivity
                     .this));
             initNetListen();
         }
@@ -719,24 +727,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        unbindService(serviceConnection);
-        unregisterReceiver(receive);
-        disableReaderMode();
-        if (netTimer != null) {
-            netTimer.cancel();
-            netTimer = null;
-        }
-    }
+
 
     /**
      * 使用定时器,每隔5秒获得一次信号强度值
      */
     @SuppressLint("WifiManagerLeak")
     private void initNet() {
-        wifiManager = (WifiManager) MainApplication.getApplication().getSystemService(WIFI_SERVICE);//获得WifiManager
+        wifiManager = (WifiManager) MainApplication.getApplication().getSystemService
+                (WIFI_SERVICE);//获得WifiManager
         Timer timer = new Timer();
         timer.scheduleAtFixedRate(new TimerTask() {
             @Override
@@ -1466,9 +1465,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 } catch (Exception e) {
                 }
                 sendMainMessager(MSG_CANCEL_CALL, "");
-//                if (faceHandler != null) {
-//                    faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_CONTRAST, 1000);
-//                }
+                if (faceHandler != null) {
+                    faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_CONTRAST, 1000);
+                }
                 try {
                     sleep(1000);
                 } catch (Exception e) {
@@ -1485,11 +1484,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      * @param blockNo
      */
     private void startDialing(String blockNo) {
-        //呼叫前，确认摄像头不被占用 红软
-//呼叫前，确认摄像头不被占用
+        //呼叫前，确认摄像头不被占用 虹软
         if (faceHandler != null) {
             faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_PAUSE, 0);
         }
+
 
         Log.i(TAG, "拍摄访客照片 并进行呼叫" + blockNo);
         setCurrentStatus(CALLING_MODE);
@@ -1922,8 +1921,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         //人脸跟踪初始化引擎，设置检测角度、范围，数量。创建对象后，必须先于其他成员函数调用，否则其他成员函数会返回 MERR_BAD_STATE
         //orientsPriority 指定检测的角度 scale 指定支持检测的最小人脸尺寸(16) maxFaceNum 最多能检测到的人脸个数(5)
-        AFT_FSDKError err = engine.AFT_FSDK_InitialFaceEngine(arc_appid, ft_key, AFT_FSDKEngine.AFT_OPF_0_HIGHER_EXT,
-                16, 5);
+        AFT_FSDKError err = engine.AFT_FSDK_InitialFaceEngine(arc_appid, ft_key, AFT_FSDKEngine
+                .AFT_OPF_0_HIGHER_EXT, 16, 5);
         Log.d(TAG, "AFT_FSDK_InitialFaceEngine =" + err.getCode());
         err = engine.AFT_FSDK_GetVersion(version);//获取版本信息
         Log.d(TAG, "AFT_FSDK_GetVersion:" + version.toString() + "," + err.getCode());
@@ -1933,9 +1932,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         faceHandler = new Handler(new Handler.Callback() {
             @Override
             public boolean handleMessage(Message msg) {
-                Log.v(TAG, "face" + "handleMessage-->" + msg.what + "/" + Thread.currentThread().getName());
+                Log.v(TAG, "face" + "handleMessage-->" + msg.what + "/" + Thread.currentThread()
+                        .getName());
                 switch (msg.what) {
-                    case MSG_FACE_DETECT_CHECK:
+                    case MSG_FACE_DETECT_CHECK://门开了以后identification设为false，发送此消息MSG_FACE_DETECT_CHECK
                         identification = true;
 //                        idOperation =true;
                         break;
@@ -2094,7 +2094,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public Object onPreview(byte[] data, int width, int height, int format, long timestamp) {
 //        Log.e(TAG, "相机" + "onPreview");
         //检测输入的图像中存在的人脸，输出结果和初始化时设置的参数有密切关系,检测到的人脸会add到此result
-        AFT_FSDKError err = engine.AFT_FSDK_FaceFeatureDetect(data, width, height, AFT_FSDKEngine.CP_PAF_NV21, result);
+        AFT_FSDKError err = engine.AFT_FSDK_FaceFeatureDetect(data, width, height, AFT_FSDKEngine
+                .CP_PAF_NV21, result);
 //        Log.d(TAG, "AFT_FSDK_FaceFeatureDetect =" + err.getCode());
 //        Log.d(TAG, "Face=" + result.size());
 //        for (AFT_FSDKFace face : result) {
@@ -2233,8 +2234,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 //检测输入图像中的人脸特征信息，输出结果保存在 AFR_FSDKFace feature
                 //data 输入的图像数据,width 图像宽度,height 图像高度,format 图像格式,face 已检测到的脸框,ori 已检测到的脸角度,
                 // feature 检测到的人脸特征信息
-                AFR_FSDKError error = engine.AFR_FSDK_ExtractFRFeature(mImageNV21, mWidth, mHeight, AFR_FSDKEngine
-                        .CP_PAF_NV21, mAFT_FSDKFace.getRect(), mAFT_FSDKFace.getDegree(), result);
+                AFR_FSDKError error = engine.AFR_FSDK_ExtractFRFeature(mImageNV21, mWidth,
+                        mHeight, AFR_FSDKEngine.CP_PAF_NV21, mAFT_FSDKFace.getRect(),
+                        mAFT_FSDKFace.getDegree(), result);
                 //Log.d(TAG, "AFR_FSDK_ExtractFRFeature cost :" + (System.currentTimeMillis() -
                 // time) + "ms");
                 //Log.d(TAG, "Face=" + result.getFeatureData()[0] + "," + result.getFeatureData()
@@ -2290,5 +2292,72 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
     /****************************虹软相关end*********************************************/
+
+    /****************************生命周期start*********************************************/
+    @Override
+    protected void onStart() {
+        super.onStart();
+
+        // TODO: 2018/5/15   以下暂时注释
+        // if (isRestartPlay) {
+//        isRestartPlay = false;
+//        advertiseHandler.start(adverErrorCallBack);
+//    }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        Log.v(TAG, "MainActivity/onResume-->");
+        if (faceHandler != null) {
+            faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_CONTRAST, 3000);
+            faceHandler.sendEmptyMessageDelayed(MSG_ID_CARD_DETECT_RESTART, 1000);
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        // TODO: 2018/5/15   以下暂时注释
+//        advertiseHandler.pause(adverErrorCallBack);
+//        isRestartPlay = true;
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        Log.v(TAG, "MainActivity/onStop-->");
+        if (faceHandler != null) {
+            faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_PAUSE, 1000);
+            faceHandler.sendEmptyMessageDelayed(MSG_ID_CARD_DETECT_PAUSE, 1000);
+        }
+    }
+
+    @Override
+    protected void onRestart() {
+        super.onRestart();
+        setCurrentStatus(CALL_MODE);
+    }
+
+    @Override
+    protected void onDestroy() {
+        unbindService(serviceConnection);
+        unregisterReceiver(receive);
+        disableReaderMode();
+        if (netTimer != null) {
+            netTimer.cancel();
+            netTimer = null;
+        }
+
+        if (faceHandler != null) {
+            faceHandler.removeCallbacksAndMessages(null);
+        }
+
+        // TODO: 2018/5/15 还有资源未释放，之后再查
+
+        super.onDestroy();
+    }
+
+    /****************************生命周期end*********************************************/
 
 }

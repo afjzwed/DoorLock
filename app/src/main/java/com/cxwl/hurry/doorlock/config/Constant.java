@@ -63,4 +63,8 @@ public class Constant {
     /********************天翼RTC相关******************/
 
     public static final int MSG_INPUT_CARDINFO = 0x04;//重复录入卡信息
+
+    /***************************************/
+    public static final int MSG_LOCK_OPENED =10004;//开锁
+    /***************************************/
 }

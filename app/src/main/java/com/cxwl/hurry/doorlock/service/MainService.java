@@ -30,6 +30,7 @@ import com.cxwl.hurry.doorlock.entity.DoorBean;
 import com.cxwl.hurry.doorlock.entity.XdoorBean;
 import com.cxwl.hurry.doorlock.entity.YeZhuBean;
 import com.cxwl.hurry.doorlock.http.API;
+import com.cxwl.hurry.doorlock.utils.AexUtil;
 import com.cxwl.hurry.doorlock.utils.Ajax;
 import com.cxwl.hurry.doorlock.utils.BitmapUtils;
 import com.cxwl.hurry.doorlock.utils.DbUtils;
@@ -37,6 +38,7 @@ import com.cxwl.hurry.doorlock.utils.HttpApi;
 import com.cxwl.hurry.doorlock.utils.HttpUtils;
 import com.cxwl.hurry.doorlock.utils.JsonUtil;
 import com.cxwl.hurry.doorlock.utils.MacUtils;
+import com.cxwl.hurry.doorlock.utils.SoundPoolUtil;
 import com.guo.android_extend.image.ImageConverter;
 import com.zhy.http.okhttp.OkHttpUtils;
 import com.zhy.http.okhttp.callback.StringCallback;
@@ -78,6 +80,7 @@ import static com.cxwl.hurry.doorlock.config.Constant.MSG_CALLMEMBER_TIMEOUT;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_CANCEL_CALL;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_DOWNLOAD;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_GUEST_PASSWORD_CHECK;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_LOCK_OPENED;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_LOGIN;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_LOGIN_AFTER;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_PASSWORD_CHECK;
@@ -114,6 +117,7 @@ public class MainService extends Service {
 
     public int callConnectState = CALL_WAITING;//视频通话链接状态  默认等待
 
+    protected AexUtil aexUtil = null;
     private String mac;
     private String key;
     private Handler mHandler;
@@ -126,7 +130,8 @@ public class MainService extends Service {
     private String token;//天翼登陆所需的token；
     private Device device;//天翼登陆连接成功 发消息的类
     private DbUtils mDbUtils;//数据库操作
-    private Hashtable<String, String> currentAdvertisementFiles = new Hashtable<String, String>(); //广告数据地址
+    private Hashtable<String, String> currentAdvertisementFiles = new Hashtable<String, String>()
+            ; //广告数据地址
     private AudioManager audioManager;//音频管理器
 
     private ArrayList<YeZhuBean> allUserList = new ArrayList<>();
@@ -186,7 +191,8 @@ public class MainService extends Service {
                     case MAIN_ACTIVITY_INIT:
                         mainMessage = msg.replyTo;
                         netWorkstate = (Boolean) msg.obj;
-                        Log.i(TAG, "MainActivity初始化完成  MainServic开始初始化" + (netWorkstate ? "有网" : "没网"));
+                        Log.i(TAG, "MainActivity初始化完成  MainServic开始初始化" + (netWorkstate ? "有网" :
+                                "没网"));
                         init();
                         break;
                     case MSG_RTC_REGISTER:
@@ -507,7 +513,7 @@ public class MainService extends Service {
 
     protected void init() {
 
-        // TODO: 2018/5/8    initAexUtil(); //安卓工控设备控制器初始化
+        initAexUtil(); //安卓工控设备控制器初始化
         Log.i("MainService", "init AEX");
         // TODO: 2018/5/8  initSqlUtil();  初始化卡相关数据库工具类
         Log.i("MainService", "init SQL");
@@ -519,6 +525,21 @@ public class MainService extends Service {
         } else {
             // TODO: 2018/5/8   initWhenOffline(); //开始离线版本
         }
+    }
+
+    /**
+     * 初始化安卓工控设备控制器
+     */
+    protected void initAexUtil() {
+
+        aexUtil = new AexUtil(mHandler);
+        try {
+            aexUtil.open();
+        } catch (Exception e) {
+        }
+        Log.e("wh", "初始化控制设备");
+//            sendInitMessenger(InitActivity.MSG_INIT_AEX);
+
     }
 
     /**
@@ -624,8 +645,8 @@ public class MainService extends Service {
             data.put("mac", "44:2c:05:e6:9c:c5");
             data.put("key", "442c05e69cc5");
             data.put("version", "1.0");
-            OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse("application/json; "
-                    + "charset=utf-8")).tag(this).build().execute(new StringCallback() {
+            OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse
+                    ("application/json; " + "charset=utf-8")).tag(this).build().execute(new StringCallback() {
                 @Override
                 public void onError(Call call, Exception e, int id) {
                     Log.e(TAG, "e " + e.toString());
@@ -668,8 +689,10 @@ public class MainService extends Service {
      * @param msg
      */
     protected void onLogin(Message msg) {
-        //"id":1,"name":"大门","key":"442c05e69cc5","ip":"123456","mac":"44:2c:05:e6:9c:c5","type":"0",
-        // "danyuan_id":"1","loudong_id":"1","xiangmu_id":346,"gongsi_id":"1","lixian_mima":"123456","version":null,
+        //"id":1,"name":"大门","key":"442c05e69cc5","ip":"123456","mac":"44:2c:05:e6:9c:c5",
+        // "type":"0",
+        // "danyuan_id":"1","loudong_id":"1","xiangmu_id":346,"gongsi_id":"1",
+        // "lixian_mima":"123456","version":null,
         // "xintiao_time":null
         XdoorBean result = (XdoorBean) msg.obj;
         this.blockId = Integer.parseInt(result.getLoudong_id());
@@ -694,7 +717,8 @@ public class MainService extends Service {
     }
 
     protected void loadInfoFromLocal() {
-        SharedPreferences sharedPreferences = getSharedPreferences("residential", Activity.MODE_PRIVATE);
+        SharedPreferences sharedPreferences = getSharedPreferences("residential", Activity
+                .MODE_PRIVATE);
         communityId = sharedPreferences.getInt("communityId", 0);
         blockId = sharedPreferences.getInt("blockId", 0);
         lockId = sharedPreferences.getInt("lockId", 0);
@@ -702,8 +726,10 @@ public class MainService extends Service {
         lockName = sharedPreferences.getString("lockName", "");
     }
 
-    protected void saveInfoIntoLocal(int communityId, int blockId, int lockId, String communityName, String lockName) {
-        SharedPreferences sharedPreferences = getSharedPreferences("residential", Activity.MODE_PRIVATE);
+    protected void saveInfoIntoLocal(int communityId, int blockId, int lockId, String
+            communityName, String lockName) {
+        SharedPreferences sharedPreferences = getSharedPreferences("residential", Activity
+                .MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPreferences.edit();
         //SPUtil.put(getApplicationContext(),);
         editor.putInt("communityId", communityId);
@@ -766,8 +792,10 @@ public class MainService extends Service {
     private void getTokenFromServer() {
         Log.i(TAG, "rtc平台获取token");
         RtcConst.UEAPPID_Current = RtcConst.UEAPPID_Self;//账号体系，包括私有、微博、QQ等，必须在获取token之前确定。
-        JSONObject jsonobj = HttpManager.getInstance().CreateTokenJson(0, key, RtcHttpClient.grantedCapabiltyID, "");
-        HttpResult ret = HttpManager.getInstance().getCapabilityToken(jsonobj, RTC_APP_ID, RTC_APP_KEY);
+        JSONObject jsonobj = HttpManager.getInstance().CreateTokenJson(0, key, RtcHttpClient
+                .grantedCapabiltyID, "");
+        HttpResult ret = HttpManager.getInstance().getCapabilityToken(jsonobj, RTC_APP_ID,
+                RTC_APP_KEY);
         onResponseGetToken(ret);
     }
 
@@ -781,7 +809,8 @@ public class MainService extends Service {
             try {
                 String code = jsonrsp.getString(RtcConst.kcode);
                 String reason = jsonrsp.getString(RtcConst.kreason);
-                Log.v("MainService", "Response getCapabilityToken code:" + code + " reason:" + reason);
+                Log.v("MainService", "Response getCapabilityToken code:" + code + " reason:" +
+                        reason);
                 if (code.equals("0")) {
                     token = jsonrsp.getString(RtcConst.kcapabilityToken);
                     Log.i(TAG, "获取token成功 token=" + token);
@@ -1011,7 +1040,7 @@ public class MainService extends Service {
     /****************************初始化天翼操作********************************/
 
 
-    /****************************呼叫相关********************************/
+    /****************************呼叫相关start********************************/
     /**
      * 取消呼叫
      */
@@ -1082,7 +1111,8 @@ public class MainService extends Service {
                     }
                     if (!username.equals(acceptMember)) {
                         Log.v("MainService", "--->取消" + username);
-                        String userUrl = RtcRules.UserToRemoteUri_new(username, RtcConst.UEType_Any);
+                        String userUrl = RtcRules.UserToRemoteUri_new(username, RtcConst
+                                .UEType_Any);
                         Log.e(TAG, "发送取消呼叫的消息");
                         device.sendIm(userUrl, "cmd/json", command.toString());
                     }
@@ -1159,8 +1189,9 @@ public class MainService extends Service {
             data.put("mac", "44:2c:05:e6:9c:c5");
             data.put("hujiaohao", this.unitNo);
 
-            OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse("application/json; "
-                    + "charset=utf-8")).addHeader("Authorization", httpServerToken).tag(this).build().execute(new StringCallback() {
+            OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse
+                    ("application/json; " + "charset=utf-8")).addHeader("Authorization",
+                    httpServerToken).tag(this).build().execute(new StringCallback() {
                 @Override
                 public void onError(Call call, Exception e, int id) {
                     Log.e(TAG, "服务器异常或没有网络 " + e.toString());
@@ -1239,7 +1270,7 @@ public class MainService extends Service {
             HttpApi.i("拨号中->网络请求在线列表" + (result != null ? result.toString() : ""));
             String yezhu = JsonUtil.getFieldValue(result, "yezhu");
             Log.e(TAG, "yezhu");
-            List<YeZhuBean> userList =JsonUtil.parseJsonToList(yezhu, YeZhuBean.class);
+            List<YeZhuBean> userList = JsonUtil.parseJsonToList(yezhu, YeZhuBean.class);
             if ((userList != null && userList.size() > 0)) {
                 Log.v("MainService", "收到新的呼叫，清除呼叫数据，UUID=" + callUuid);
                 HttpApi.i("拨号中->清除呼叫数据");
@@ -1362,6 +1393,7 @@ public class MainService extends Service {
 
     /**
      * 推送消息
+     *
      * @param pushList
      * @throws JSONException
      * @throws IOException
@@ -1398,6 +1430,7 @@ public class MainService extends Service {
 
     /**
      * 发送消息到mainactivity
+     *
      * @param what
      * @param o
      */
@@ -1502,5 +1535,57 @@ public class MainService extends Service {
         }
     }
 
-    /****************************虹软相关*********************************************/
+    /****************************虹软相关end*********************************************/
+
+
+    /****************************生命周期start*********************************************/
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        Log.v("MainService", "onDestroy()");
+        // TODO: 2018/5/15 还有资源未释放
+
+
+        if (aexUtil != null) {
+            aexUtil.close();
+        }
+    }
+
+    /****************************生命周期end*********************************************/
+
+    protected void openLock() {
+
+        openAexLock();
+
+        // TODO: 2018/5/15 以下注释
+//        int status = 2;
+//        Intent ds_intent = new Intent();
+//        ds_intent.setAction(DoorLock.DoorLockOpenDoor);
+//        ds_intent.putExtra("index", 0);
+//        ds_intent.putExtra("status", status);
+//        sendBroadcast(ds_intent);
+//
+//        Intent intent = new Intent();
+//        intent.setAction(DoorLock.DoorLockOpenDoor_BLE);
+//        sendBroadcast(intent);
+    }
+
+    private void openAexLock() {
+        int result = aexUtil.openLock();
+        if (result > 0) {
+            sendDialMessenger(MSG_LOCK_OPENED);//开锁
+             SoundPoolUtil.getSoundPoolUtil().loadVoice(getBaseContext(), 011111);
+        }
+    }
+
+    protected void sendDialMessenger(int code) {
+        Message message = Message.obtain();
+        message.what = code;
+        try {
+            mainMessage.send(message);
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+    }
+
 }
