@@ -64,7 +64,8 @@ public class Constant {
 
     public static final int MSG_INPUT_CARDINFO = 0x04;//重复录入卡信息
 
-    /***************************************/
+    /********************卡相关*******************/
     public static final int MSG_LOCK_OPENED =10004;//开锁
-    /***************************************/
+    public static final int MSG_INVALID_CARD =10015;//无效房卡
+    /********************卡相关*******************/
 }

@@ -72,6 +72,7 @@ import com.cxwl.hurry.doorlock.service.MainService;
 import com.cxwl.hurry.doorlock.utils.AdvertiseHandler;
 import com.cxwl.hurry.doorlock.utils.Ajax;
 import com.cxwl.hurry.doorlock.utils.DbUtils;
+import com.cxwl.hurry.doorlock.utils.DoorLock;
 import com.cxwl.hurry.doorlock.utils.HttpApi;
 import com.cxwl.hurry.doorlock.utils.HttpUtils;
 import com.cxwl.hurry.doorlock.utils.Intenet;
@@ -119,6 +120,7 @@ import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_INFO;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_ID_CARD_DETECT_INPUT;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_ID_CARD_DETECT_PAUSE;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_ID_CARD_DETECT_RESTART;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_INVALID_CARD;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_LOCK_OPENED;
 import static com.cxwl.hurry.doorlock.config.Constant.arc_appid;
 import static com.cxwl.hurry.doorlock.config.Constant.ft_key;
@@ -528,9 +530,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_INPUT, 100);
                         break;
                     case MSG_LOCK_OPENED:
+                        //开锁
                         // TODO: 2018/5/16   //做UI显示，并开启其他的任务
                         Log.i(TAG, "开锁");
                         onLockOpened();
+                        break;
+                    case MSG_INVALID_CARD:
+                        //无效房卡
+                        Utils.DisplayToast(MainActivity.this, "无效房卡");
                         break;
                     default:
                         break;
@@ -568,9 +575,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         Intent intent = new Intent(this, MainService.class);
         bindService(intent, serviceConnection, Service.BIND_AUTO_CREATE);
 
-        // TODO: 2018/5/8 开门服务类暂时注释
-//        Intent dlIntent = new Intent(MainActivity.this, DoorLock.class);
-//        startService(dlIntent);//start方式启动锁Service
+        Intent dlIntent = new Intent(MainActivity.this, DoorLock.class);
+        startService(dlIntent);//start方式启动锁Service
     }
 
     /**
@@ -590,7 +596,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     @Override
                     public void run() {
                         Log.i(TAG, "无网状态");
-                        // TODO: 2018/5/8    rl.setVisibility(View.VISIBLE);//界面上显示无网提示
+                         rl.setVisibility(View.VISIBLE);//界面上显示无网提示
                     }
                 });
             } else {
@@ -625,8 +631,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
         return verName;
     }
-/*************************************************初始化一些基本东西end
- * ********************************************/
+/***********************************初始化一些基本东西end*****************************************/
     /**
      * 登录成功后
      *
@@ -643,18 +648,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             Log.e(TAG, "可以读卡");
             enableReaderMode();//登录成功后开启读卡
 
+            //人脸识别开始
             if (faceHandler != null) {
                 faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_CONTRAST, 1000);
             }
 
             sendMainMessager(MainService.REGISTER_ACTIVITY_DIAL, null);//开始心跳包
-
         }
 //                else if (code == 1) { //登录失败,MAC地址不存在服务器
 //                    //显示MAC地址并提示添加
 //                    showMacaddress(result.getString("mac"));
 //                }
-
     }
 
     /**
@@ -2184,7 +2188,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         sendMainMessager(MSG_FACE_DOWNLOAD, null);
     }
 
-    class FRAbsLoop extends AbsLoop {
+   class FRAbsLoop extends AbsLoop {
 
         AFR_FSDKVersion version = new AFR_FSDKVersion();
         AFR_FSDKEngine engine = new AFR_FSDKEngine();
@@ -2193,6 +2197,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         // TODO: 2018/5/14 这里拿到本地数据库脸信息表
 //        List<FaceDB.FaceRegist> mResgist = ArcsoftManager.getInstance().mFaceDB.mRegister;
         List<Lian> mFaceList = new ArrayList<>();
+
+
 //        List<ASAE_FSDKFace> face1 = new ArrayList<>();
 //        List<ASGE_FSDKFace> face2 = new ArrayList<>();
 

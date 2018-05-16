@@ -33,7 +33,9 @@ import com.cxwl.hurry.doorlock.http.API;
 import com.cxwl.hurry.doorlock.utils.AexUtil;
 import com.cxwl.hurry.doorlock.utils.Ajax;
 import com.cxwl.hurry.doorlock.utils.BitmapUtils;
+import com.cxwl.hurry.doorlock.utils.CardRecord;
 import com.cxwl.hurry.doorlock.utils.DbUtils;
+import com.cxwl.hurry.doorlock.utils.DoorLock;
 import com.cxwl.hurry.doorlock.utils.HttpApi;
 import com.cxwl.hurry.doorlock.utils.HttpUtils;
 import com.cxwl.hurry.doorlock.utils.JsonUtil;
@@ -54,12 +56,15 @@ import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import jni.http.HttpManager;
 import jni.http.HttpResult;
 import jni.http.RtcHttpClient;
 import okhttp3.Call;
 import okhttp3.MediaType;
+import okhttp3.Response;
 import rtc.sdk.clt.RtcClientImpl;
 import rtc.sdk.common.RtcConst;
 import rtc.sdk.common.SdkSettings;
@@ -81,6 +86,7 @@ import static com.cxwl.hurry.doorlock.config.Constant.MSG_CALLMEMBER_TIMEOUT;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_CANCEL_CALL;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_DOWNLOAD;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_GUEST_PASSWORD_CHECK;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_INVALID_CARD;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_LOCK_OPENED;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_LOGIN;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_LOGIN_AFTER;
@@ -93,7 +99,6 @@ import static com.cxwl.hurry.doorlock.config.Constant.RTC_APP_ID;
 import static com.cxwl.hurry.doorlock.config.Constant.RTC_APP_KEY;
 import static com.cxwl.hurry.doorlock.config.Constant.arc_appid;
 import static com.cxwl.hurry.doorlock.config.Constant.ft_key;
-import static com.cxwl.hurry.doorlock.config.DeviceConfig.XINTIAO_URL;
 
 
 /**
@@ -120,6 +125,7 @@ public class MainService extends Service {
     public int callConnectState = CALL_WAITING;//视频通话链接状态  默认等待
 
     protected AexUtil aexUtil = null;
+    protected CardRecord cardRecord = new CardRecord();
     private String mac;
     private String key;
     private Handler mHandler;
@@ -143,7 +149,7 @@ public class MainService extends Service {
 
     public String unitNo = "";//呼叫房号
     public static int communityId = 0;//社区ID
-    public int blockId = 0;//楼栋ID
+    public static int blockId = 0;//楼栋ID
     public static String communityName = "";//社区名字
     public static String lockName = "";//锁的名字
     public int inputBlockId = 0;//这个也是楼栋ID，好像可以用来代表社区大门
@@ -206,7 +212,6 @@ public class MainService extends Service {
                         onCallMember(msg);
                         break;
                     case MSG_LOGIN:
-                        //呼叫成员
                         Log.i(TAG, "登陆成功");
                         onLogin(msg);
                         break;
@@ -253,8 +258,9 @@ public class MainService extends Service {
                         startCheckGuestPasswordAppendImage();
                         break;
                     case MSG_CARD_INCOME: {
-                        // TODO: 2018/5/8 下面的方法中进行卡信息处理（判定及开门等）  onCardIncome((String) msg.obj);
+                        // TODO: 2018/5/8 下面的方法中进行卡信息处理（判定及开门等）
                         String obj1 = (String) msg.obj;
+                        onCardIncome(obj1);
                         Log.e(TAG, "onCardIncome obj1" + obj1);
                         break;
                     }
@@ -276,8 +282,8 @@ public class MainService extends Service {
 
                         //在这里初始化人脸检测和识别相关类，之后抽取方法
                         //人脸检测初始化引擎，设置检测角度、范围，数量。创建对象后，必须先于其他成员函数调用
-                        err_afd = engine_afd.AFD_FSDK_InitialFaceEngine(arc_appid, ft_key, AFD_FSDKEngine
-                                .AFD_OPF_0_HIGHER_EXT, 16, 5);
+                        err_afd = engine_afd.AFD_FSDK_InitialFaceEngine(arc_appid, ft_key,
+                                AFD_FSDKEngine.AFD_OPF_0_HIGHER_EXT, 16, 5);
 
                         //人脸识别初始化引擎，设置检测角度、范围，数量。创建对象后，必须先于其他成员函数调用
                         err_afr = engine_afr.AFR_FSDK_InitialEngine(arc_appid, ft_key);
@@ -290,7 +296,8 @@ public class MainService extends Service {
                         } else {
                             err_afd = engine_afd.AFD_FSDK_GetVersion(version_afd);
                             err_afr = engine_afr.AFR_FSDK_GetVersion(version_afr);
-                            Log.d(TAG, "AFD_FSDK_GetVersion =" + version_afd.toString() + ", " + err_afd.getCode());
+                            Log.d(TAG, "AFD_FSDK_GetVersion =" + version_afd.toString() + ", " +
+                                    err_afd.getCode());
                             new Thread(new Runnable() {
                                 @Override
                                 public void run() {
@@ -482,15 +489,18 @@ public class MainService extends Service {
         /**
          * 锁门禁向服务器发送的心跳包：每间隔一段时间发送一次（间隔时间由服务器返回,默认1分钟），服务器接到心跳包后，返回心跳发送间隔(s) ,服务器时间()
          * ，卡最后更新时间（版本），广告最后更新时间（版本），人脸最后更新时间（版本），通告最后更新时间（版本）,离线密码，版本号，服务器记录本次心跳时间，用于后续判断锁门禁是否在线
-
          请求路径：xdoor/device/connectReport
          请求参数：String mac 地址，Integer xiangmu_id 项目ID，String date锁门禁时间(毫秒值)，String version版本号（APP版本)
-
          */
         String url = API.CONNECT_REPORT;
         try {
             JSONObject data = new JSONObject();
             data.put("mac", mac);
+
+//            Response response = OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse
+//                    ("application/json; charset=utf-8")).addHeader("Authorization",httpServerToken).tag(url).build().execute();
+
+
             OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse
                     ("application/json; charset=utf-8")).addHeader("Authorization",
                     httpServerToken).tag(this).build().execute(new StringCallback() {
@@ -626,9 +636,7 @@ public class MainService extends Service {
      * 开启登录线程
      */
     protected void initClientInfo() {
-
         getClientInfo();
-
     }
 
     private void textDB() {
@@ -661,11 +669,13 @@ public class MainService extends Service {
         try {
             String url = API.DEVICE_LOGIN;
             JSONObject data = new JSONObject();
+            // TODO: 2018/5/16 参数之后要改
             data.put("mac", "44:2c:05:e6:9c:c5");
             data.put("key", "442c05e69cc5");
             data.put("version", "1.0");
-            OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse("application/json; "
-                    + "charset=utf-8")).tag(this).build().execute(new StringCallback() {
+
+            OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse
+                    ("application/json; " + "charset=utf-8")).tag(url).build().execute(new StringCallback() {
                 @Override
                 public void onError(Call call, Exception e, int id) {
                     Log.e(TAG, "e " + e.toString());
@@ -688,6 +698,8 @@ public class MainService extends Service {
                             message.what = MSG_LOGIN;
                             message.obj = doorBean.getXdoor();
                             mHandler.sendMessage(message);
+                        } else {
+                            getClientInfo();
                         }
                     } else {
                         //服务器异常或没有网络
@@ -714,13 +726,13 @@ public class MainService extends Service {
         // "lixian_mima":"123456","version":null,
         // "xintiao_time":null
         XdoorBean result = (XdoorBean) msg.obj;
-        this.blockId = Integer.parseInt(result.getLoudong_id());
+        blockId = Integer.parseInt(result.getLoudong_id());
         communityId = result.getXiangmu_id();
         //目前服务器返回为空
         communityName = result.getXiangmu_name() == null ? "欣社区" : result.getXiangmu_name();
         lockId = Integer.parseInt(result.getDanyuan_id());
         lockName = result.getDanyuan_name() == null ? lockId + "单元" : result.getDanyuan_name();
-        if (this.blockId == 0) {
+        if (blockId == 0) {
             DeviceConfig.DEVICE_TYPE = "C";
         }
         // 保存消息  需要操作
@@ -1544,18 +1556,20 @@ public class MainService extends Service {
 
         //这个函数功能为检测输入的图像中存在的人脸,data 输入的图像数据,width 图像宽度,height 图像高度,format 图像格式,List<AFD_FSDKFace>
         // list 检测到的人脸会放到到该列表里
-        err_afd = engine_afd.AFD_FSDK_StillImageFaceDetection(data, mBitmap.getWidth(), mBitmap.getHeight(),
-                AFD_FSDKEngine.CP_PAF_NV21, result_afd);
-        Log.d(TAG, "AFD_FSDK_StillImageFaceDetection =" + err_afd.getCode() + "<" + result_afd.size());
+        err_afd = engine_afd.AFD_FSDK_StillImageFaceDetection(data, mBitmap.getWidth(), mBitmap
+                .getHeight(), AFD_FSDKEngine.CP_PAF_NV21, result_afd);
+        Log.d(TAG, "AFD_FSDK_StillImageFaceDetection =" + err_afd.getCode() + "<" + result_afd
+                .size());
 
         if (!result_afd.isEmpty() && result_afd.size() != 0) {//人脸数据结果不为空
+
             //检测输入图像中的人脸特征信息，输出结果保存在 AFR_FSDKFace feature
-            err_afr = engine_afr.AFR_FSDK_ExtractFRFeature(data, mBitmap.getWidth(), mBitmap.getHeight(),
-                    AFR_FSDKEngine.CP_PAF_NV21, new Rect(result_afd.get(0).getRect()), result_afd.get(0).getDegree(),
-                    result_afr);
-            Log.d("com.arcsoft", "Face=" + result_afr.getFeatureData()[0] + "," + result_afr.getFeatureData()[1] + "," +
-                    "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + result_afr
-                    .getFeatureData()[2] + "," + err_afr.getCode());
+            err_afr = engine_afr.AFR_FSDK_ExtractFRFeature(data, mBitmap.getWidth(), mBitmap
+                    .getHeight(), AFR_FSDKEngine.CP_PAF_NV21, new Rect(result_afd.get(0).getRect
+                    ()), result_afd.get(0).getDegree(), result_afr);
+            Log.d("com.arcsoft", "Face=" + result_afr.getFeatureData()[0] + "," + result_afr
+                    .getFeatureData()[1] + "," + result_afr.getFeatureData()[2] + "," + err_afr
+                    .getCode());
             if (err_afr.getCode() == err_afr.MOK) {//人脸特征检测成功
                 mAFR_FSDKFace = result_afr.clone();
                 // TODO: 2018/5/15 保存mAFR_FSDKFace人脸信息，操作数据库
@@ -1595,39 +1609,48 @@ public class MainService extends Service {
 
     /****************************生命周期end*********************************************/
 
+    /****************************卡相关start************************/
+
+    /**
+     * 检测卡信息是否合法
+     * @param card
+     */
+    private void onCardIncome(String card){
+        if (!this.cardRecord.checkLastCard(card)) {//判断距离上次刷卡时间是否超过1秒
+            Log.v("MainService", "onCard====卡信息：" + card);
+            if (DbUtils.getInstans().isHasKa(card)) {//判断数据库中是否有卡
+                openLock();
+                Log.e(TAG, "onCard====:" + card);
+                // TODO: 2018/5/16 调用日志接口,传卡号 startCardAccessLog(card);
+            } else {
+                sendMessageToMainAcitivity(MSG_INVALID_CARD,null);//无效房卡
+            }
+        }
+    }
+
+    /****************************卡相关end************************/
+
     protected void openLock() {
 
         openAexLock();
 
-        // TODO: 2018/5/15 以下注释
-//        int status = 2;
-//        Intent ds_intent = new Intent();
-//        ds_intent.setAction(DoorLock.DoorLockOpenDoor);
-//        ds_intent.putExtra("index", 0);
-//        ds_intent.putExtra("status", status);
-//        sendBroadcast(ds_intent);
-//
-//        Intent intent = new Intent();
-//        intent.setAction(DoorLock.DoorLockOpenDoor_BLE);
-//        sendBroadcast(intent);
+        int status = 2;
+        Intent ds_intent = new Intent();
+        ds_intent.setAction(DoorLock.DoorLockOpenDoor);
+        ds_intent.putExtra("index", 0);
+        ds_intent.putExtra("status", status);
+        sendBroadcast(ds_intent);
+
+        Intent intent = new Intent();
+        intent.setAction(DoorLock.DoorLockOpenDoor_BLE);
+        sendBroadcast(intent);
     }
 
     private void openAexLock() {
         int result = aexUtil.openLock();
         if (result > 0) {
-            sendDialMessenger(MSG_LOCK_OPENED);//开锁
+            sendMessageToMainAcitivity(MSG_LOCK_OPENED, null);//开锁
             SoundPoolUtil.getSoundPoolUtil().loadVoice(getBaseContext(), 011111);
         }
     }
-
-    protected void sendDialMessenger(int code) {
-        Message message = Message.obtain();
-        message.what = code;
-        try {
-            mainMessage.send(message);
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        }
-    }
-
 }
