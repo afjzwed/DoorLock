@@ -22,10 +22,10 @@ public class Constant {
     public static final int MSG_ID_CARD_DETECT_RESTART = 11104;//身份证识别重新开始
     public static final int MSG_ID_CARD_DETECT_INPUT = 11105;//身份证识别重新开始
 
-    public static final int MSG_FACE_DETECT_CHECK=-1;//人脸识别重置标志位
+    public static final int MSG_FACE_DETECT_CHECK = -1;//人脸识别重置标志位
 
     public static final int MSG_FACE_INFO = 11106;//获取人脸照片URL
-    public static final int MSG_FACE_DOWNLOAD =11107;//下载照片并录入人脸
+    public static final int MSG_FACE_DOWNLOAD = 11107;//下载照片并录入人脸
     /********************虹软相关*********************/
 
     /********************天翼RTC相关******************/
@@ -65,7 +65,17 @@ public class Constant {
     public static final int MSG_INPUT_CARDINFO = 0x04;//重复录入卡信息
 
     /********************卡相关*******************/
-    public static final int MSG_LOCK_OPENED =10004;//开锁
-    public static final int MSG_INVALID_CARD =10015;//无效房卡
+    public static final int MSG_LOCK_OPENED = 10004;//开锁
+    public static final int MSG_INVALID_CARD = 10015;//无效房卡
     /********************卡相关*******************/
+
+    /*******************sp保存的心跳信息****************/
+    public static final String SP_VISION_KA = "ka_vison";
+    public static final String SP_VISION_LIAN = "lian_vison";
+    public static final String SP_VISION_GUANGGAO = "guanggao_vison";
+    public static final String SP_VISION_TONGGAO = "tonggao_vison";
+    public static final String SP_VISION_APP = "app_vison";
+    public static final String SP_LIXIAN_MIMA = "lixian_mima";
+    public static final String SP_XINTIAO_TIME = "xintiao_time";
+    /*******************sp保存的心跳信息****************/
 }

@@ -17,4 +17,6 @@ public interface API {
 
     String LOG = HTTP_HOST+"/xdoor/device/createAccessLog";//日志提交
 
+    String CALLALL_CARDS = HTTP_HOST + "/xdoor/device/callAllCards";//获取门禁卡信息
+
 }
