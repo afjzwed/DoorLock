@@ -12,7 +12,8 @@ public class Constant {
     public static String fd_key = "79kKgHjTgz27bkMMkKA8G6Ts9qaxt7NsLEmKwBBH84TF";//人脸检测(FD) Key :
     public static String fr_key = "79kKgHjTgz27bkMMkKA8G6TzKEr6TYfhDa6UAuqxKK5r";//人脸识别(FR) Key :
     public static String age_key = "79kKgHjTgz27bkMMkKA8G6Uc8F9xjy9bcFCL3o9w8k6m";//年龄识别(Age) Key :
-    public static String gender_key = "79kKgHjTgz27bkMMkKA8G6UjHeRAg5TZNJ4u8sPEKj9m";//性别识别(Gender) Key :
+    public static String gender_key = "79kKgHjTgz27bkMMkKA8G6UjHeRAg5TZNJ4u8sPEKj9m";//性别识别
+    // (Gender) Key :
 
     public static final String PIC_PREFIX = "arcsoft_";//
     public static final int MSG_FACE_DETECT_CONTRAST = 11100;//人脸识别对比
@@ -62,11 +63,10 @@ public class Constant {
     public static final int MSG_PASSWORD_CHECK = 10003;//验证密码后
     /********************天翼RTC相关******************/
 
-    public static final int MSG_INPUT_CARDINFO = 0x04;//重复录入卡信息
-
     /********************卡相关*******************/
     public static final int MSG_LOCK_OPENED = 10004;//开锁
     public static final int MSG_INVALID_CARD = 10015;//无效房卡
+    public static final int MSG_INPUT_CARDINFO = 0x04;//重复录入卡信息
     /********************卡相关*******************/
 
     /*******************sp保存的心跳信息****************/
@@ -78,4 +78,8 @@ public class Constant {
     public static final String SP_LIXIAN_MIMA = "lixian_mima";
     public static final String SP_XINTIAO_TIME = "xintiao_time";
     /*******************sp保存的心跳信息****************/
+
+    public static final int MSG_LOADLOCAL_DATA = 20030;//离线模式
+
+    public static final int MSG_GET_NOTICE = 20100;//获取通告成功
 }

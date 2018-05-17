@@ -13,6 +13,7 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.Messenger;
 import android.os.RemoteException;
+import android.support.annotation.IntDef;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
@@ -29,6 +30,7 @@ import com.cxwl.hurry.doorlock.config.DeviceConfig;
 import com.cxwl.hurry.doorlock.db.Ka;
 import com.cxwl.hurry.doorlock.entity.ConnectReportBean;
 import com.cxwl.hurry.doorlock.entity.DoorBean;
+import com.cxwl.hurry.doorlock.entity.NoticeBean;
 import com.cxwl.hurry.doorlock.entity.XdoorBean;
 import com.cxwl.hurry.doorlock.entity.YeZhuBean;
 import com.cxwl.hurry.doorlock.http.API;
@@ -88,8 +90,10 @@ import static com.cxwl.hurry.doorlock.config.Constant.MSG_CALLMEMBER_SERVER_ERRO
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_CALLMEMBER_TIMEOUT;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_CANCEL_CALL;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_DOWNLOAD;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_GET_NOTICE;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_GUEST_PASSWORD_CHECK;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_INVALID_CARD;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_LOADLOCAL_DATA;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_LOCK_OPENED;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_LOGIN;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_LOGIN_AFTER;
@@ -143,7 +147,8 @@ public class MainService extends Service {
     private String token;//天翼登陆所需的token；
     private Device device;//天翼登陆连接成功 发消息的类
     private DbUtils mDbUtils;//数据库操作
-    private Hashtable<String, String> currentAdvertisementFiles = new Hashtable<String, String>(); //广告数据地址
+    private Hashtable<String, String> currentAdvertisementFiles = new Hashtable<String, String>()
+            ; //广告数据地址
     private AudioManager audioManager;//音频管理器
 
     private ArrayList<YeZhuBean> allUserList = new ArrayList<>();
@@ -180,6 +185,8 @@ public class MainService extends Service {
     private AFR_FSDKError err_afr = new AFR_FSDKError();//这个类用来保存虹软错误
 
     private AFR_FSDKFace mAFR_FSDKFace;//用于保存到数据库中的人脸特征信息
+
+    private int noticesStatus = 0;//门禁卡信息版本状态(默认为0)// 0:不一致（等待下载数据）1:不一致（正在下载数据）
 
     @Override
     public void onCreate() {
@@ -275,7 +282,7 @@ public class MainService extends Service {
                         if (netWorkstate) {
                             initWhenConnected(); //开始在线版本
                         } else {
-                            // TODO: 2018/5/8   initWhenOffline(); //开始离线版本
+                            initWhenOffline(); //开始离线版本
                         }
                         break;
                     }
@@ -479,8 +486,6 @@ public class MainService extends Service {
             }
         }
         sendMessageToMainAcitivity(MSG_PASSWORD_CHECK, result);
-
-
     }
 
     int i = 0;
@@ -545,12 +550,13 @@ public class MainService extends Service {
                                 Log.i(TAG, "心跳中有卡信息更新");
                                 getCardInfo(Float.parseFloat(connectReportBean.getKa()));
                             }
-                            int lianVision = (int) SPUtil.get(MainService.this, Constant.SP_VISION_LIAN, 0);
-                            if (Integer.parseInt(connectReportBean.getLian()) > lianVision) {
+                            float lianVision = (float) SPUtil.get(MainService.this, Constant.SP_VISION_LIAN, 0f);
+                            if (Float.parseFloat(connectReportBean.getLian()) > lianVision) {
                                 Log.i(TAG, "心跳中有脸信息更新");
                             }
-                            int guanggaoVision = (int) SPUtil.get(MainService.this, Constant.SP_VISION_GUANGGAO, 0);
-                            if (Integer.parseInt(connectReportBean.getGuanggao()) > guanggaoVision) {
+                            float guanggaoVision = (float) SPUtil.get(MainService.this, Constant.SP_VISION_GUANGGAO, 0f);
+
+                            if (Float.parseFloat(connectReportBean.getGuanggao()) > guanggaoVision) {
                                 Log.i(TAG, "心跳中有广告信息更新");
                             }
                             //// TODO: 2018/5/17 拿app版本信息 去掉点
@@ -558,11 +564,13 @@ public class MainService extends Service {
 //                            if (Integer.parseInt(connectReportBean.getGuanggao()) > appVision) {
 //                                Log.i(TAG, "心跳中有APP信息更新");
 //                            }
-                            int tonggaoVision = (int) SPUtil.get(MainService.this, Constant.SP_VISION_TONGGAO, 0);
-                            if (Integer.parseInt(connectReportBean.getTonggao()) > tonggaoVision) {
+                            float tonggaoVision = (float) SPUtil.get(MainService.this, Constant.SP_VISION_TONGGAO, 0f);
+                            if (Float.parseFloat(connectReportBean.getTonggao()) > tonggaoVision) {
                                 Log.i(TAG, "心跳中有通告信息更新");
+                                if (noticesStatus == 0) {//判断是否正在下载
+                                    getTongGaoInfo(Float.parseFloat(connectReportBean.getTonggao()));
+                                }
                             }
-////
                         }
                     } else {
                         //服务器异常或没有网络
@@ -575,6 +583,60 @@ public class MainService extends Service {
             e.printStackTrace();
         }
 
+    }
+
+    /**
+     * 获取通告信息接口
+     * @param version
+     */
+    private void getTongGaoInfo(final float version) {
+        noticesStatus = 1;//正在下载，避免重复下载
+        try {
+            String url = API.CALLALL_NOTICES;
+            JSONObject data = new JSONObject();
+            data.put("mac", mac);
+
+            OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse
+                    ("application/json; charset=utf-8")).addHeader("Authorization",
+                    httpServerToken).tag(this).build().execute(new StringCallback() {
+                @Override
+                public void onError(Call call, Exception e, int id) {
+                    Log.e(TAG, "通告信息 服务器异常或没有网络 " + e.toString());
+                    noticesStatus = 0;//等待下载数据
+                }
+
+                @Override
+                public void onResponse(String response, int id) {
+                    Log.e("wh response 通告信息", response);
+
+                    if (null != response) {
+                        String code = JsonUtil.getFieldValue(response, "code");
+                        if ("0".equals(code)) {
+                            String result = JsonUtil.getResult(response);
+                            NoticeBean notice = JsonUtil.parseJsonToBean(result, NoticeBean.class);
+                            //通知主线程，显示通知
+                            sendMessageToMainAcitivity(MSG_GET_NOTICE,notice);
+                            //保存本次更新版本
+                            SPUtil.put(MainService.this,Constant.SP_VISION_TONGGAO,version);
+                            // TODO: 2018/5/17 调用更新通知接口
+
+                            noticesStatus = 0;//修改状态，等待下次（新）数据
+                        } else {
+                            noticesStatus = 0;//等待下载数据
+                        }
+                    } else {
+                        //服务器异常或没有网络
+                        HttpApi.e("通告信息 getClientInfo()->服务器无响应");
+                        noticesStatus = 0;//等待下载数据
+                    }
+                }
+            });
+
+        } catch (Exception e) {
+            noticesStatus = 0;//等待下载数据
+            HttpApi.e("通告信息 getClientInfo()->服务器数据解析异常");
+            e.printStackTrace();
+        }
     }
 
 
@@ -652,7 +714,7 @@ public class MainService extends Service {
     private void syncCallBack(final String type, float vision) {
         try {
             //开始获取门禁卡信息
-            String url = API.CALLALL_CARDS;
+            String url = API.SYNC_CALLBACK;
             JSONObject data = new JSONObject();
             data.put("mac", mac);
             data.put("type", type);
@@ -727,7 +789,7 @@ public class MainService extends Service {
         if (netWorkstate) {
             initWhenConnected(); //开始在线版本
         } else {
-            // TODO: 2018/5/8   initWhenOffline(); //开始离线版本
+            initWhenOffline(); //开始离线版本
         }
     }
 
@@ -768,8 +830,8 @@ public class MainService extends Service {
         if (initMacKey()) {
             HttpApi.i("通过MAC地址验证");
             try {
-                // TODO: 2018/5/8 loadInfoFromLocal(); //获取本地sp文件中的数据
-                // TODO: 2018/5/8 sendInitMessenger(MSG_LOADLOCAL_DATA);//在MainActivity中展示
+                loadInfoFromLocal(); //获取本地sp文件中的数据
+                sendMessageToMainAcitivity(MSG_LOADLOCAL_DATA, "");//在MainActivity中展示
                 //startDialActivity(false);  //xiaozd add
                 //rtcConnectTimeout();
             } catch (Exception e) {
@@ -814,7 +876,70 @@ public class MainService extends Service {
      * 开启登录线程
      */
     protected void initClientInfo() {
+//        new Thread() {
+//            public void run() {
+//                boolean result = false;
+//                try {
+//                    do {
+//                        result = deviceLogin();
+//                        if (!result) {
+//                            sleep(1000 * 10);//重新登录间隔10秒
+//                        }
+//                    } while (!result);
+//                } catch (Exception e) {
+//                }
+//            }
+//        }.start();
+
         getClientInfo();
+    }
+
+    /**
+     * 登录接口
+     *
+     * @return
+     */
+    private boolean deviceLogin() {
+        boolean resultValue = false;
+        try {
+            String url = API.DEVICE_LOGIN;
+//            String url = API.CONNECT_REPORT;
+            JSONObject data = new JSONObject();
+            data.put("mac", mac);
+            data.put("key", key);
+            data.put("version", "1.0");
+
+            Response execute = OkHttpUtils.postString().url(url).content(data.toString())
+                    .mediaType(MediaType.parse("application/json; charset=utf-8")).tag(this)
+                    .build().execute();
+            if (null != execute) {
+                String response = execute.body().string();
+                if (null != response) {
+                    String code = JsonUtil.getFieldValue(response, "code");
+                    if ("0".equals(code)) {
+                        resultValue =true;
+                        String result = JsonUtil.getResult(response);
+                        DoorBean doorBean = JsonUtil.parseJsonToBean(result, DoorBean.class);
+                        httpServerToken = doorBean.getToken();
+                        Log.e(TAG, doorBean.toString());
+
+                        //保存返回数据，通知主线程继续下一步逻辑
+                        Message message = mHandler.obtainMessage();
+                        message.what = MSG_LOGIN;
+                        message.obj = doorBean.getXdoor();
+                        mHandler.sendMessage(message);
+                    }
+                } else {
+//                    服务器异常或没有网络
+                    HttpApi.e("getClientInfo()->服务器无响应");
+                }
+            }
+        } catch (Exception e) {
+            HttpApi.e("getClientInfo()->服务器数据解析异常");
+            e.printStackTrace();
+        }
+        Log.e("这里", "" + resultValue);
+        return resultValue;
     }
 
     private void textDB() {
@@ -1421,7 +1546,7 @@ public class MainService extends Service {
         try {
             String url = API.CALLALL_MEMBERS;
             JSONObject data = new JSONObject();
-            data.put("mac", "44:2c:05:e6:9c:c5");
+            data.put("mac", mac);
             data.put("hujiaohao", this.unitNo);
 
             OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse("application/json; "
@@ -1653,12 +1778,6 @@ public class MainService extends Service {
 
     /****************************呼叫相关********************************/
 
-    @Nullable
-    @Override
-    public IBinder onBind(Intent intent) {
-        return serviceMessage.getBinder();
-    }
-
     /**
      * 发送消息到mainactivity
      *
@@ -1744,8 +1863,7 @@ public class MainService extends Service {
                     result_afr);
             Log.d("com.arcsoft", "Face=" + result_afr.getFeatureData()[0] + "," + result_afr.getFeatureData()[1] + "," +
                     "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + ""
-                    + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" +
-                    result_afr.getFeatureData()[2] + "," + "" + err_afr.getCode());
+                    + "" + "" + "" + "" + result_afr.getFeatureData()[2] + "," + err_afr.getCode());
             if (err_afr.getCode() == err_afr.MOK) {//人脸特征检测成功
                 mAFR_FSDKFace = result_afr.clone();
                 // TODO: 2018/5/15 保存mAFR_FSDKFace人脸信息，操作数据库
@@ -1769,8 +1887,13 @@ public class MainService extends Service {
 
     /****************************虹软相关end*********************************************/
 
-
     /****************************生命周期start*********************************************/
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        return super.onStartCommand(intent, flags, startId);
+    }
+
     @Override
     public void onDestroy() {
         super.onDestroy();
@@ -1783,16 +1906,22 @@ public class MainService extends Service {
         }
     }
 
+    @Nullable
+    @Override
+    public IBinder onBind(Intent intent) {
+        return serviceMessage.getBinder();
+    }
+
+
     /****************************生命周期end*********************************************/
 
     /****************************卡相关start************************/
 
     /**
      * 检测卡信息是否合法
-     *
      * @param card
      */
-    private void onCardIncome(String card) {
+    private void onCardIncome(String card){
         if (!this.cardRecord.checkLastCard(card)) {//判断距离上次刷卡时间是否超过1秒
             Log.v("MainService", "onCard====卡信息：" + card);
             Ka kaInfo = DbUtils.getInstans().getKaInfo(card);

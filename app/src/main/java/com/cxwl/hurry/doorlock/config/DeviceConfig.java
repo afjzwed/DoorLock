@@ -35,8 +35,8 @@ public class DeviceConfig {
     public static int BLOCK_LENGTH = 6;//楼栋房屋号长度
 
 
-    public static final int DEVICE_KEYCODE_POUND = 30;//确认键
-    public static final int DEVICE_KEYCODE_STAR = 32;//删除键
+    public static final int DEVICE_KEYCODE_POUND = 66;//确认键
+    public static final int DEVICE_KEYCODE_STAR = 67;//删除键
     /*******************************/
 
 }

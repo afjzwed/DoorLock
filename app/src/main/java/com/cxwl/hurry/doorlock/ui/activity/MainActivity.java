@@ -66,6 +66,7 @@ import com.cxwl.hurry.doorlock.callback.AdverErrorCallBack;
 import com.cxwl.hurry.doorlock.config.Constant;
 import com.cxwl.hurry.doorlock.config.DeviceConfig;
 import com.cxwl.hurry.doorlock.db.Lian;
+import com.cxwl.hurry.doorlock.entity.NoticeBean;
 import com.cxwl.hurry.doorlock.entity.XdoorBean;
 import com.cxwl.hurry.doorlock.interfac.TakePictureCallback;
 import com.cxwl.hurry.doorlock.service.MainService;
@@ -117,10 +118,12 @@ import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_DETECT_INPUT;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_DETECT_PAUSE;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_DOWNLOAD;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_INFO;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_GET_NOTICE;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_ID_CARD_DETECT_INPUT;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_ID_CARD_DETECT_PAUSE;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_ID_CARD_DETECT_RESTART;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_INVALID_CARD;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_LOADLOCAL_DATA;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_LOCK_OPENED;
 import static com.cxwl.hurry.doorlock.config.Constant.arc_appid;
 import static com.cxwl.hurry.doorlock.config.Constant.ft_key;
@@ -538,6 +541,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     case MSG_INVALID_CARD:
                         //无效房卡
                         Utils.DisplayToast(MainActivity.this, "无效房卡");
+                        break;
+                    case MSG_LOADLOCAL_DATA://离线模式
+                        //加载本地数据显示到界面
+                        setCommunityName(MainService.communityName);
+                        setLockName(MainService.lockName);
+                        break;
+                    case MSG_GET_NOTICE://获取通告成功
+
+                        setTongGaoInfo((NoticeBean)msg.obj);
                         break;
                     default:
                         break;
@@ -1692,6 +1704,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             public void run() {
                 Log.e(TAG, "设置单元" + thisValue);
                 setTextView(R.id.tv_lock, thisValue);
+            }
+        });
+    }
+
+    private void setTongGaoInfo(NoticeBean value) {
+        final String neirong = value.getNeirong();
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                setTextView(R.id.gonggao,neirong);
             }
         });
     }
