@@ -25,7 +25,7 @@ android {
     }
 
     greendao {
-        schemaVersion 1
+        schemaVersion 2
         daoPackage 'com.cxwl.hurry.doorlock.db'
         targetGenDir 'src/main/java'
     }

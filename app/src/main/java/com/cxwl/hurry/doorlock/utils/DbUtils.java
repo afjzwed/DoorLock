@@ -1,11 +1,11 @@
 package com.cxwl.hurry.doorlock.utils;
 
+import com.cxwl.hurry.doorlock.db.KaDao;
 import com.cxwl.hurry.doorlock.db.Log;
 
 import com.cxwl.hurry.doorlock.MainApplication;
 import com.cxwl.hurry.doorlock.db.DaoSession;
 import com.cxwl.hurry.doorlock.db.Ka;
-import com.cxwl.hurry.doorlock.db.KaDao;
 import com.cxwl.hurry.doorlock.db.Lian;
 import com.cxwl.hurry.doorlock.db.LianDao;
 import com.cxwl.hurry.doorlock.db.LogDao;
@@ -22,6 +22,7 @@ public class DbUtils {
     private KaDao mKaDao;
     private LianDao mLianDao;
     private LogDao mLogDao;
+    private final static String TAG = "DB";
 
     private DbUtils(DaoSession daoSession) {
         this.mDaoSession = daoSession;
@@ -62,17 +63,29 @@ public class DbUtils {
         for (int i = 0; i < ka.size(); i++) {
             mKaDao.insert(ka.get(i));
         }
+        android.util.Log.i(TAG, "增加所有卡信息成功");
     }
 
     /**
-     * 数据库中是否存在此卡信息
+     * 查询所有卡信息
      */
-    public boolean isHasKa(String ka_id) {
+    public void quaryAllKa() {
+        List<Ka> list = mKaDao.queryBuilder().list();
+        if (list!=null){
+            android.util.Log.i(TAG, "查询所有卡信息成功"+list.toString());
+        }
+
+    }
+
+    /**
+     * 更具卡id查询卡信息
+     */
+    public Ka getKaInfo(String ka_id) {
         Ka unique = mKaDao.queryBuilder().where(KaDao.Properties.Ka_id.eq(ka_id)).unique();
         if (unique != null) {
-            return true;
+            return unique;
         }
-        return false;
+        return null;
     }
 
     /**

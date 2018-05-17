@@ -100,6 +100,7 @@ import static com.cxwl.hurry.doorlock.config.Constant.MSG_RTC_ONVIDEO;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_RTC_REGISTER;
 import static com.cxwl.hurry.doorlock.config.Constant.RTC_APP_ID;
 import static com.cxwl.hurry.doorlock.config.Constant.RTC_APP_KEY;
+import static com.cxwl.hurry.doorlock.config.Constant.SP_VISION_KA;
 import static com.cxwl.hurry.doorlock.config.Constant.SP_XINTIAO_TIME;
 import static com.cxwl.hurry.doorlock.config.Constant.arc_appid;
 import static com.cxwl.hurry.doorlock.config.Constant.ft_key;
@@ -533,16 +534,16 @@ public class MainService extends Service {
                             //保存离线密码 默认123456
                             SPUtil.put(MainService.this, Constant.SP_LIXIAN_MIMA, "123456");
                             //保存心跳时间 默认一分钟
-                            Log.i(TAG, "心跳--服务器返回的心跳时间（秒）" + (long)(connectReportBean.getXintiao_time() * 1000));
-                            SPUtil.put(MainService.this, Constant.SP_XINTIAO_TIME,(long)( connectReportBean.getXintiao_time
-                                    () * 1000));
+                            Log.i(TAG, "心跳--服务器返回的心跳时间（秒）" + (long) (connectReportBean.getXintiao_time() * 1000));
+                            SPUtil.put(MainService.this, Constant.SP_XINTIAO_TIME, (long) (connectReportBean
+                                    .getXintiao_time() * 1000));
                             float kaVision = (float) SPUtil.get(MainService.this, Constant.SP_VISION_KA, 0f);
                             Log.i(TAG, "心跳--当前卡版本：" + kaVision + "   服务器卡版本：" + Float.parseFloat(connectReportBean
                                     .getKa()));
                             if (Float.parseFloat(connectReportBean.getKa()) > kaVision) {
                                 //有卡信息更新
                                 Log.i(TAG, "心跳中有卡信息更新");
-                                getCard();
+                                getCardInfo(Float.parseFloat(connectReportBean.getKa()));
                             }
                             int lianVision = (int) SPUtil.get(MainService.this, Constant.SP_VISION_LIAN, 0);
                             if (Integer.parseInt(connectReportBean.getLian()) > lianVision) {
@@ -582,62 +583,108 @@ public class MainService extends Service {
      */
     private int cardInfoStatus = 0;//门禁卡信息版本状态(默认为0)// 0:不一致（等待下载数据）1:不一致（正在下载数据）
 
-    private void getCard() {
-        //把判断放在外层，减少线程的建立
-        if (cardInfoStatus == 0) {//判断门禁卡信息版本状态
-            new Thread() {
-                @Override
-                public void run() {
-                    try {
-                        getCardInfo();
-                    } catch (Exception e) {
 
+    private void getCardInfo(final float kaVison) {
+        if (cardInfoStatus == 0) {
+            Log.i(TAG, "getCardInfo正在进行卡信息下载");
+            cardInfoStatus = 1;//正在下载
+            try {
+                //开始获取门禁卡信息
+                String url = API.CALLALL_CARDS;
+                JSONObject data = new JSONObject();
+                data.put("mac", mac);
+                OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse
+                        ("application/json; " + "charset=utf-8")).addHeader("Authorization", httpServerToken).tag
+                        (this).build().execute(new StringCallback() {
+                    @Override
+                    public void onError(Call call, Exception e, int id) {
+                        Log.e(TAG, "onError 卡信息接口getCardInfo" + e.toString());
+                        cardInfoStatus = 0;//修改状态，等待下次（新）数据
                     }
-                }
-            }.start();
+
+                    @Override
+                    public void onResponse(String response, int id) {
+                        Log.i(TAG, "onResponse 卡信息接口getCardInfo  onResponse" + response);
+                        if (null != response) {
+                            String code = JsonUtil.getFieldValue(response, "code");
+                            if ("0".equals(code)) {
+                                try {
+                                    String result = JsonUtil.getResult(response);
+                                    List<Ka> kas = JsonUtil.fromJsonArray(result, Ka.class);
+                                    //保存卡信息成功
+                                    DbUtils.getInstans().addAllKa(kas);
+                                    //查询卡信息成功
+                                    //DbUtils.getInstans().quaryAllKa();
+                                    //保存卡信息的版本
+                                    SPUtil.put(MainService.this, SP_VISION_KA, kaVison);
+                                    syncCallBack("1",kaVison);
+                                    cardInfoStatus = 0;//修改状态，等待下次（新）数据
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                    Log.i(TAG, "onResponse 卡信息接口getCardInfo  catch" + e.toString());
+                                    cardInfoStatus = 0;//修改状态，等待下次（新）数据
+                                }
+
+                            } else {
+                                Log.i(TAG, "onResponse 卡信息接口getCardInfo  code" + code);
+                                cardInfoStatus = 0;//修改状态，等待下次（新）数据
+                            }
+                        } else {
+                            //服务器异常或没有网络
+                            Log.i(TAG, "onResponse 卡信息接口getCardInfo  服务器异常或没有网络");
+                            cardInfoStatus = 0;//等待下载数据
+                        }
+                    }
+                });
+            } catch (Exception e) {
+                Log.e(TAG, "catch 卡信息接口getCardInfo  Exception" + e.toString());
+                e.printStackTrace();
+                cardInfoStatus = 0;//等待下载数据
+            }
         }
     }
 
-    private void getCardInfo() {
-        Log.i(TAG, "getCardInfo正在进行卡信息下载");
-        cardInfoStatus = 1;//正在下载
+    /**
+     * 同步完成更新的信息信息
+     * @param type 1 卡，2 人脸，3 广告，4 通告
+     * @param vision 版本
+     */
+    private void syncCallBack(final String type, float vision) {
         try {
             //开始获取门禁卡信息
             String url = API.CALLALL_CARDS;
             JSONObject data = new JSONObject();
             data.put("mac", mac);
+            data.put("type", type);
+            data.put("version", vision+"");
+            data.put("time", System.currentTimeMillis()+"");
             OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse("application/json; "
                     + "charset=utf-8")).addHeader("Authorization", httpServerToken).tag(this).build().execute(new StringCallback() {
                 @Override
                 public void onError(Call call, Exception e, int id) {
-                    Log.e(TAG, "onError 卡信息接口getCardInfo" + e.toString());
-                    cardInfoStatus = 0;//修改状态，等待下次（新）数据
+                    Log.e(TAG, "onError同步完成更新信息接口   syncCallBack() type+"+type+"   Exception" + e.toString());
                 }
 
                 @Override
                 public void onResponse(String response, int id) {
-                    Log.i(TAG, "onResponse 卡信息接口getCardInfo  onResponse" + response);
+                    Log.i(TAG, "onResponse同步完成更新信息接口   syncCallBack() type+"+type+"   response" + response);
                     if (null != response) {
                         String code = JsonUtil.getFieldValue(response, "code");
                         if ("0".equals(code)) {
-                            //操作数据库，先删除旧的，然后建立新的表
-                            // DbUtils.getInstans().addAllKa();
-                            cardInfoStatus = 0;//修改状态，等待下次（新）数据
-                            //告诉主线程同步完成，调通知接口
+
                         } else {
+
                         }
                     } else {
                         //服务器异常或没有网络
-                        HttpApi.e("getClientInfo()->服务器无响应");
-                        cardInfoStatus = 0;//等待下载数据
+
                     }
                 }
             });
         } catch (Exception e) {
-            Log.e(TAG, "catch 卡信息接口getCardInfo  Exception" + e.toString());
             e.printStackTrace();
-            cardInfoStatus = 0;//等待下载数据
         }
+
     }
 
     /**
@@ -784,8 +831,8 @@ public class MainService extends Service {
                 Log.i(TAG, System.currentTimeMillis() + "开始后");
                 mDbUtils.addAllKa(list);
                 Log.i(TAG, System.currentTimeMillis() + "添加后");
-                boolean hasKa = mDbUtils.isHasKa("1052");
-                Log.i(TAG, System.currentTimeMillis() + "查询后" + hasKa);
+//                boolean hasKa = mDbUtils.isHasKa("1052");
+//                Log.i(TAG, System.currentTimeMillis() + "查询后" + hasKa);
             }
         }).start();
     }
@@ -1697,7 +1744,8 @@ public class MainService extends Service {
                     result_afr);
             Log.d("com.arcsoft", "Face=" + result_afr.getFeatureData()[0] + "," + result_afr.getFeatureData()[1] + "," +
                     "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + ""
-                    + "" + "" + "" + "" + result_afr.getFeatureData()[2] + "," + err_afr.getCode());
+                    + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" +
+                    result_afr.getFeatureData()[2] + "," + "" + err_afr.getCode());
             if (err_afr.getCode() == err_afr.MOK) {//人脸特征检测成功
                 mAFR_FSDKFace = result_afr.clone();
                 // TODO: 2018/5/15 保存mAFR_FSDKFace人脸信息，操作数据库
@@ -1747,11 +1795,29 @@ public class MainService extends Service {
     private void onCardIncome(String card) {
         if (!this.cardRecord.checkLastCard(card)) {//判断距离上次刷卡时间是否超过1秒
             Log.v("MainService", "onCard====卡信息：" + card);
-            if (DbUtils.getInstans().isHasKa(card)) {//判断数据库中是否有卡
-                openLock();
+            Ka kaInfo = DbUtils.getInstans().getKaInfo(card);
+            if (kaInfo != null) {//判断数据库中是否有卡
+                Log.i(TAG, "刷卡开门成功" + card);
+                sendMessageToMainAcitivity(MSG_LOCK_OPENED, "");
+                // openLock();
                 Log.e(TAG, "onCard====:" + card);
                 // TODO: 2018/5/16 调用日志接口,传卡号 startCardAccessLog(card);
+                try {
+                    JSONObject data = new JSONObject();
+                    data.put("mac", mac);
+                    data.put("phone", kaInfo.getYezhu_dianhua());
+                    data.put("ka_id", kaInfo.getKa_id());
+                    data.put("kaimenfangshi", "1");
+                    data.put("kaimenjietu", "");
+                    data.put("kaimenshijian", System.currentTimeMillis());
+                    data.put("uuid", "");
+                    createAccessLog(data.toString());
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+
             } else {
+                Log.e(TAG, "数据库中不存在这个卡 刷卡开门失败" + card);
                 sendMessageToMainAcitivity(MSG_INVALID_CARD, null);//无效房卡
             }
         }
@@ -1782,6 +1848,7 @@ public class MainService extends Service {
             SoundPoolUtil.getSoundPoolUtil().loadVoice(getBaseContext(), 011111);
         }
     }
+
     /**
      * 获取版本名
      *

@@ -19,4 +19,6 @@ public interface API {
 
     String CALLALL_CARDS = HTTP_HOST + "/xdoor/device/callAllCards";//获取门禁卡信息
 
+    String SYNC_CALLBACK = HTTP_HOST + "xdoor/device/syncCallBack";//同步完成通知
+
 }

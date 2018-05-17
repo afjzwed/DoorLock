@@ -24,6 +24,8 @@ public class KaDao extends AbstractDao<Ka, Long> {
     public static class Properties {
         public final static Property Id = new Property(0, Long.class, "id", true, "_id");
         public final static Property Ka_id = new Property(1, String.class, "ka_id", false, "ka_id");
+        public final static Property Yezhu_dianhua = new Property(2, String.class, "yezhu_dianhua", false, "yezhu_dianhua");
+        public final static Property Guoqi_time = new Property(3, String.class, "guoqi_time", false, "guoqi_time");
     }
 
 
@@ -40,7 +42,9 @@ public class KaDao extends AbstractDao<Ka, Long> {
         String constraint = ifNotExists? "IF NOT EXISTS ": "";
         db.execSQL("CREATE TABLE " + constraint + "\"KA\" (" + //
                 "\"_id\" INTEGER PRIMARY KEY ," + // 0: id
-                "\"ka_id\" TEXT);"); // 1: ka_id
+                "\"ka_id\" TEXT," + // 1: ka_id
+                "\"yezhu_dianhua\" TEXT," + // 2: yezhu_dianhua
+                "\"guoqi_time\" TEXT);"); // 3: guoqi_time
     }
 
     /** Drops the underlying database table. */
@@ -62,6 +66,16 @@ public class KaDao extends AbstractDao<Ka, Long> {
         if (ka_id != null) {
             stmt.bindString(2, ka_id);
         }
+ 
+        String yezhu_dianhua = entity.getYezhu_dianhua();
+        if (yezhu_dianhua != null) {
+            stmt.bindString(3, yezhu_dianhua);
+        }
+ 
+        String guoqi_time = entity.getGuoqi_time();
+        if (guoqi_time != null) {
+            stmt.bindString(4, guoqi_time);
+        }
     }
 
     @Override
@@ -77,6 +91,16 @@ public class KaDao extends AbstractDao<Ka, Long> {
         if (ka_id != null) {
             stmt.bindString(2, ka_id);
         }
+ 
+        String yezhu_dianhua = entity.getYezhu_dianhua();
+        if (yezhu_dianhua != null) {
+            stmt.bindString(3, yezhu_dianhua);
+        }
+ 
+        String guoqi_time = entity.getGuoqi_time();
+        if (guoqi_time != null) {
+            stmt.bindString(4, guoqi_time);
+        }
     }
 
     @Override
@@ -88,7 +112,9 @@ public class KaDao extends AbstractDao<Ka, Long> {
     public Ka readEntity(Cursor cursor, int offset) {
         Ka entity = new Ka( //
             cursor.isNull(offset + 0) ? null : cursor.getLong(offset + 0), // id
-            cursor.isNull(offset + 1) ? null : cursor.getString(offset + 1) // ka_id
+            cursor.isNull(offset + 1) ? null : cursor.getString(offset + 1), // ka_id
+            cursor.isNull(offset + 2) ? null : cursor.getString(offset + 2), // yezhu_dianhua
+            cursor.isNull(offset + 3) ? null : cursor.getString(offset + 3) // guoqi_time
         );
         return entity;
     }
@@ -97,6 +123,8 @@ public class KaDao extends AbstractDao<Ka, Long> {
     public void readEntity(Cursor cursor, Ka entity, int offset) {
         entity.setId(cursor.isNull(offset + 0) ? null : cursor.getLong(offset + 0));
         entity.setKa_id(cursor.isNull(offset + 1) ? null : cursor.getString(offset + 1));
+        entity.setYezhu_dianhua(cursor.isNull(offset + 2) ? null : cursor.getString(offset + 2));
+        entity.setGuoqi_time(cursor.isNull(offset + 3) ? null : cursor.getString(offset + 3));
      }
     
     @Override
