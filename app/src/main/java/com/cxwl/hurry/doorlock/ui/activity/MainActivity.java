@@ -833,7 +833,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             public void run() {
                 switch (NetWorkUtils.getCurrentNetType(MainActivity.this)) {
                     case NETWORK_TYPE_WIFI:
-                        //  Log.i(TAG, "NETWORK_TYPE_WIFI");
+                        //  LogDoor.i(TAG, "NETWORK_TYPE_WIFI");
                         wifiInfo = wifiManager.getConnectionInfo();
                         //获得信号强度值
                         level = wifiInfo.getRssi();
@@ -1041,8 +1041,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //                    Message message = Message.obtain();
 //                    message.what = MainService.MSG_CHECK_BLOCKNO;
 //                    message.obj = blockNo;
-//                    Log.i(TAG, "输入的楼栋编号满足长度为6 blockNo=" + blockNo);
-//                    Log.e("blockNo", "2===" + blockNo);
+//                    LogDoor.i(TAG, "输入的楼栋编号满足长度为6 blockNo=" + blockNo);
+//                    LogDoor.e("blockNo", "2===" + blockNo);
 //                    try {
 //                        serviceMessenger.send(message);
 //                    } catch (RemoteException e) {
@@ -1263,7 +1263,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         setDialValue(blockNo);
         setCurrentStatus(CALL_MODE);
         //启动广告
-        //    advertiseHandler.start(adverErrorCallBack);
+            advertiseHandler.start(adverErrorCallBack);
 
         videoLayout.setVisibility(View.INVISIBLE);
         setVideoSurfaceVisibility(View.INVISIBLE);
@@ -1272,8 +1272,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public void onRtcConnected() {
         setCurrentStatus(ONVIDEO_MODE);
         setDialValue("");
-        //暂时停止广告播放
-        // advertiseHandler.pause(adverErrorCallBack);
+//        暂时停止广告播放
+         advertiseHandler.pause(adverErrorCallBack);
     }
 
     public void onRtcVideoOn() {
@@ -1964,7 +1964,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             public boolean onMenuItemClick(MenuItem item) {
                 switch (item.getItemId()) {
                     case R.id.action_settings1:
-//                        Log.e(TAG,"menu 系統設置");
+//                        LogDoor.e(TAG,"menu 系統設置");
 
                         Intent intent = new Intent(Settings.ACTION_SETTINGS);//跳轉到系統設置
                         intent.putExtra("back", true);
@@ -1999,7 +1999,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //                        DoorLock.getInstance().runReboot();
                         break;
                     case R.id.action_settings10://退出
-//                        Log.e(TAG,"menu 退出");
+//                        LogDoor.e(TAG,"menu 退出");
                         setResult(RESULT_OK);
                         MainActivity.this.stopService(new Intent(MainActivity.this, MainService
                                 .class));
@@ -2155,7 +2155,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      */
     @Override
     public Camera setupCamera() {
-//        Log.e(TAG, "相机" + "setupCamera");
+//        LogDoor.e(TAG, "相机" + "setupCamera");
 
         try {//这里其实不用捕捉错误
             mCamera = Camera.open();
@@ -2166,17 +2166,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             // (NV21：是一种YUV420SP格式，紧跟Y平面的是VU交替的平面)
 
 //            for (Camera.Size size : parameters.getSupportedPreviewSizes()) {
-//                Log.v(TAG, "SIZE:" + size.width + "x" + size.height);
+//                LogDoor.v(TAG, "SIZE:" + size.width + "x" + size.height);
 //            }
 //            for (Integer format : parameters.getSupportedPreviewFormats()) {
-//                Log.v(TAG, "FORMAT:" + format);
+//                LogDoor.v(TAG, "FORMAT:" + format);
 //            }
 //
 //            List<int[]> fps = parameters.getSupportedPreviewFpsRange();
 //            for (int[] count : fps) {
-//                Log.d(TAG, "T:");
+//                LogDoor.d(TAG, "T:");
 //                for (int data : count) {
-//                    Log.d(TAG, "V=" + data);
+//                    LogDoor.d(TAG, "V=" + data);
 //                }
 //            }
             //parameters.setPreviewFpsRange(15000, 30000);
@@ -2189,7 +2189,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             mCamera.setParameters(parameters);
         } catch (Exception e) {
             e.printStackTrace();
-//            Log.v(TAG, "setupCamera-->" + e.getMessage());
+//            LogDoor.v(TAG, "setupCamera-->" + e.getMessage());
         }
 
         if (mCamera != null) {
@@ -2210,7 +2210,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      */
     @Override
     public void setupChanged(int format, int width, int height) {
-//        Log.e(TAG, "相机" + "setupChanged");
+//        LogDoor.e(TAG, "相机" + "setupChanged");
     }
 
     /**
@@ -2220,7 +2220,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      */
     @Override
     public boolean startPreviewLater() {
-//        Log.e(TAG, "相机" + "startPreviewLater");
+//        LogDoor.e(TAG, "相机" + "startPreviewLater");
         return false;
     }
 
@@ -2236,14 +2236,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      */
     @Override
     public Object onPreview(byte[] data, int width, int height, int format, long timestamp) {
-//        Log.e(TAG, "相机" + "onPreview");
+//        LogDoor.e(TAG, "相机" + "onPreview");
         //检测输入的图像中存在的人脸，输出结果和初始化时设置的参数有密切关系,检测到的人脸会add到此result
         AFT_FSDKError err = engine.AFT_FSDK_FaceFeatureDetect(data, width, height, AFT_FSDKEngine
                 .CP_PAF_NV21, result);
-//        Log.d(TAG, "AFT_FSDK_FaceFeatureDetect =" + err.getCode());
-//        Log.d(TAG, "Face=" + result.size());
+//        LogDoor.d(TAG, "AFT_FSDK_FaceFeatureDetect =" + err.getCode());
+//        LogDoor.d(TAG, "Face=" + result.size());
 //        for (AFT_FSDKFace face : result) {
-//            Log.d(TAG, "虹软:" + face.toString());
+//            LogDoor.d(TAG, "虹软:" + face.toString());
 ////            Rect(145, 164 - 385, 404),1
 ////            Rect(169, 166 - 429, 426),1
 ////            Rect(140, 164 - 404, 428),1
@@ -2275,7 +2275,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      */
     @Override
     public void onBeforeRender(CameraFrameData data) {
-//        Log.e(TAG, "相机" + "onBeforeRender");
+//        LogDoor.e(TAG, "相机" + "onBeforeRender");
     }
 
     /**
@@ -2285,9 +2285,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      */
     @Override
     public void onAfterRender(CameraFrameData data) {
-//        Log.e(TAG, "相机" + "onAfterRender");
+//        LogDoor.e(TAG, "相机" + "onAfterRender");
 //        if (null == data.getParams()) {
-//            Log.e(TAG, "相机" + "getParams" + "为空");
+//            LogDoor.e(TAG, "相机" + "getParams" + "为空");
 //        }
         mGLSurfaceView.getGLES2Render().draw_rect((Rect[]) data.getParams(), Color.GREEN, 2);
     }
@@ -2350,18 +2350,18 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         @Override
         public void setup() {
-//            Log.e("人脸识别", "这里走了吗");
+//            LogDoor.e("人脸识别", "这里走了吗");
             AFR_FSDKError error = engine.AFR_FSDK_InitialEngine(arc_appid, fr_key);
-            //Log.v(FACE_TAG, "AFR_FSDK_InitialEngine = " + error.getCode());
+            //LogDoor.v(FACE_TAG, "AFR_FSDK_InitialEngine = " + error.getCode());
             error = engine.AFR_FSDK_GetVersion(version);
-            //Log.v(FACE_TAG, "FR=" + version.toString() + "," + error.getCode()); //(210, 178 -
+            //LogDoor.v(FACE_TAG, "FR=" + version.toString() + "," + error.getCode()); //(210, 178 -
             // 478, 446), degree =
             // 1　780, 2208 - 1942, 3370
         }
 
         @Override
         public void loop() {
-//            Log.v(FACE_TAG, "loop1:" + mImageNV21 + "/" + identification);
+//            LogDoor.v(FACE_TAG, "loop1:" + mImageNV21 + "/" + identification);
             while (pause) {
                 onPause();
             }
@@ -2378,7 +2378,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 AFR_FSDKError error = engine.AFR_FSDK_ExtractFRFeature(mImageNV21, mWidth,
                         mHeight, AFR_FSDKEngine.CP_PAF_NV21, mAFT_FSDKFace.getRect(),
                         mAFT_FSDKFace.getDegree(), result);
-//                Log.d(TAG, "AFR_FSDK_ExtractFRFeature cost :" + (System.currentTimeMillis() -
+//                LogDoor.d(TAG, "AFR_FSDK_ExtractFRFeature cost :" + (System.currentTimeMillis() -
 //                 time) + "ms");
                 Log.d(TAG, "Face=" + result.getFeatureData()[0] + "," + result.getFeatureData()
                  [1] + "," + result
@@ -2409,11 +2409,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 }
 
 
-                //Log.v(FACE_TAG, "fit Score:" + max + ", NAME:" + name);
+                //LogDoor.v(FACE_TAG, "fit Score:" + max + ", NAME:" + name);
                 if (max > 0.618f) {//匹配度的值高于设定值,发出消息,开门
                     //fr success.
                     final float max_score = max;
-                    //Log.v(FACE_TAG, "置信度：" + (float) ((int) (max_score * 1000)) / 1000.0);
+                    //LogDoor.v(FACE_TAG, "置信度：" + (float) ((int) (max_score * 1000)) / 1000.0);
                     sendMainMessager(MSG_FACE_OPENLOCK, null);
                 }
                 mImageNV21 = null;
@@ -2423,7 +2423,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         @Override
         public void over() {
             AFR_FSDKError error = engine.AFR_FSDK_UninitialEngine();//销毁引擎，释放内存资源
-            //Log.v(FACE_TAG, "AFR_FSDK_UninitialEngine : " + error.getCode());
+            //LogDoor.v(FACE_TAG, "AFR_FSDK_UninitialEngine : " + error.getCode());
         }
     }
     /****************************虹软相关end*********************************************/
@@ -2434,12 +2434,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onStart();
 
         // TODO: 2018/5/15   以下暂时注释
-        // if (isRestartPlay) {
-//        isRestartPlay = false;
-//        advertiseHandler.start(adverErrorCallBack);
-//    }
+         if (isRestartPlay) {
+        isRestartPlay = false;
+        advertiseHandler.start(adverErrorCallBack);
     }
-
+    }
+        private boolean isRestartPlay = false;
     @Override
     protected void onResume() {
         super.onResume();
@@ -2454,8 +2454,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     protected void onPause() {
         super.onPause();
         // TODO: 2018/5/15   以下暂时注释
-//        advertiseHandler.pause(adverErrorCallBack);
-//        isRestartPlay = true;
+        advertiseHandler.pause(adverErrorCallBack);
+        isRestartPlay = true;
     }
 
     @Override

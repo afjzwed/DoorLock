@@ -198,7 +198,7 @@ public class DoorLock extends Service implements OnBackCall {
             } else if (intent.getAction().equals(actionRunShutdown)) {
                 runShutdown();
             /*} else if (intent.getAction().equals(TXDeviceService.OnReceiveDataPoint)) {
-                Log.d(TAG, "onReceive: 执行了吗?");
+                LogDoor.d(TAG, "onReceive: 执行了吗?");
                 Long from = intent.getExtras().getLong("from", 0);
                 Parcelable[] arrayDataPoint = intent.getExtras().getParcelableArray("datapoint");
                 for (int i = 0; i < arrayDataPoint.length; ++i) {
@@ -215,7 +215,7 @@ public class DoorLock extends Service implements OnBackCall {
                                 ds_intent.putExtra("status", status);
                                 sendBroadcast(ds_intent);
                                 dpa[0] = dp;
-                                Log.d(TAG, "onReceive: " + Arrays.toString(dpa));
+                                LogDoor.d(TAG, "onReceive: " + Arrays.toString(dpa));
                                 TXDeviceService.reportDataPoint(dpa);
 
                                 Intent intent_ble = new Intent();
@@ -317,16 +317,16 @@ public class DoorLock extends Service implements OnBackCall {
                         break;
                 }
                 /*
-                Log.v("status", statusString);
-                Log.v("health", healthString);
-				Log.v("present", String.valueOf(present));
-				Log.v("level", String.valueOf(level));
-				Log.v("scale", String.valueOf(scale));
-				Log.v("icon_small", String.valueOf(icon_small));
-				Log.v("plugged", acString);
-				Log.v("voltage", String.valueOf(voltage));
-				Log.v("temperature", String.valueOf(temperature));
-				Log.v("technology", technology);
+                LogDoor.v("status", statusString);
+                LogDoor.v("health", healthString);
+				LogDoor.v("present", String.valueOf(present));
+				LogDoor.v("level", String.valueOf(level));
+				LogDoor.v("scale", String.valueOf(scale));
+				LogDoor.v("icon_small", String.valueOf(icon_small));
+				LogDoor.v("plugged", acString);
+				LogDoor.v("voltage", String.valueOf(voltage));
+				LogDoor.v("temperature", String.valueOf(temperature));
+				LogDoor.v("technology", technology);
 				*/
             }
         }

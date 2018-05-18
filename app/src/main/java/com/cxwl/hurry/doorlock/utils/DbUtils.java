@@ -1,14 +1,17 @@
 package com.cxwl.hurry.doorlock.utils;
 
+import android.nfc.Tag;
+import android.util.Log;
+
 import com.cxwl.hurry.doorlock.db.KaDao;
-import com.cxwl.hurry.doorlock.db.Log;
+import com.cxwl.hurry.doorlock.db.LogDoor;
 
 import com.cxwl.hurry.doorlock.MainApplication;
 import com.cxwl.hurry.doorlock.db.DaoSession;
 import com.cxwl.hurry.doorlock.db.Ka;
 import com.cxwl.hurry.doorlock.db.Lian;
 import com.cxwl.hurry.doorlock.db.LianDao;
-import com.cxwl.hurry.doorlock.db.LogDao;
+import com.cxwl.hurry.doorlock.db.LogDoorDao;
 
 import java.util.List;
 
@@ -21,14 +24,14 @@ public class DbUtils {
     private DaoSession mDaoSession;
     private KaDao mKaDao;
     private LianDao mLianDao;
-    private LogDao mLogDao;
+    private LogDoorDao mLogDao;
     private final static String TAG = "DB";
 
     private DbUtils(DaoSession daoSession) {
         this.mDaoSession = daoSession;
         mKaDao = this.mDaoSession.getKaDao();
         mLianDao = this.mDaoSession.getLianDao();
-        mLogDao = this.mDaoSession.getLogDao();
+        mLogDao = this.mDaoSession.getLogDoorDao();
     }
 
     private static DbUtils mDbUtils;
@@ -71,8 +74,8 @@ public class DbUtils {
      */
     public void quaryAllKa() {
         List<Ka> list = mKaDao.queryBuilder().list();
-        if (list!=null){
-            android.util.Log.i(TAG, "查询所有卡信息成功"+list.toString());
+        if (list != null) {
+            android.util.Log.i(TAG, "查询所有卡信息成功" + list.toString());
         }
 
     }
@@ -133,26 +136,36 @@ public class DbUtils {
     /**
      * 增加一条日志信息
      */
-    public void insertOneLog(Log log) {
-        mLogDao.insert(log);
+    public void insertOneLog(LogDoor logDoor) {
+        mLogDao.insert(logDoor);
     }
 
     /**
      * 删除一条日志信息
      */
-    public void deleteOneLog(Log log) {
-        mLogDao.delete(log);
+    public void deleteOneLog(LogDoor logDoor) {
+        mLogDao.delete(logDoor);
     }
 
     /**
      * 增加所有日志信息
      */
-    public void addAllLog(List<Log> log) {
-        //先删除所有日志信息
-        deleteAllLog();
-        for (int i = 0; i < log.size(); i++) {
-            mLogDao.insert(log.get(i));
+    public void addAllLog(List<LogDoor> logDoor) {
+        for (int i = 0; i < logDoor.size(); i++) {
+            mLogDao.insert(logDoor.get(i));
         }
+        Log.i(TAG, "离线日志保存到数据库成功");
+    }
+
+    /**
+     * 检查是否存在离线日志
+     *
+     * @return
+     */
+    public List<LogDoor> quaryLog() {
+        List<LogDoor> doors = mLogDao.queryBuilder().list();
+        Log.i(TAG, "查询所有离线日志");
+        return doors;
     }
 
     /**
@@ -160,6 +173,6 @@ public class DbUtils {
      */
     public void deleteAllLog() {
         mLogDao.deleteAll();
-
+        Log.i(TAG, "删除数据库中日志");
     }
 }

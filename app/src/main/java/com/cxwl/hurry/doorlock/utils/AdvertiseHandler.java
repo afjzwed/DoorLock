@@ -169,6 +169,7 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
 
     public void playVideo(GuangGaoBean item) {
         try {
+            Log.e("广告", item.toString());
             String fileUrls = item.getNeirong();
 
             String source = HttpUtils.getLocalFileFromUrl(fileUrls);
@@ -180,7 +181,8 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
                 initMediaPlayer();
                 startMediaPlay(mediaPlayerSource);
             } else {
-                next();
+                Log.e("广告", "next");
+              //  next();
             }
         } catch (Exception e) {
         }

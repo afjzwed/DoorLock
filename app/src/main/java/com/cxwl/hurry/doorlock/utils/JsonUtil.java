@@ -133,8 +133,10 @@ public class JsonUtil {
         return null;
     }
 
-    public static  void parseBeanToJson(Object object){
-
+    public static  String parseBeanToJson(Object object){
+        Gson gson = new Gson();
+        String json = gson.toJson(object);
+        return json;
     }
 
 

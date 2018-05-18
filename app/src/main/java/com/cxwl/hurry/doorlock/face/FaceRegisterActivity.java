@@ -532,7 +532,7 @@ public class FaceRegisterActivity extends AppCompatActivity implements SurfaceHo
     private boolean fileOperation(String name) {
         boolean bool = false;
         String path = getExternalCacheDir().getPath();
-//        Log.v("人脸识别", "fileOperation-->" + path);
+//        LogDoor.v("人脸识别", "fileOperation-->" + path);
         File file = new File(path);
         if (file != null && file.exists()) {
             File[] files = file.listFiles();// 读取文件夹下文件

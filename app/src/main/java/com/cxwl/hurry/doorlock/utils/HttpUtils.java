@@ -44,6 +44,11 @@ public class HttpUtils {
         String localFile = null;
         int lastIndex = url.lastIndexOf("/");
         String fileName = url.substring(lastIndex + 1);
+        //// TODO: 2018/5/18 //处理代点的问题
+        if (fileName.contains(".")){
+            fileName = fileName.substring(0, fileName.lastIndexOf("."));
+            Log.e("filename .", fileName);
+        }
         OutputStream output = null;
         try {
                 /*
@@ -154,6 +159,11 @@ public class HttpUtils {
     public static String getLocalFileFromUrl(String url) {
         int lastIndex = url.lastIndexOf("/");
         String fileName = url.substring(lastIndex + 1);
+        //// TODO: 2018/5/18 包含.mp4去掉
+        if (fileName.contains(".")){
+            fileName = fileName.substring(0, fileName.lastIndexOf("."));
+            Log.e("filename .", fileName);
+        }
         return getLocalFile(fileName);
     }
 
@@ -168,6 +178,8 @@ public class HttpUtils {
                 result = fileString;
             }
         }
+        if (result!=null){
+        Log.e("file", result+file.length());}
         return result;
     }
 

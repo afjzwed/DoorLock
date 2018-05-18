@@ -29,10 +29,12 @@ import com.arcsoft.facerecognition.AFR_FSDKVersion;
 import com.cxwl.hurry.doorlock.config.Constant;
 import com.cxwl.hurry.doorlock.config.DeviceConfig;
 import com.cxwl.hurry.doorlock.db.Ka;
+import com.cxwl.hurry.doorlock.db.LogDoor;
 import com.cxwl.hurry.doorlock.entity.ConnectReportBean;
 import com.cxwl.hurry.doorlock.entity.DoorBean;
 import com.cxwl.hurry.doorlock.entity.FaceUrlBean;
 import com.cxwl.hurry.doorlock.entity.GuangGaoBean;
+import com.cxwl.hurry.doorlock.entity.LogListBean;
 import com.cxwl.hurry.doorlock.entity.NoticeBean;
 import com.cxwl.hurry.doorlock.entity.XdoorBean;
 import com.cxwl.hurry.doorlock.entity.YeZhuBean;
@@ -51,6 +53,7 @@ import com.cxwl.hurry.doorlock.utils.MacUtils;
 import com.cxwl.hurry.doorlock.utils.SPUtil;
 import com.cxwl.hurry.doorlock.utils.ShellUtils;
 import com.cxwl.hurry.doorlock.utils.SoundPoolUtil;
+import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
@@ -81,6 +84,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
+
+import javax.crypto.Mac;
 
 import jni.http.HttpManager;
 import jni.http.HttpResult;
@@ -557,7 +562,8 @@ public class MainService extends Service {
                             String result = JsonUtil.getResult(response);
                             ConnectReportBean connectReportBean = JsonUtil.parseJsonToBean(result, ConnectReportBean
                                     .class);
-
+                            //测试上传日志
+                            //test();
                             //保存离线密码 默认123456
                             Log.i(TAG, "心跳--服务器返回的离线密码" + connectReportBean.getLixian_mima());
                             SPUtil.put(MainService.this, Constant.SP_LIXIAN_MIMA, connectReportBean.getLixian_mima());
@@ -892,67 +898,68 @@ public class MainService extends Service {
     private int adInfoStatus = 0;//广告信息状态(默认为0) 0:不一致（等待下载数据）1:不一致（正在下载数据）
 
     private void getGuangGao(float v) {
-        adInfoStatus = 1;
-        String url = API.CALLALL_ADS;
-        try {
-            Log.e(TAG, "获取广告url= " + url);
-            JSONObject data = new JSONObject();
-            data.put("mac", mac);
-            OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse("application/json; "
-                    + "charset=utf-8")).addHeader("Authorization", httpServerToken).tag(this).build().execute(new StringCallback() {
-                @Override
-                public void onError(Call call, Exception e, int id) {
-                    Log.e(TAG, "onError 获取广告接口 getGuangGao  Exception=" + e.toString());
-                }
+        if(adInfoStatus==0) {
+            adInfoStatus = 1;
+            String url = API.CALLALL_ADS;
+            try {
+                Log.e(TAG, "获取广告url= " + url);
+                JSONObject data = new JSONObject();
+                data.put("mac", mac);
+                data.put("leixing", "1");
+                OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse("application/json; " + "charset=utf-8")).addHeader("Authorization", httpServerToken).tag(this).build().execute(new StringCallback() {
 
-                @Override
-                public void onResponse(String response, int id) {
-                    Log.e(TAG, "onResponse 获取广告接口 getGuangGao  response=" + response);
-                    if (null != response) {
-                        String code = JsonUtil.getFieldValue(response, "code");
-                        if ("0".equals(code)) {
-                            try {
-                                String result = JsonUtil.getResult(response);
-                                String guanggao = JsonUtil.getFieldValue(result, "guanggao");
-                                final List<GuangGaoBean> guangGaoBeen = JsonUtil.fromJsonArray(guanggao, GuangGaoBean
-                                        .class);
-                                GuangGaoBean guangGaoBeen1 = new GuangGaoBean();
-                                guangGaoBeen1.setLeixing("2");
-                                guangGaoBeen1.setNeirong("http://img.taopic" + "" + "" + "" + "" + "" + "" + "" + ""
-                                        + ".com/uploads/allimg/120727/201995-120HG1030762.jpg");
-                                guangGaoBeen.add(guangGaoBeen1);
-                                new Thread(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        try {
-                                            downloadAdvertisement(guangGaoBeen);
-                                            adjustAdvertiseFiles();
-                                            restartAdvertise(guangGaoBeen);
-                                            removeAdvertiseFiles();
-                                        } catch (Exception e) {
-                                            e.printStackTrace();
-                                        }
-                                    }
-                                }).start();
-                            } catch (JSONException e) {
-                                e.printStackTrace();
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                            }
-
-                        } else {
-                        }
-                    } else {
-                        //服务器异常或没有网络
-                        HttpApi.e("getClientInfo()->服务器无响应");
-                        adInfoStatus = 0;//等待下载数据
+                    @Override
+                    public void onError(Call call, Exception e, int id) {
+                        Log.e(TAG, "onError 获取广告接口 getGuangGao  Exception=" + e.toString());
                     }
-                }
-            });
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
 
+                    @Override
+                    public void onResponse(String response, int id) {
+                        Log.e(TAG, "onResponse 获取广告接口 getGuangGao  response=" + response);
+                        if (null != response) {
+                            String code = JsonUtil.getFieldValue(response, "code");
+                            if ("0".equals(code)) {
+                                try {
+                                    String result = JsonUtil.getResult(response);
+                                    String guanggao = JsonUtil.getFieldValue(result, "guanggao");
+                                    final List<GuangGaoBean> guangGaoBeen = JsonUtil.fromJsonArray(guanggao, GuangGaoBean.class);
+//                                GuangGaoBean guangGaoBeen1 = new GuangGaoBean();
+//                                guangGaoBeen1.setLeixing("2");
+//                                guangGaoBeen1.setNeirong("http://img.taopic" + "" + "" + "" + "" + "" + "" + "" + ""
+//                                        + ".com/uploads/allimg/120727/201995-120HG1030762.jpg");
+//                                guangGaoBeen.add(guangGaoBeen1);
+                                    new Thread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            try {
+                                                downloadAdvertisement(guangGaoBeen);
+                                                adjustAdvertiseFiles();
+                                                restartAdvertise(guangGaoBeen);
+                                                removeAdvertiseFiles();
+                                            } catch (Exception e) {
+                                                e.printStackTrace();
+                                            }
+                                        }
+                                    }).start();
+                                } catch (JSONException e) {
+                                    e.printStackTrace();
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+
+                            } else {
+                            }
+                        } else {
+                            //服务器异常或没有网络
+                            HttpApi.e("getClientInfo()->服务器无响应");
+                            adInfoStatus = 0;//等待下载数据
+                        }
+                    }
+                });
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     private List<GuangGaoBean> currentAdvertisementList = new ArrayList<>();
@@ -1049,13 +1056,19 @@ public class MainService extends Service {
     protected void downloadAdvertisementFile(String file) throws Exception {
         int lastIndex = file.lastIndexOf("/");
         String fileName = file.substring(lastIndex + 1);
+        Log.e("filename", fileName);
+        //// TODO: 2018/5/18 包含.mp4去掉
+        if (fileName.contains(".")){
+            fileName = fileName.substring(0, fileName.lastIndexOf("."));
+            Log.e("filename .", fileName);
+        }
         //根据文件名返回本地路径
         String localFile = HttpUtils.getLocalFile(fileName);
         if (localFile == null) {
             Log.i(TAG, "准备下载广告");
             //如果本地没有对应文件,则下载文件至本地
             localFile = HttpUtils.downloadFile(file);
-            Log.i(TAG, "广告" + localFile);
+            Log.i(TAG, "广告----" + localFile);
             if (localFile != null) {
                 Log.i(TAG, "加载本地广告");
                 if (localFile.endsWith(".temp")) {
@@ -1443,7 +1456,7 @@ public class MainService extends Service {
                 mDbUtils.addAllKa(list);
                 Log.i(TAG, System.currentTimeMillis() + "添加后");
 //                boolean hasKa = mDbUtils.isHasKa("1052");
-//                Log.i(TAG, System.currentTimeMillis() + "查询后" + hasKa);
+//                LogDoor.i(TAG, System.currentTimeMillis() + "查询后" + hasKa);
             }
         }).start();
     }
@@ -1693,7 +1706,7 @@ public class MainService extends Service {
 
         @Override
         public void onSendIm(int i) {
-            Log.e(RTCTAG, "onSendIm()" + i);
+            Log.e(RTCTAG, "onSendIm()" + (i==0?"成功":"失败"));
             if (callConnectState == CALL_VIDEO_CONNECTING) {
                 checkSendCallMessageParall(i);
             }
@@ -1706,7 +1719,7 @@ public class MainService extends Service {
 
         @Override
         public void onNewCall(Connection connection) {
-            //   Log.i(TAG,"收到来电");
+            //   LogDoor.i(TAG,"收到来电");
             JSONObject callInfo = null;
             String acceptMember = null;
             try {
@@ -1768,8 +1781,6 @@ public class MainService extends Service {
 //                rejectUserList.add(from);
 //            }
         } else if (content.startsWith("{\"")) {
-            //上传日志
-            createAccessLog(content);
             cancelOtherMembers(from);
             Log.v("MainService", "用户直接开门，取消其他呼叫");
             resetCallMode();
@@ -1778,6 +1789,11 @@ public class MainService extends Service {
             Log.e(TAG, "进行开门操作 开门开门");
             //// TODO: 2018/5/16  暂时直接开锁
             sendMessageToMainAcitivity(MSG_LOCK_OPENED, "");//开锁
+            //上传日志
+            LogDoor logDoor = JsonUtil.parseJsonToBean(content, LogDoor.class);
+            List<LogDoor> list = new ArrayList<>();
+            list.add(logDoor);
+            createAccessLog(list);
         } else if (content.startsWith("refuse call")) { //拒绝接听
 //            if (!rejectUserList.contains(from)) {
 //                rejectUserList.add(from);
@@ -1791,17 +1807,64 @@ public class MainService extends Service {
         }
     }
 
-    /**
-     * 上传rtc开门日志
-     */
-    protected void createAccessLog(String data) {
-        Log.e(TAG, "rtc开门日志上传" + data);
+    private void test() {
         String url = API.LOG;
-        OkHttpUtils.postString().url(url).content(data).mediaType(MediaType.parse("application/json; charset=utf-8"))
-                .addHeader("Authorization", httpServerToken).tag(this).build().execute(new StringCallback() {
+        JSONObject data = new JSONObject();
+        try {
+            data.put("mac", "44:2c:05:e6:9c:c5");
+            data.put("phone", "454");
+            data.put("ka_id", "");
+            data.put("kaimenfangshi", "1");
+            data.put("kaimenjietu", "");
+            data.put("kaimenshijian", System.currentTimeMillis());
+            data.put("uuid", "");
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        LogDoor logDoor = JsonUtil.parseJsonToBean(data.toString(), LogDoor.class);
+        List<LogDoor> door = new ArrayList<>();
+        door.add(logDoor);
+        LogListBean logListBean = new LogListBean();
+        logListBean.setMac("44:2c:05:e6:9c:c5");
+        logListBean.setXdoorOneOpenDtos(door);
+        String s = JsonUtil.parseBeanToJson(logListBean);
+        Log.e(TAG, "test" + JsonUtil.parseBeanToJson(logListBean));
+        OkHttpUtils.postString().url(url).content(s).mediaType(MediaType.parse("application/json;" + " " +
+                "charset=utf-8")).addHeader("Authorization", httpServerToken).tag(this).build().execute(new StringCallback() {
+
+
+            @Override
+            public void onError(Call call, Exception e, int id) {
+                Log.e(TAG, e.toString());
+            }
+
+            @Override
+            public void onResponse(String response, int id) {
+                Log.e(TAG, response);
+            }
+        });
+    }
+
+    /**
+     * 上传开门日志
+     */
+    protected void createAccessLog(final List<LogDoor> data) {
+        Log.e(TAG, "开门日志上传" + data.toString());
+        String url = API.LOG;
+
+        LogListBean logListBean = new LogListBean();
+        logListBean.setMac(mac);
+        logListBean.setXdoorOneOpenDtos(data);
+        String json = JsonUtil.parseBeanToJson(logListBean);
+        Log.e(TAG, "开门日志上传 参数" + json);
+
+        OkHttpUtils.postString().url(url).content(json).mediaType(MediaType.parse("application/json;" + "" + "" + " "
+                + "charset=utf-8")).addHeader("Authorization", httpServerToken).tag(this).build().execute(new StringCallback() {
             @Override
             public void onError(Call call, Exception e, int id) {
                 Log.e(TAG, "onError rtc上传日志接口createAccessLog oner " + e.toString());
+                Log.e(TAG, "上传日志失败 保存日志信息到数据库");
+                DbUtils.getInstans().addAllLog(data);
             }
 
             @Override
@@ -1811,20 +1874,59 @@ public class MainService extends Service {
                 if (null != response) {
                     String code = JsonUtil.getFieldValue(response, "code");
                     if ("0".equals(code)) {
+                        Log.i(TAG, "日志上传成功 查询离线日志");
+                        List<LogDoor> doors = DbUtils.getInstans().quaryLog();
 
+                        if (doors.size() > 0) {
+                            //有离线日志 上传离线日志
+                            Log.i(TAG, "有离线日志" + doors.size() + "条" + " 开始上传 " + doors.toString());
+                            createAccessLogLixian(doors);
+                        }
+                    } else {
+                        Log.e(TAG, "上传日志失败 保存日志信息到数据库");
+                        DbUtils.getInstans().addAllLog(data);
                     }
-//                        if (isCheckLogDB) {
-//                            //正在检查日志表(或是提交的离线日志)，不重复检查
-//                        } else {
-//                            getDB();//普通日志提交成功后，检查离线日志
-//                        }
-//                    } else {
-//                        saveLog(o);//日志提交不成功，存本地数据库
-//                    }
                 } else {
                     //服务器异常或没有网络
-                    HttpApi.e("getClientInfo()->服务器无响应");
-                    //  saveLog(o);//日志提交不成功，存本地数据库
+                    Log.e(TAG, "上传日志失败 保存日志信息到数据库");
+                    DbUtils.getInstans().addAllLog(data);
+                }
+            }
+        });
+    }
+
+    protected void createAccessLogLixian(List<LogDoor> data) {
+        Log.e(TAG, "开门离线日志上传" + data.toString());
+        String url = API.LOG;
+        LogListBean logListBean = new LogListBean();
+        logListBean.setMac(mac);
+        logListBean.setXdoorOneOpenDtos(data);
+        String json = JsonUtil.parseBeanToJson(logListBean);
+        Log.e(TAG, "开门离线日志上传 参数" + json);
+        OkHttpUtils.postString().url(url).content(json).mediaType(MediaType.parse("application/json;" + "" + "" + " "
+                + "charset=utf-8")).addHeader("Authorization", httpServerToken).tag(this).build().execute(new StringCallback() {
+            @Override
+            public void onError(Call call, Exception e, int id) {
+                Log.e(TAG, "onError rtc上传日志接口createAccessLog oner " + e.toString());
+                Log.e(TAG, "上传离线日志失败 不做保存操作");
+
+            }
+
+            @Override
+            public void onResponse(String response, int id) {
+                Log.e("wh response", response);
+                Log.e(TAG, "onResponse rtc上传日志接口createAccessLog response" + response);
+                if (null != response) {
+                    String code = JsonUtil.getFieldValue(response, "code");
+                    if ("0".equals(code)) {
+                        Log.i(TAG, "离线日志上传成功 删除离线日志");
+                        DbUtils.getInstans().deleteAllLog();
+                    } else {
+                        Log.e(TAG, "上传离线日志失败不保存信息到数据库");
+                    }
+                } else {
+                    //服务器异常或没有网络
+                    Log.e(TAG, "上传离线日志失败 不保存信息到数据库");
                 }
             }
         });
@@ -2396,20 +2498,19 @@ public class MainService extends Service {
 
         //这个函数功能为检测输入的图像中存在的人脸,data 输入的图像数据,width 图像宽度,height 图像高度,format 图像格式,List<AFD_FSDKFace>
         // list 检测到的人脸会放到到该列表里
-        err_afd = engine_afd.AFD_FSDK_StillImageFaceDetection(data, mBitmap.getWidth(), mBitmap
-                .getHeight(), AFD_FSDKEngine.CP_PAF_NV21, result_afd);
-        Log.d(TAG, "AFD_FSDK_StillImageFaceDetection =" + err_afd.getCode() + "<" + result_afd
-                .size());
+        err_afd = engine_afd.AFD_FSDK_StillImageFaceDetection(data, mBitmap.getWidth(), mBitmap.getHeight(),
+                AFD_FSDKEngine.CP_PAF_NV21, result_afd);
+        Log.d(TAG, "AFD_FSDK_StillImageFaceDetection =" + err_afd.getCode() + "<" + result_afd.size());
 
         if (!result_afd.isEmpty() && result_afd.size() != 0) {//人脸数据结果不为空
 
             //检测输入图像中的人脸特征信息，输出结果保存在 AFR_FSDKFace feature
-            err_afr = engine_afr.AFR_FSDK_ExtractFRFeature(data, mBitmap.getWidth(), mBitmap
-                    .getHeight(), AFR_FSDKEngine.CP_PAF_NV21, new Rect(result_afd.get(0).getRect
-                    ()), result_afd.get(0).getDegree(), result_afr);
-            Log.d("com.arcsoft", "Face=" + result_afr.getFeatureData()[0] + "," + result_afr
-                    .getFeatureData()[1] + "," + "result_afr" + result_afr.toString() + "  " +
-                    result_afr.getFeatureData()[2] + "," + err_afr.getCode());
+            err_afr = engine_afr.AFR_FSDK_ExtractFRFeature(data, mBitmap.getWidth(), mBitmap.getHeight(),
+                    AFR_FSDKEngine.CP_PAF_NV21, new Rect(result_afd.get(0).getRect()), result_afd.get(0).getDegree(),
+                    result_afr);
+            Log.d("com.arcsoft", "Face=" + result_afr.getFeatureData()[0] + "," + result_afr.getFeatureData()[1] + "," +
+                    "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "result_afr" +
+                    result_afr.toString() + "  " + "" + result_afr.getFeatureData()[2] + "," + err_afr.getCode());
             if (err_afr.getCode() == err_afr.MOK) {//人脸特征检测成功
                 mAFR_FSDKFace = result_afr.clone();
                 // TODO: 2018/5/15 保存mAFR_FSDKFace人脸信息，操作数据库
@@ -2479,19 +2580,19 @@ public class MainService extends Service {
 //                 openLock();
                 Log.e(TAG, "onCard====:" + card);
                 // TODO: 2018/5/16 调用日志接口,传卡号 startCardAccessLog(card);
-                try {
-                    JSONObject data = new JSONObject();
-                    data.put("mac", mac);
-                    data.put("phone", kaInfo.getYezhu_dianhua());
-                    data.put("ka_id", kaInfo.getKa_id());
-                    data.put("kaimenfangshi", "1");
-                    data.put("kaimenjietu", "");
-                    data.put("kaimenshijian", System.currentTimeMillis());
-                    data.put("uuid", "");
-                    createAccessLog(data.toString());
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
+
+                LogDoor data = new LogDoor();
+                data.setMac(mac);
+                data.setPhone(kaInfo.getYezhu_dianhua());
+                data.setKa_id(kaInfo.getKa_id());
+                data.setKaimenfangshi("1");
+                data.setKaimenjietu("");
+                data.setKaimenshijian(System.currentTimeMillis() + "");
+                data.setUuid("");
+                List<LogDoor> list = new ArrayList<>();
+                list.add(data);
+                createAccessLog(list);
+
             } else {
                 Log.e(TAG, "数据库中不存在这个卡 刷卡开门失败" + card);
                 sendMessageToMainAcitivity(MSG_INVALID_CARD, null);//无效房卡
