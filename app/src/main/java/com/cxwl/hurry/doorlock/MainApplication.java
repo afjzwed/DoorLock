@@ -4,6 +4,7 @@ import android.app.Application;
 
 import com.cxwl.hurry.doorlock.db.DaoMaster;
 import com.cxwl.hurry.doorlock.db.DaoSession;
+import com.cxwl.hurry.doorlock.face.ArcsoftManager;
 import com.zhy.http.okhttp.OkHttpUtils;
 import com.zhy.http.okhttp.log.LoggerInterceptor;
 
@@ -24,7 +25,8 @@ public class MainApplication  extends Application {
     public void onCreate() {
         application = this;
 
-        // TODO: 2018/5/14 这个不用了，人脸识别的数据存本地数据库 ArcsoftManager.getInstance().initArcsoft(this);//虹软人脸识别初始化
+        // TODO: 2018/5/14 这个不用了，人脸识别的数据存本地数据库
+         ArcsoftManager.getInstance().initArcsoft(this);//虹软人脸识别初始化
 
         super.onCreate();
 

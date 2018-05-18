@@ -27,6 +27,9 @@
     <!-- 开启摄像头 -->
     <uses-permission android:name="android.hardware.camera"/>
     <uses-permission android:name="android.hardware.camera.autofocus"/>
+    <uses-feature
+        android:name="android.hardware.camera.setParameters"
+        android:required="false" />
     <!--允许使用PowerManager的WakeLocks保持进程在休眠时从屏幕消失-->
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
 
@@ -50,6 +53,10 @@
                 <category android:name="android.intent.category.DEFAULT"/>
             </intent-filter>
         </activity>
+
+        <activity android:name=".face.FaceRegisterActivity"/>
+
+        <activity android:name=".face.PhotographActivity2"/>
 
 
         <service android:name=".service.MainService"/>

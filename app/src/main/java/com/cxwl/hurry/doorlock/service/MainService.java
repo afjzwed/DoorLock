@@ -30,6 +30,7 @@ import com.cxwl.hurry.doorlock.config.DeviceConfig;
 import com.cxwl.hurry.doorlock.db.Ka;
 import com.cxwl.hurry.doorlock.entity.ConnectReportBean;
 import com.cxwl.hurry.doorlock.entity.DoorBean;
+import com.cxwl.hurry.doorlock.entity.FaceUrlBean;
 import com.cxwl.hurry.doorlock.entity.NoticeBean;
 import com.cxwl.hurry.doorlock.entity.XdoorBean;
 import com.cxwl.hurry.doorlock.entity.YeZhuBean;
@@ -47,6 +48,7 @@ import com.cxwl.hurry.doorlock.utils.MacUtils;
 import com.cxwl.hurry.doorlock.utils.SPUtil;
 import com.cxwl.hurry.doorlock.utils.SoundPoolUtil;
 import com.google.gson.JsonObject;
+import com.google.gson.reflect.TypeToken;
 import com.guo.android_extend.image.ImageConverter;
 import com.zhy.http.okhttp.OkHttpUtils;
 import com.zhy.http.okhttp.callback.StringCallback;
@@ -90,6 +92,8 @@ import static com.cxwl.hurry.doorlock.config.Constant.MSG_CALLMEMBER_SERVER_ERRO
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_CALLMEMBER_TIMEOUT;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_CANCEL_CALL;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_DOWNLOAD;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_INFO;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_OPENLOCK;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_GET_NOTICE;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_GUEST_PASSWORD_CHECK;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_INVALID_CARD;
@@ -107,6 +111,8 @@ import static com.cxwl.hurry.doorlock.config.Constant.RTC_APP_KEY;
 import static com.cxwl.hurry.doorlock.config.Constant.SP_VISION_KA;
 import static com.cxwl.hurry.doorlock.config.Constant.SP_XINTIAO_TIME;
 import static com.cxwl.hurry.doorlock.config.Constant.arc_appid;
+import static com.cxwl.hurry.doorlock.config.Constant.fd_key;
+import static com.cxwl.hurry.doorlock.config.Constant.fr_key;
 import static com.cxwl.hurry.doorlock.config.Constant.ft_key;
 
 
@@ -156,6 +162,7 @@ public class MainService extends Service {
     private ArrayList<YeZhuBean> onlineUserList = new ArrayList<>();
     private ArrayList<YeZhuBean> offlineUserList = new ArrayList<>();
     private ArrayList<YeZhuBean> rejectUserList = new ArrayList<>();
+    private ArrayList<FaceUrlBean> faceUrlList = new ArrayList<>();//人脸照片URL集合
 
     public String unitNo = "";//呼叫房号
     public static int communityId = 0;//社区ID
@@ -187,6 +194,8 @@ public class MainService extends Service {
     private AFR_FSDKFace mAFR_FSDKFace;//用于保存到数据库中的人脸特征信息
 
     private int noticesStatus = 0;//门禁卡信息版本状态(默认为0)// 0:不一致（等待下载数据）1:不一致（正在下载数据）
+    private int faceStatus = 0;//人脸信息版本状态(默认为0)// 0:不一致（等待下载数据）1:不一致（正在下载数据）
+    private int cardInfoStatus = 0;//门禁卡信息版本状态(默认为0)// 0:不一致（等待下载数据）1:不一致（正在下载数据）
 
     @Override
     public void onCreate() {
@@ -210,7 +219,8 @@ public class MainService extends Service {
                     case MAIN_ACTIVITY_INIT:
                         mainMessage = msg.replyTo;
                         netWorkstate = (Boolean) msg.obj;
-                        Log.i(TAG, "MainActivity初始化完成  MainServic开始初始化" + (netWorkstate ? "有网" : "没网"));
+                        Log.i(TAG, "MainActivity初始化完成  MainServic开始初始化" + (netWorkstate ? "有网" :
+                                "没网"));
                         init();
                         break;
                     case MSG_RTC_REGISTER:
@@ -290,36 +300,16 @@ public class MainService extends Service {
                         initConnectReport();//心跳开始,根据心跳返回结果开启各更新程序
                         break;
                     case MSG_FACE_DOWNLOAD: {
-                        // TODO: 2018/5/15 接收从MainActivity传来的人脸URL,循环下载并录入
-
-                        //在这里初始化人脸检测和识别相关类，之后抽取方法
-                        //人脸检测初始化引擎，设置检测角度、范围，数量。创建对象后，必须先于其他成员函数调用
-                        err_afd = engine_afd.AFD_FSDK_InitialFaceEngine(arc_appid, ft_key, AFD_FSDKEngine
-                                .AFD_OPF_0_HIGHER_EXT, 16, 5);
-
-                        //人脸识别初始化引擎，设置检测角度、范围，数量。创建对象后，必须先于其他成员函数调用
-                        err_afr = engine_afr.AFR_FSDK_InitialEngine(arc_appid, ft_key);
-
-
-                        if (err_afd.getCode() != AFD_FSDKError.MOK) {//FD初始化失败
-                            Log.e(TAG, "FD初始化失败，错误码：" + err_afd.getCode());
-                        } else if (err_afr.getCode() != AFD_FSDKError.MOK) {
-                            Log.e(TAG, "FR初始化失败，错误码：" + err_afr.getCode());
-                        } else {
-                            err_afd = engine_afd.AFD_FSDK_GetVersion(version_afd);
-                            err_afr = engine_afr.AFR_FSDK_GetVersion(version_afr);
-                            Log.d(TAG, "AFD_FSDK_GetVersion =" + version_afd.toString() + ", " + err_afd.getCode());
-                            new Thread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    for (int i = 0; i < 100; i++) {
-                                        downLoadFace();
-                                    }
-                                }
-                            }).start();
+                        // TODO: 2018/5/15 接收人脸URL,循环下载并录入
+                        if (null != faceUrlList && faceUrlList.size() > 0) {
+                            initFaceEngine();
                         }
                         break;
                     }
+                    case MSG_FACE_OPENLOCK:
+                        sendMessageToMainAcitivity(MSG_LOCK_OPENED, "");
+//                        openLock();
+                        break;
                     default:
                         break;
                 }
@@ -328,7 +318,6 @@ public class MainService extends Service {
         };
         serviceMessage = new Messenger(mHandler);
     }
-
 
     /**
      * 开启心跳线程
@@ -345,7 +334,8 @@ public class MainService extends Service {
                 try {
                     connectReport();//首次执行
                     while (!isInterrupted()) {//检测线程是否已经中断
-                        sleep((Long) SPUtil.get(MainService.this, SP_XINTIAO_TIME, 60000L)); //心跳间隔时间
+                        sleep((Long) SPUtil.get(MainService.this, SP_XINTIAO_TIME, 60000L));
+                        //心跳间隔时间
                         connectReport();
                     }
                 } catch (InterruptedException e) {
@@ -439,8 +429,9 @@ public class MainService extends Service {
             if (imageUrl != null) {
                 data.put("kaimenjietu", this.imageUrl);
             }
-            OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse("application/json; "
-                    + "charset=utf-8")).addHeader("Authorization", httpServerToken).tag(this).build().execute(new StringCallback() {
+            OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse
+                    ("application/json; " + "charset=utf-8")).addHeader("Authorization",
+                    httpServerToken).tag(this).build().execute(new StringCallback() {
                 @Override
                 public void onError(Call call, Exception e, int id) {
                     HttpApi.e("验证密码接口->服务器异常或没有网络" + e.toString());
@@ -488,8 +479,6 @@ public class MainService extends Service {
         sendMessageToMainAcitivity(MSG_PASSWORD_CHECK, result);
     }
 
-    int i = 0;
-
     /**
      * 心跳接口
      */
@@ -506,13 +495,16 @@ public class MainService extends Service {
             JSONObject data = new JSONObject();
             data.put("mac", mac);
 
-//            Response response = OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse
-//                    ("application/json; charset=utf-8")).addHeader("Authorization",httpServerToken).tag(url).build
+//            Response response = OkHttpUtils.postString().url(url).content(data.toString())
+// .mediaType(MediaType.parse
+//                    ("application/json; charset=utf-8")).addHeader("Authorization",
+// httpServerToken).tag(url).build
 // ().execute();
 
 
-            OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse("application/json; "
-                    + "charset=utf-8")).addHeader("Authorization", httpServerToken).tag(this).build().execute(new StringCallback() {
+            OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse
+                    ("application/json; " + "charset=utf-8")).addHeader("Authorization",
+                    httpServerToken).tag(this).build().execute(new StringCallback() {
                 @Override
                 public void onError(Call call, Exception e, int id) {
                     Log.e(TAG, "onError 心跳接口 connectReport " + e.toString());
@@ -526,49 +518,68 @@ public class MainService extends Service {
                         String code = JsonUtil.getFieldValue(response, "code");
                         if (code.equals("0")) {
                             /**
-                             * {"code":"0","msg":"成功！","data":{"id":1,"ka":"2018-05-09 17:20:55","ka_gx":"2018-05-09
+                             * {"code":"0","msg":"成功！","data":{"id":1,"ka":"2018-05-09 17:20:55",
+                             * "ka_gx":"2018-05-09
                              * 17:20:50","lian":"1","lian_gx":"2018-05-09 17:20:42","guanggao":"1",
-                             * "guanggao_gx":"2018-05-09 17:56:49","tonggao":"1","tonggao_gx":"2018-05-09 17:20:46",
-                             * "mac":"44:2c:05:e6:9c:c5","xiangmu_id":346,"xdoor":null,"xintiao_time":300,
-                             * "fuwuqi_time":"1526517919811","lixian_mima":"123456","version":"1.00","token":null}
+                             * "guanggao_gx":"2018-05-09 17:56:49","tonggao":"1",
+                             * "tonggao_gx":"2018-05-09 17:20:46",
+                             * "mac":"44:2c:05:e6:9c:c5","xiangmu_id":346,"xdoor":null,
+                             * "xintiao_time":300,
+                             * "fuwuqi_time":"1526517919811","lixian_mima":"123456",
+                             * "version":"1.00","token":null}
                              */
                             String result = JsonUtil.getResult(response);
-                            ConnectReportBean connectReportBean = JsonUtil.parseJsonToBean(result, ConnectReportBean
-                                    .class);
+                            ConnectReportBean connectReportBean = JsonUtil.parseJsonToBean
+                                    (result, ConnectReportBean.class);
 
                             //保存离线密码 默认123456
                             SPUtil.put(MainService.this, Constant.SP_LIXIAN_MIMA, "123456");
                             //保存心跳时间 默认一分钟
-                            Log.i(TAG, "心跳--服务器返回的心跳时间（秒）" + (long) (connectReportBean.getXintiao_time() * 1000));
-                            SPUtil.put(MainService.this, Constant.SP_XINTIAO_TIME, (long) (connectReportBean
+                            Log.i(TAG, "心跳--服务器返回的心跳时间（秒）" + (long) (connectReportBean
                                     .getXintiao_time() * 1000));
-                            float kaVision = (float) SPUtil.get(MainService.this, Constant.SP_VISION_KA, 0f);
-                            Log.i(TAG, "心跳--当前卡版本：" + kaVision + "   服务器卡版本：" + Float.parseFloat(connectReportBean
-                                    .getKa()));
+                            SPUtil.put(MainService.this, Constant.SP_XINTIAO_TIME, (long)
+                                    (connectReportBean.getXintiao_time() * 1000));
+
+                            float kaVision = (float) SPUtil.get(MainService.this, Constant
+                                    .SP_VISION_KA, 0f);
+                            Log.i(TAG, "心跳--当前卡版本：" + kaVision + "   服务器卡版本：" + Float.parseFloat
+                                    (connectReportBean.getKa()));
                             if (Float.parseFloat(connectReportBean.getKa()) > kaVision) {
                                 //有卡信息更新
                                 Log.i(TAG, "心跳中有卡信息更新");
                                 getCardInfo(Float.parseFloat(connectReportBean.getKa()));
                             }
-                            float lianVision = (float) SPUtil.get(MainService.this, Constant.SP_VISION_LIAN, 0f);
+
+                            float lianVision = (float) SPUtil.get(MainService.this, Constant
+                                    .SP_VISION_LIAN, 0f);
                             if (Float.parseFloat(connectReportBean.getLian()) > lianVision) {
                                 Log.i(TAG, "心跳中有脸信息更新");
-                            }
-                            float guanggaoVision = (float) SPUtil.get(MainService.this, Constant.SP_VISION_GUANGGAO, 0f);
+                                if (faceStatus == 0) {//判断是否正在下载
+//                                    getFaceUrlInfo();
+                                }
 
-                            if (Float.parseFloat(connectReportBean.getGuanggao()) > guanggaoVision) {
-                                Log.i(TAG, "心跳中有广告信息更新");
+                            }
+
+                            float guanggaoVision = (float) SPUtil.get(MainService.this, Constant
+                                    .SP_VISION_GUANGGAO, 0f);
+                            if (Float.parseFloat(connectReportBean.getGuanggao()) >
+                                    guanggaoVision) {
+                                Log.i(TAG, "人脸URL 心跳中有广告信息更新");
                             }
                             //// TODO: 2018/5/17 拿app版本信息 去掉点
-//                            int appVision = (int) SPUtil.get(MainService.this, Constant.SP_VISION_APP, 0);
+//                            int appVision = (int) SPUtil.get(MainService.this, Constant
+// .SP_VISION_APP, 0);
 //                            if (Integer.parseInt(connectReportBean.getGuanggao()) > appVision) {
 //                                Log.i(TAG, "心跳中有APP信息更新");
 //                            }
-                            float tonggaoVision = (float) SPUtil.get(MainService.this, Constant.SP_VISION_TONGGAO, 0f);
+
+                            float tonggaoVision = (float) SPUtil.get(MainService.this, Constant
+                                    .SP_VISION_TONGGAO, 0f);
                             if (Float.parseFloat(connectReportBean.getTonggao()) > tonggaoVision) {
                                 Log.i(TAG, "心跳中有通告信息更新");
                                 if (noticesStatus == 0) {//判断是否正在下载
-                                    getTongGaoInfo(Float.parseFloat(connectReportBean.getTonggao()));
+                                    getTongGaoInfo(Float.parseFloat(connectReportBean.getTonggao
+                                            ()));
                                 }
                             }
                         }
@@ -582,11 +593,65 @@ public class MainService extends Service {
         } catch (JSONException e) {
             e.printStackTrace();
         }
+    }
 
+    /**
+     * 获取人脸URL接口
+     */
+    private void getFaceUrlInfo() {
+        faceStatus = 1;//正在下载
+        try {
+            //开始获取人脸信息
+            String url = API.CALLALL_FACES;
+
+            JSONObject data = new JSONObject();
+            data.put("mac", mac);
+            Log.e(TAG, "人脸URL mac " + mac + " url " + url);
+
+            OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse
+                    ("application/json; charset=utf-8")).addHeader("Authorization",
+                    httpServerToken).tag(this).build().execute(new StringCallback() {
+                @Override
+                public void onError(Call call, Exception e, int id) {
+                    Log.e(TAG, "人脸URL 服务器异常或没有网络 " + e.toString());
+                    faceStatus = 0;//等待下载数据
+                }
+
+                @Override
+                public void onResponse(String response, int id) {
+                    Log.e("wh response 人脸URL", response);
+                    if (null != response) {
+                        String code = JsonUtil.getFieldValue(response, "code");
+                        if ("0".equals(code)) {
+                            String result = JsonUtil.getResult(response);
+                            String list = JsonUtil.getFieldValue(result, "lian");//服务器字段命名错误
+                            faceUrlList = (ArrayList<FaceUrlBean>) JsonUtil.parseJsonToList(list,
+                                    new TypeToken<List<FaceUrlBean>>() {
+                            }.getType());
+
+                            //通知MainActivity开始人脸录入流程
+                            sendMessageToMainAcitivity(MSG_FACE_INFO, null);
+                            // TODO: 2018/5/17 完全录入完成才改状态 faceStatus = 0;//修改状态，等待下次（新）数据
+                        } else {
+                            faceStatus = 0;//等待下载数据
+                        }
+                    } else {
+                        //服务器异常或没有网络
+                        HttpApi.e("人脸URL getClientInfo()->服务器无响应");
+                        faceStatus = 0;//等待下载数据
+                    }
+                }
+            });
+        } catch (Exception e) {
+            HttpApi.e("人脸URL getClientInfo()->服务器数据解析异常");
+            e.printStackTrace();
+            faceStatus = 0;//等待下载数据
+        }
     }
 
     /**
      * 获取通告信息接口
+     *
      * @param version
      */
     private void getTongGaoInfo(final float version) {
@@ -613,11 +678,13 @@ public class MainService extends Service {
                         String code = JsonUtil.getFieldValue(response, "code");
                         if ("0".equals(code)) {
                             String result = JsonUtil.getResult(response);
-                            NoticeBean notice = JsonUtil.parseJsonToBean(result, NoticeBean.class);
+                            String tonggao = JsonUtil.getFieldValue(result, "guanggao");//服务器字段命名错误
+
+                            Log.e(TAG, "设置通告notice" + tonggao);
                             //通知主线程，显示通知
-                            sendMessageToMainAcitivity(MSG_GET_NOTICE,notice);
+                            sendMessageToMainAcitivity(MSG_GET_NOTICE, tonggao);
                             //保存本次更新版本
-                            SPUtil.put(MainService.this,Constant.SP_VISION_TONGGAO,version);
+                            SPUtil.put(MainService.this, Constant.SP_VISION_TONGGAO, version);
                             // TODO: 2018/5/17 调用更新通知接口
 
                             noticesStatus = 0;//修改状态，等待下次（新）数据
@@ -639,13 +706,9 @@ public class MainService extends Service {
         }
     }
 
-
     /**
      * 获取门禁卡信息接口
      */
-    private int cardInfoStatus = 0;//门禁卡信息版本状态(默认为0)// 0:不一致（等待下载数据）1:不一致（正在下载数据）
-
-
     private void getCardInfo(final float kaVison) {
         if (cardInfoStatus == 0) {
             Log.i(TAG, "getCardInfo正在进行卡信息下载");
@@ -655,9 +718,9 @@ public class MainService extends Service {
                 String url = API.CALLALL_CARDS;
                 JSONObject data = new JSONObject();
                 data.put("mac", mac);
-                OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse
-                        ("application/json; " + "charset=utf-8")).addHeader("Authorization", httpServerToken).tag
-                        (this).build().execute(new StringCallback() {
+                OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType
+                        .parse("application/json; " + "charset=utf-8")).addHeader
+                        ("Authorization", httpServerToken).tag(this).build().execute(new StringCallback() {
                     @Override
                     public void onError(Call call, Exception e, int id) {
                         Log.e(TAG, "onError 卡信息接口getCardInfo" + e.toString());
@@ -679,7 +742,7 @@ public class MainService extends Service {
                                     //DbUtils.getInstans().quaryAllKa();
                                     //保存卡信息的版本
                                     SPUtil.put(MainService.this, SP_VISION_KA, kaVison);
-                                    syncCallBack("1",kaVison);
+                                    syncCallBack("1", kaVison);
                                     cardInfoStatus = 0;//修改状态，等待下次（新）数据
                                 } catch (Exception e) {
                                     e.printStackTrace();
@@ -708,7 +771,8 @@ public class MainService extends Service {
 
     /**
      * 同步完成更新的信息信息
-     * @param type 1 卡，2 人脸，3 广告，4 通告
+     *
+     * @param type   1 卡，2 人脸，3 广告，4 通告
      * @param vision 版本
      */
     private void syncCallBack(final String type, float vision) {
@@ -718,18 +782,21 @@ public class MainService extends Service {
             JSONObject data = new JSONObject();
             data.put("mac", mac);
             data.put("type", type);
-            data.put("version", vision+"");
-            data.put("time", System.currentTimeMillis()+"");
-            OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse("application/json; "
-                    + "charset=utf-8")).addHeader("Authorization", httpServerToken).tag(this).build().execute(new StringCallback() {
+            data.put("version", vision + "");
+            data.put("time", System.currentTimeMillis() + "");
+            OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse
+                    ("application/json; " + "charset=utf-8")).addHeader("Authorization",
+                    httpServerToken).tag(this).build().execute(new StringCallback() {
                 @Override
                 public void onError(Call call, Exception e, int id) {
-                    Log.e(TAG, "onError同步完成更新信息接口   syncCallBack() type+"+type+"   Exception" + e.toString());
+                    Log.e(TAG, "onError同步完成更新信息接口   syncCallBack() type+" + type + "   Exception"
+                            + e.toString());
                 }
 
                 @Override
                 public void onResponse(String response, int id) {
-                    Log.i(TAG, "onResponse同步完成更新信息接口   syncCallBack() type+"+type+"   response" + response);
+                    Log.i(TAG, "onResponse同步完成更新信息接口   syncCallBack() type+" + type + "   " +
+                            "response" + response);
                     if (null != response) {
                         String code = JsonUtil.getFieldValue(response, "code");
                         if ("0".equals(code)) {
@@ -917,7 +984,7 @@ public class MainService extends Service {
                 if (null != response) {
                     String code = JsonUtil.getFieldValue(response, "code");
                     if ("0".equals(code)) {
-                        resultValue =true;
+                        resultValue = true;
                         String result = JsonUtil.getResult(response);
                         DoorBean doorBean = JsonUtil.parseJsonToBean(result, DoorBean.class);
                         httpServerToken = doorBean.getToken();
@@ -977,8 +1044,8 @@ public class MainService extends Service {
             data.put("key", key);
             data.put("version", "1.0");
 
-            OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse("application/json; "
-                    + "charset=utf-8")).tag(url).build().execute(new StringCallback() {
+            OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse
+                    ("application/json; " + "charset=utf-8")).tag(url).build().execute(new StringCallback() {
                 @Override
                 public void onError(Call call, Exception e, int id) {
                     Log.e(TAG, "e " + e.toString());
@@ -1051,7 +1118,8 @@ public class MainService extends Service {
     }
 
     protected void loadInfoFromLocal() {
-        SharedPreferences sharedPreferences = getSharedPreferences("residential", Activity.MODE_PRIVATE);
+        SharedPreferences sharedPreferences = getSharedPreferences("residential", Activity
+                .MODE_PRIVATE);
         communityId = sharedPreferences.getInt("communityId", 0);
         blockId = sharedPreferences.getInt("blockId", 0);
         lockId = sharedPreferences.getInt("lockId", 0);
@@ -1059,8 +1127,10 @@ public class MainService extends Service {
         lockName = sharedPreferences.getString("lockName", "");
     }
 
-    protected void saveInfoIntoLocal(int communityId, int blockId, int lockId, String communityName, String lockName) {
-        SharedPreferences sharedPreferences = getSharedPreferences("residential", Activity.MODE_PRIVATE);
+    protected void saveInfoIntoLocal(int communityId, int blockId, int lockId, String
+            communityName, String lockName) {
+        SharedPreferences sharedPreferences = getSharedPreferences("residential", Activity
+                .MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPreferences.edit();
         //SPUtil.put(getApplicationContext(),);
         editor.putInt("communityId", communityId);
@@ -1123,8 +1193,10 @@ public class MainService extends Service {
     private void getTokenFromServer() {
         Log.i(TAG, "rtc平台获取token");
         RtcConst.UEAPPID_Current = RtcConst.UEAPPID_Self;//账号体系，包括私有、微博、QQ等，必须在获取token之前确定。
-        JSONObject jsonobj = HttpManager.getInstance().CreateTokenJson(0, key, RtcHttpClient.grantedCapabiltyID, "");
-        HttpResult ret = HttpManager.getInstance().getCapabilityToken(jsonobj, RTC_APP_ID, RTC_APP_KEY);
+        JSONObject jsonobj = HttpManager.getInstance().CreateTokenJson(0, key, RtcHttpClient
+                .grantedCapabiltyID, "");
+        HttpResult ret = HttpManager.getInstance().getCapabilityToken(jsonobj, RTC_APP_ID,
+                RTC_APP_KEY);
         onResponseGetToken(ret);
     }
 
@@ -1138,7 +1210,8 @@ public class MainService extends Service {
             try {
                 String code = jsonrsp.getString(RtcConst.kcode);
                 String reason = jsonrsp.getString(RtcConst.kreason);
-                Log.v("MainService", "Response getCapabilityToken code:" + code + " reason:" + reason);
+                Log.v("MainService", "Response getCapabilityToken code:" + code + " reason:" +
+                        reason);
                 if (code.equals("0")) {
                     token = jsonrsp.getString(RtcConst.kcapabilityToken);
                     Log.i(TAG, "获取token成功 token=" + token);
@@ -1311,8 +1384,9 @@ public class MainService extends Service {
     protected void createAccessLog(String data) {
         Log.e(TAG, "rtc开门日志上传" + data);
         String url = API.LOG;
-        OkHttpUtils.postString().url(url).content(data).mediaType(MediaType.parse("application/json; charset=utf-8"))
-                .addHeader("Authorization", httpServerToken).tag(this).build().execute(new StringCallback() {
+        OkHttpUtils.postString().url(url).content(data).mediaType(MediaType.parse
+                ("application/json; charset=utf-8")).addHeader("Authorization", httpServerToken)
+                .tag(this).build().execute(new StringCallback() {
             @Override
             public void onError(Call call, Exception e, int id) {
                 Log.e(TAG, "onError rtc上传日志接口createAccessLog oner " + e.toString());
@@ -1342,7 +1416,6 @@ public class MainService extends Service {
                 }
             }
         });
-
     }
 
     /**
@@ -1472,7 +1545,8 @@ public class MainService extends Service {
                     }
                     if (!username.equals(acceptMember)) {
                         Log.v("MainService", "--->取消" + username);
-                        String userUrl = RtcRules.UserToRemoteUri_new(username, RtcConst.UEType_Any);
+                        String userUrl = RtcRules.UserToRemoteUri_new(username, RtcConst
+                                .UEType_Any);
                         Log.e(TAG, "发送取消呼叫的消息");
                         device.sendIm(userUrl, "cmd/json", command.toString());
                     }
@@ -1549,8 +1623,9 @@ public class MainService extends Service {
             data.put("mac", mac);
             data.put("hujiaohao", this.unitNo);
 
-            OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse("application/json; "
-                    + "charset=utf-8")).addHeader("Authorization", httpServerToken).tag(this).build().execute(new StringCallback() {
+            OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse
+                    ("application/json; " + "charset=utf-8")).addHeader("Authorization",
+                    httpServerToken).tag(this).build().execute(new StringCallback() {
                 @Override
                 public void onError(Call call, Exception e, int id) {
                     Log.e(TAG, "服务器异常或没有网络 " + e.toString());
@@ -1799,12 +1874,53 @@ public class MainService extends Service {
 
     /****************************虹软相关*********************************************/
 
-    private boolean downLoadFace() {
-        boolean abc = false;
+    /**
+     * 人脸录入前初始化虹软相关类
+     */
+    private void initFaceEngine() {
+        //在这里初始化人脸检测和识别相关类，之后抽取方法
+        //人脸检测初始化引擎，设置检测角度、范围，数量。创建对象后，必须先于其他成员函数调用
+        err_afd = engine_afd.AFD_FSDK_InitialFaceEngine(arc_appid, fd_key, AFD_FSDKEngine
+                .AFD_OPF_0_HIGHER_EXT, 16, 5);
+
+        //人脸识别初始化引擎，设置检测角度、范围，数量。创建对象后，必须先于其他成员函数调用
+        err_afr = engine_afr.AFR_FSDK_InitialEngine(arc_appid, fr_key);
+
+
+        if (err_afd.getCode() != AFD_FSDKError.MOK) {//FD初始化失败
+            Log.e(TAG, "FD初始化失败，错误码：" + err_afd.getCode());
+        } else if (err_afr.getCode() != AFD_FSDKError.MOK) {
+            Log.e(TAG, "FR初始化失败，错误码：" + err_afr.getCode());
+        } else {
+            err_afd = engine_afd.AFD_FSDK_GetVersion(version_afd);
+            err_afr = engine_afr.AFR_FSDK_GetVersion(version_afr);
+            Log.d(TAG, "AFD_FSDK_GetVersion =" + version_afd.toString() + ", " + err_afd.getCode());
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    for (FaceUrlBean urlBean : faceUrlList) {
+                        downLoadFace(urlBean);
+                    }
+                }
+            }).start();
+        }
+    }
+
+    /**
+     * 下载人脸照片
+     *
+     * @param urlBean
+     * @return
+     */
+    private boolean downLoadFace(FaceUrlBean urlBean) {
+        Log.e("wh", "开始下载照片"+urlBean.toString());
+        boolean result = false;//此张照片是否录入的标识
         try {
-            String file = "/app/download/face/20180421121538";
+//            String file = "/app/download/face/20180421121538";
+            String file = urlBean.getZhaopian();
             int lastIndex = file.lastIndexOf("/");
             String fileName = file.substring(lastIndex + 1);
+            Log.e("wh", "fileName " + fileName);
             //根据文件名返回本地路径
             String localFile = HttpUtils.getLocalFile(fileName);
             if (localFile == null) {
@@ -1820,13 +1936,33 @@ public class MainService extends Service {
                         File file2 = new File(localFile + ".jpg");
                         Log.e("wh", "file2 " + file2.getPath());
                         file1.renameTo(file2);//重命名,去掉.temp
-                        file1.renameTo(new File(localFile + ".jpg"));
                         String path = file2.getPath();
                         Log.e("wh", "图片路径" + path);
                         if (file1 != null) {
                             // TODO: 2018/5/15 这里捕捉人脸信息并录入
-                            abc = getFaceInfo(file2.getPath());
+                            result = getFaceInfo(file2.getPath());
+                            Log.e("wh", "录入结果" + result);
+                            //无论录入是否成功，删除照片
+                            if (file1.exists()) {
+                                file1.delete();
+                                Log.e("wh", "file1存在");
+                            }
+                            if (file2.exists()) {
+                                file2.delete();
+                                Log.e("wh", "file2存在");
+                            }
                         }
+                    }
+                } else {
+                    File file1 = new File(localFile + ".temp");
+                    File file2 = new File(localFile + ".jpg");
+                    if (file1.exists()) {
+                        file1.delete();
+                        Log.e("wh", "file1存在1");
+                    }
+                    if (file2.exists()) {
+                        file2.delete();
+                        Log.e("wh", "file2存在1");
                     }
                 }
             } else {
@@ -1834,7 +1970,7 @@ public class MainService extends Service {
             }
         } catch (Exception e) {
         }
-        return abc;
+        return result;
     }
 
     private boolean getFaceInfo(String mFilePath) {
@@ -1851,19 +1987,21 @@ public class MainService extends Service {
 
         //这个函数功能为检测输入的图像中存在的人脸,data 输入的图像数据,width 图像宽度,height 图像高度,format 图像格式,List<AFD_FSDKFace>
         // list 检测到的人脸会放到到该列表里
-        err_afd = engine_afd.AFD_FSDK_StillImageFaceDetection(data, mBitmap.getWidth(), mBitmap.getHeight(),
-                AFD_FSDKEngine.CP_PAF_NV21, result_afd);
-        Log.d(TAG, "AFD_FSDK_StillImageFaceDetection =" + err_afd.getCode() + "<" + result_afd.size());
+        err_afd = engine_afd.AFD_FSDK_StillImageFaceDetection(data, mBitmap.getWidth(), mBitmap
+                .getHeight(), AFD_FSDKEngine.CP_PAF_NV21, result_afd);
+        Log.d(TAG, "AFD_FSDK_StillImageFaceDetection =" + err_afd.getCode() + "<" + result_afd
+                .size());
 
         if (!result_afd.isEmpty() && result_afd.size() != 0) {//人脸数据结果不为空
 
             //检测输入图像中的人脸特征信息，输出结果保存在 AFR_FSDKFace feature
-            err_afr = engine_afr.AFR_FSDK_ExtractFRFeature(data, mBitmap.getWidth(), mBitmap.getHeight(),
-                    AFR_FSDKEngine.CP_PAF_NV21, new Rect(result_afd.get(0).getRect()), result_afd.get(0).getDegree(),
-                    result_afr);
-            Log.d("com.arcsoft", "Face=" + result_afr.getFeatureData()[0] + "," + result_afr.getFeatureData()[1] + "," +
-                    "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + ""
-                    + "" + "" + "" + "" + result_afr.getFeatureData()[2] + "," + err_afr.getCode());
+            err_afr = engine_afr.AFR_FSDK_ExtractFRFeature(data, mBitmap.getWidth(), mBitmap
+                    .getHeight(), AFR_FSDKEngine.CP_PAF_NV21, new Rect(result_afd.get(0).getRect
+                    ()), result_afd.get(0).getDegree(), result_afr);
+            Log.d("com.arcsoft", "Face=" + result_afr.getFeatureData()[0] + "," + result_afr
+                    .getFeatureData()[1] + "," + "" + "" + "" + "" + "" + "" + "" + "" + "" + ""
+                    + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" +
+                    result_afr.getFeatureData()[2] + "," + err_afr.getCode());
             if (err_afr.getCode() == err_afr.MOK) {//人脸特征检测成功
                 mAFR_FSDKFace = result_afr.clone();
                 // TODO: 2018/5/15 保存mAFR_FSDKFace人脸信息，操作数据库
@@ -1919,16 +2057,18 @@ public class MainService extends Service {
 
     /**
      * 检测卡信息是否合法
+     *
      * @param card
      */
-    private void onCardIncome(String card){
+    private void onCardIncome(String card) {
         if (!this.cardRecord.checkLastCard(card)) {//判断距离上次刷卡时间是否超过1秒
             Log.v("MainService", "onCard====卡信息：" + card);
+            DbUtils.getInstans().quaryAllKa();
             Ka kaInfo = DbUtils.getInstans().getKaInfo(card);
             if (kaInfo != null) {//判断数据库中是否有卡
                 Log.i(TAG, "刷卡开门成功" + card);
                 sendMessageToMainAcitivity(MSG_LOCK_OPENED, "");
-                // openLock();
+//                 openLock();
                 Log.e(TAG, "onCard====:" + card);
                 // TODO: 2018/5/16 调用日志接口,传卡号 startCardAccessLog(card);
                 try {

@@ -23,4 +23,6 @@ public interface API {
 
     String SYNC_CALLBACK = HTTP_HOST + "/xdoor/device/syncCallBack";//同步完成通知
 
+    String CALLALL_FACES = HTTP_HOST + "/xdoor/device/callAllFaces";//获取人脸信息
+
 }

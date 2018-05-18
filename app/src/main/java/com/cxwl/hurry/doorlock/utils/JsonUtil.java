@@ -89,6 +89,13 @@ public class JsonUtil {
         return lst;
     }
 
+    public static List<?> parseJsonToList(String json, Type type) {
+        Gson gson = new Gson();
+        List<?> list = gson.fromJson(json, type);
+        return list;
+    }
+
+
     /**
      * 获取json串中某个字段的值，注意，只能获取同一层级的value
      *
