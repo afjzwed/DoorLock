@@ -62,6 +62,7 @@ public class Constant {
     public static final int MSG_CALLMEMBER_NO_ONLINE = 12005;//呼叫成员不在线
 
     public static final int MSG_GUEST_PASSWORD_CHECK = 20007;//获取服务器返回的密码
+    public static final int MSG_LIXIAN_PASSWORD_CHECK = 20009;//获取离线验证密码
     public static final int MSG_PASSWORD_CHECK = 10003;//验证密码后
     /********************天翼RTC相关******************/
 
@@ -84,4 +85,6 @@ public class Constant {
     public static final int MSG_LOADLOCAL_DATA = 20030;//离线模式
 
     public static final int MSG_GET_NOTICE = 20100;//获取通告成功
+
+    public static final int MSG_ADVERTISE_REFRESH = 10013;//刷新广告
 }

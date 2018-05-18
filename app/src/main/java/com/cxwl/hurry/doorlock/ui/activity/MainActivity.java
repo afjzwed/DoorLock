@@ -67,6 +67,7 @@ import com.cxwl.hurry.doorlock.callback.AdverErrorCallBack;
 import com.cxwl.hurry.doorlock.config.Constant;
 import com.cxwl.hurry.doorlock.config.DeviceConfig;
 import com.cxwl.hurry.doorlock.db.Lian;
+import com.cxwl.hurry.doorlock.entity.GuangGaoBean;
 import com.cxwl.hurry.doorlock.entity.NoticeBean;
 import com.cxwl.hurry.doorlock.entity.XdoorBean;
 import com.cxwl.hurry.doorlock.face.ArcsoftManager;
@@ -118,6 +119,7 @@ import java.util.UUID;
 import jni.util.Utils;
 
 import static com.cxwl.hurry.doorlock.config.Constant.CALL_MODE;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_ADVERTISE_REFRESH;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_CALLMEMBER_ERROR;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_DETECT_CHECK;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_DETECT_CONTRAST;
@@ -380,7 +382,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      * 初始化音量设置
      */
     protected void initVoiceVolume() {
-        AudioManager audioManager = (AudioManager) getSystemService(this.AUDIO_SERVICE);
+        AudioManager audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
         initVoiceVolume(audioManager, AudioManager.STREAM_MUSIC, DeviceConfig.VOLUME_STREAM_MUSIC);
         initVoiceVolume(audioManager, AudioManager.STREAM_RING, DeviceConfig.VOLUME_STREAM_RING);
         initVoiceVolume(audioManager, AudioManager.STREAM_SYSTEM, DeviceConfig
@@ -571,7 +573,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         setCommunityName(MainService.communityName);
                         setLockName(MainService.lockName);
                         break;
-                    case MSG_GET_NOTICE: {//获取通告成功
+                    case MSG_GET_NOTICE: //获取通告成功
                         String value = (String) msg.obj;
                         ArrayList<NoticeBean> noticeBeanList = (ArrayList<NoticeBean>) JsonUtil
                                 .parseJsonToList(value, new TypeToken<List<NoticeBean>>() {
@@ -581,7 +583,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                         setTongGaoInfo(neirong);
                         break;
-                    }
+                    case MSG_ADVERTISE_REFRESH://刷新广告
+                        Log.i(TAG, "刷新广告");
+                        onAdvertiseRefresh(msg.obj);
+                        break;
+                    case  MSG_ADVERTISE_IMAGE:
+                        onAdvertiseImageChange(msg.obj);
+                        break;
                     default:
                         break;
                 }
@@ -591,7 +599,22 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mainMessage = new Messenger(handler);
 
     }
-
+    protected void onAdvertiseImageChange(Object obj) {
+        String source = (String) obj;
+        source = HttpUtils.getLocalFileFromUrl(source);
+        Bitmap bm = BitmapFactory.decodeFile(source);
+        imageView.setImageBitmap(bm);
+    }
+    /**
+     * 刷新广告
+     * @param obj
+     */
+    public void onAdvertiseRefresh(Object obj) {
+        List<GuangGaoBean> obj1 = (List<GuangGaoBean>) obj;
+        Log.d(TAG, "UpdateAdvertise: 8");
+        advertiseHandler.initData(obj1, mainMessage, (currentStatus == ONVIDEO_MODE),
+                adverErrorCallBack);
+    }
     /**
      * 开门
      */
@@ -793,6 +816,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             e.printStackTrace();
         }
     }
+
 
 
     /**

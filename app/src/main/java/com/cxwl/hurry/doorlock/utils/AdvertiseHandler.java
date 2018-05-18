@@ -15,12 +15,15 @@ import android.widget.TextView;
 
 
 import com.cxwl.hurry.doorlock.callback.AdverErrorCallBack;
+import com.cxwl.hurry.doorlock.entity.GuangGaoBean;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 import static com.cxwl.hurry.doorlock.ui.activity.MainActivity.MSG_ADVERTISE_IMAGE;
 
@@ -38,7 +41,7 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
     private MediaPlayer mediaPlayer;
     private MediaPlayer voicePlayer;
     private String mediaPlayerSource;
-    private JSONArray list = null;
+    private List<GuangGaoBean> list = new ArrayList<>();
     private int listIndex = 0;
     ImageDisplayThread imageDialpayThread = null;
     private JSONArray imageList = null;
@@ -121,23 +124,20 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
         surfaceViewCreate = false;
     }
 
-    public void initData(JSONArray rows, Messenger dialMessenger, boolean isOnVideo, AdverErrorCallBack errorCallBack) {
+    public void initData(List<GuangGaoBean> rows, Messenger dialMessenger, boolean isOnVideo, AdverErrorCallBack errorCallBack) {
         this.dialMessenger = dialMessenger;
-        try {
-            JSONObject row = rows.getJSONObject(0);
-            list = row.getJSONArray("items");
+            list = rows;
             listIndex = 0;
             //initScreen();
             play();
             if (isOnVideo) {
                 pause(errorCallBack);
             }
-        } catch (JSONException e) {
-        }
+
     }
 
     public void next() {
-        if (listIndex == list.length() - 1) {
+        if (listIndex == list.size() - 1) {
             listIndex = 0;
         } else {
             listIndex++;
@@ -146,36 +146,32 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
     }
 
     protected String getCurrentAdType() {
-        String adType = "N";
-        try {
-            if (list != null && list.length() > 0) {
-                JSONObject item = list.getJSONObject(listIndex);
-                adType = item.getString("adType");
+        String adType = "2";
+            if (list != null && list.size() > 0) {
+                GuangGaoBean item = list.get(listIndex);
+                adType = item.getLeixing();
             }
-        } catch (JSONException e) {
-        }
+
         return adType;
     }
 
     public void play() {
-        try {
-            JSONObject item = list.getJSONObject(listIndex);
-            String adType = item.getString("adType");
-            if (adType.equals("V")) {
+
+            GuangGaoBean item = list.get(listIndex);
+            String adType = item.getLeixing();
+            if (adType.equals("1")) {
                 playVideo(item);
-            } else if (adType.equals("I")) {
+            } else if (adType.equals("2")) {
                 playImage(item);
             }
-        } catch (JSONException e) {
-        }
+
     }
 
-    public void playVideo(JSONObject item) {
+    public void playVideo(GuangGaoBean item) {
         try {
-            String fileUrls = item.getString("fileUrls");
-            JSONObject urls = new JSONObject(fileUrls);
-            String source = urls.getString("video");
-            source = HttpUtils.getLocalFileFromUrl(source);
+            String fileUrls = item.getNeirong();
+
+            String source = HttpUtils.getLocalFileFromUrl(fileUrls);
             if (source != null) {
                 mTextView.setVisibility(View.VISIBLE);
                 videoView.setVisibility(View.VISIBLE);
@@ -190,44 +186,36 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
         }
     }
 
-    public void playImage(JSONObject item) {
-        try {
-            String fileUrls = item.getString("fileUrls");
-            JSONObject urls = new JSONObject(fileUrls);
-            String source = urls.getString("voice");
-            try {
-                imagePeroid = urls.getInt("period");
-            } catch (Exception e) {
-                imagePeroid = urls.getInt("peroid");
-            }
-            imageList = urls.getJSONArray("images");
-            source = HttpUtils.getLocalFileFromUrl(source);
+    public void playImage(GuangGaoBean item) {
+
+            String fileUrls = item.getNeirong();
+
+            String source = HttpUtils.getLocalFileFromUrl(fileUrls);
             if (source != null) {
                 videoView.setVisibility(View.INVISIBLE);
                 imageView.setVisibility(View.VISIBLE);
-                startImageDisplay();
+                startImageDisplay(item);
                 initVoicePlayer();
                 startVoicePlay(source);
             } else {
                 next();
             }
-        } catch (JSONException e) {
-        }
+
     }
 
-    private void startImageDisplay() {
+    private void startImageDisplay(final GuangGaoBean item) {
         stopImageDisplay();
         Log.v("AdvertiseHandler", "------>start image display thread<-------" + new Date());
         imageDialpayThread = new ImageDisplayThread() {
             public void run() {
-                showImage();
+                showImage(item);
                 while (!isInterrupted() && isWorking) { //检查线程没有被停止
                     try {
                         sleep(imagePeroid); //等待指定的一个并行时间
                     } catch (InterruptedException e) {
                     }
                     if (isWorking) {
-                        nextImage();
+                        nextImage(item);
                     }
                 }
                 Log.v("AdvertiseHandler", "------>end image display thread<-------" + new Date());
@@ -238,25 +226,24 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
         imageDialpayThread.start();
     }
 
-    public void nextImage() {
-        if (imageListIndex == imageList.length() - 1) {
-            imageListIndex = 0;
+    public void nextImage(GuangGaoBean item) {
+        if (listIndex == list.size() - 1) {
+            listIndex = 0;
         } else {
-            imageListIndex++;
+            listIndex++;
         }
-        showImage();
+        showImage(list.get(listIndex));
         Log.v("AdvertiseHandler", "------>showing image<-------" + new Date());
     }
 
-    public void showImage() {
-        try {
-            JSONObject image = imageList.getJSONObject(imageListIndex);
-            String imageFile = image.getString("image");
+    public void showImage(GuangGaoBean item) {
+
+       //     JSONObject image = imageList.getJSONObject(imageListIndex);
+            String imageFile = item.getNeirong();
             if (dialMessenger != null) {
                 sendDialMessenger(MSG_ADVERTISE_IMAGE, imageFile);
             }
-        } catch (JSONException e) {
-        }
+
     }
 
     protected void sendDialMessenger(int code, Object object) {

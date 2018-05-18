@@ -25,4 +25,7 @@ public interface API {
 
     String CALLALL_FACES = HTTP_HOST + "/xdoor/device/callAllFaces";//获取人脸信息
 
+    String CALLALL_ADS = HTTP_HOST + "/xdoor/device/callAllAds";//获取广告信息
+
+
 }

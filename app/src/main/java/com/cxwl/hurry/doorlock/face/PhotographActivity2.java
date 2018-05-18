@@ -22,6 +22,8 @@ import com.arcsoft.facetracking.AFT_FSDKError;
 import com.arcsoft.facetracking.AFT_FSDKFace;
 import com.arcsoft.facetracking.AFT_FSDKVersion;
 import com.cxwl.hurry.doorlock.R;
+import com.cxwl.hurry.doorlock.config.Constant;
+import com.cxwl.hurry.doorlock.config.DeviceConfig;
 import com.guo.android_extend.widget.CameraFrameData;
 import com.guo.android_extend.widget.CameraGLSurfaceView;
 import com.guo.android_extend.widget.CameraSurfaceView;
@@ -217,7 +219,7 @@ public class PhotographActivity2 extends AppCompatActivity implements Camera.Pic
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-        if (keyCode == KeyEvent.KEYCODE_ENTER) {//按确认键拍照
+        if (keyCode == DeviceConfig.DEVICE_KEYCODE_POUND) {//按确认键拍照
             if (mCaptureButton.getVisibility() == View.VISIBLE) {
                 mCaptureButton.setEnabled(false);//控件进入沉睡状态
                 // get an image from the camera

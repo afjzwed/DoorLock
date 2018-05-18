@@ -51,9 +51,9 @@ public class HttpUtils {
                  * 要网络连接成功，需在AndroidMainfest.xml中进行权限配置
                  * <uses-permission android:name="android.permission.INTERNET" />
                  */
-            URL urlObject = new URL(convertImageUrl(url));
-            Log.i("http", "下载广告" + url);
-            HttpURLConnection conn = (HttpURLConnection) urlObject.openConnection();
+            URL urlObject=new URL(url);
+            Log.i("http","下载广告" + url);
+            HttpURLConnection conn=(HttpURLConnection)urlObject.openConnection();
             //取得inputStream，并将流中的信息写入SDCard
 
                 /*

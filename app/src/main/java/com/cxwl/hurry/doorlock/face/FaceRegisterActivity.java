@@ -33,6 +33,7 @@ import com.arcsoft.facerecognition.AFR_FSDKError;
 import com.arcsoft.facerecognition.AFR_FSDKFace;
 import com.arcsoft.facerecognition.AFR_FSDKVersion;
 import com.cxwl.hurry.doorlock.R;
+import com.cxwl.hurry.doorlock.config.DeviceConfig;
 import com.cxwl.hurry.doorlock.utils.BitmapUtils;
 import com.guo.android_extend.image.ImageConverter;
 import com.guo.android_extend.widget.ExtImageView;
@@ -374,7 +375,7 @@ public class FaceRegisterActivity extends AppCompatActivity implements SurfaceHo
                                             } else {//输入密码
                                                 callInput(key, mEditText2);
                                             }
-                                        } else if (keyCode == KeyEvent.KEYCODE_DEL) {
+                                        } else if (keyCode == DeviceConfig.DEVICE_KEYCODE_STAR) {
                                             Log.v("人脸识别", "onKey7-->" + keyCode + "/" +
                                                     houseNumber + "/" + phoneNumber + "/" + key +
                                                     "/" + focus);
@@ -402,7 +403,7 @@ public class FaceRegisterActivity extends AppCompatActivity implements SurfaceHo
                                                 mEditText1.requestFocus();
                                                 mEditText1.requestFocusFromTouch();
                                             }
-                                        } else if (keyCode == KeyEvent.KEYCODE_ENTER) {//确认键
+                                        } else if (keyCode == DeviceConfig.DEVICE_KEYCODE_POUND) {//确认键
                                             if (focus) {
                                                 if (TextUtils.isEmpty(houseNumber)) {
                                                     Toast.makeText(FaceRegisterActivity.this,
@@ -478,7 +479,7 @@ public class FaceRegisterActivity extends AppCompatActivity implements SurfaceHo
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-        if (keyCode == KeyEvent.KEYCODE_DEL) {
+        if (keyCode == DeviceConfig.DEVICE_KEYCODE_STAR) {
             this.finish(); // back button
             return true;
         }
