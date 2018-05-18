@@ -76,6 +76,7 @@ public class Constant {
     public static final String SP_VISION_KA = "ka_vison";
     public static final String SP_VISION_LIAN = "lian_vison";
     public static final String SP_VISION_GUANGGAO = "guanggao_vison";
+    public static final String SP_VISION_GUANGGAO_VIDEO = "guanggao_vison_video";
     public static final String SP_VISION_TONGGAO = "tonggao_vison";
     public static final String SP_VISION_APP = "app_vison";
     public static final String SP_LIXIAN_MIMA = "lixian_mima";

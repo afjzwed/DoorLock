@@ -7,13 +7,15 @@ package com.cxwl.hurry.doorlock.entity;
 
 public class ConnectReportBean {
 
+
     /**
      * id : 1
-     * ka : 2018-05-09 17:20:55
+     * ka : 1
      * ka_gx : 2018-05-09 17:20:50
      * lian : 1
      * lian_gx : 2018-05-09 17:20:42
-     * guanggao : 1
+     * guanggaopic : 1
+     * guanggaovideo :
      * guanggao_gx : 2018-05-09 17:56:49
      * tonggao : 1
      * tonggao_gx : 2018-05-09 17:20:46
@@ -21,8 +23,8 @@ public class ConnectReportBean {
      * xiangmu_id : 346
      * xdoor : null
      * xintiao_time : 300
-     * fuwuqi_time : 1526517919811
-     * lixian_mima : 123456
+     * fuwuqi_time : 1526610665487
+     * lixian_mima : 123465
      * version : 1.00
      * token : null
      */
@@ -32,7 +34,8 @@ public class ConnectReportBean {
     private String ka_gx;
     private String lian;
     private String lian_gx;
-    private String guanggao;
+    private String guanggaopic;
+    private String guanggaovideo;
     private String guanggao_gx;
     private String tonggao;
     private String tonggao_gx;
@@ -85,12 +88,20 @@ public class ConnectReportBean {
         this.lian_gx = lian_gx;
     }
 
-    public String getGuanggao() {
-        return guanggao;
+    public String getGuanggaopic() {
+        return guanggaopic;
     }
 
-    public void setGuanggao(String guanggao) {
-        this.guanggao = guanggao;
+    public void setGuanggaopic(String guanggaopic) {
+        this.guanggaopic = guanggaopic;
+    }
+
+    public String getGuanggaovideo() {
+        return guanggaovideo;
+    }
+
+    public void setGuanggaovideo(String guanggaovideo) {
+        this.guanggaovideo = guanggaovideo;
     }
 
     public String getGuanggao_gx() {

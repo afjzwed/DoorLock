@@ -27,5 +27,7 @@ public interface API {
 
     String CALLALL_ADS = HTTP_HOST + "/xdoor/device/callAllAds";//获取广告信息
 
+    String VERSION_ADDRESS = HTTP_HOST + "/xdoor/device/version";//获取版本更新路径
+
 
 }

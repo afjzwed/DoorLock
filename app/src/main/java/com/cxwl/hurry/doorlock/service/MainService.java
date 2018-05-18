@@ -45,23 +45,34 @@ import com.cxwl.hurry.doorlock.utils.DbUtils;
 import com.cxwl.hurry.doorlock.utils.DoorLock;
 import com.cxwl.hurry.doorlock.utils.HttpApi;
 import com.cxwl.hurry.doorlock.utils.HttpUtils;
+import com.cxwl.hurry.doorlock.utils.InstallUtil;
 import com.cxwl.hurry.doorlock.utils.JsonUtil;
 import com.cxwl.hurry.doorlock.utils.MacUtils;
 import com.cxwl.hurry.doorlock.utils.SPUtil;
+import com.cxwl.hurry.doorlock.utils.ShellUtils;
 import com.cxwl.hurry.doorlock.utils.SoundPoolUtil;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 import com.guo.android_extend.image.ImageConverter;
 import com.zhy.http.okhttp.OkHttpUtils;
+import com.zhy.http.okhttp.callback.Callback;
 import com.zhy.http.okhttp.callback.StringCallback;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Enumeration;
@@ -203,6 +214,7 @@ public class MainService extends Service {
     private int noticesStatus = 0;//门禁卡信息版本状态(默认为0)// 0:不一致（等待下载数据）1:不一致（正在下载数据）
     private int faceStatus = 0;//人脸信息版本状态(默认为0)// 0:不一致（等待下载数据）1:不一致（正在下载数据）
     private int cardInfoStatus = 0;//门禁卡信息版本状态(默认为0)// 0:不一致（等待下载数据）1:不一致（正在下载数据）
+    private int appStatus = 0;//门禁app信息版本状态(默认为0)// 0:不一致（等待下载数据）1:不一致（正在下载数据）
 
     @Override
     public void onCreate() {
@@ -536,11 +548,11 @@ public class MainService extends Service {
                         String code = JsonUtil.getFieldValue(response, "code");
                         if (code.equals("0")) {
                             /**
-                             * {"code":"0","msg":"成功！","data":{"id":1,"ka":"2018-05-09 17:20:55","ka_gx":"2018-05-09
-                             * 17:20:50","lian":"1","lian_gx":"2018-05-09 17:20:42","guanggao":"1",
-                             * "guanggao_gx":"2018-05-09 17:56:49","tonggao":"1","tonggao_gx":"2018-05-09 17:20:46",
-                             * "mac":"44:2c:05:e6:9c:c5","xiangmu_id":346,"xdoor":null,"xintiao_time":300,
-                             * "fuwuqi_time":"1526517919811","lixian_mima":"123456","version":"1.00","token":null}
+                             * {"id":1,"ka":"1","ka_gx":"2018-05-09 17:20:50","lian":"1","lian_gx":"2018-05-09
+                             * 17:20:42","guanggaopic":"1","guanggaovideo":"","guanggao_gx":"2018-05-09 17:56:49",
+                             * "tonggao":"1","tonggao_gx":"2018-05-09 17:20:46","mac":"44:2c:05:e6:9c:c5",
+                             * "xiangmu_id":346,"xdoor":null,"xintiao_time":300,"fuwuqi_time":"1526610665487",
+                             * "lixian_mima":"123465","version":"1.00","token":null}
                              */
                             String result = JsonUtil.getResult(response);
                             ConnectReportBean connectReportBean = JsonUtil.parseJsonToBean(result, ConnectReportBean
@@ -563,34 +575,48 @@ public class MainService extends Service {
                             float lianVision = (float) SPUtil.get(MainService.this, Constant.SP_VISION_LIAN, 0f);
                             if (Float.parseFloat(connectReportBean.getLian()) > lianVision) {
                                 Log.i(TAG, "心跳中有脸信息更新");
-                                if (faceStatus == 0) {//判断是否正在下载
+                                if (faceStatus == 0) {
+                                    //判断是否正在下载
 //                                    getFaceUrlInfo();
                                 }
                             }
 
                             float guanggaoVision = (float) SPUtil.get(MainService.this, Constant.SP_VISION_GUANGGAO,
                                     0f);
-                            if (Float.parseFloat(connectReportBean.getGuanggao()) > guanggaoVision) {
-                                Log.i(TAG, "人脸URL 心跳中有广告信息更新");
-                                if (Float.parseFloat(connectReportBean.getGuanggao()) > guanggaoVision) {
-                                    Log.i(TAG, "心跳中有广告信息更新");
-                                    getGuangGao(Float.parseFloat(connectReportBean.getGuanggao()));
-                                }
-                                //// TODO: 2018/5/17 拿app版本信息 去掉点
-//                            int appVision = (int) SPUtil.get(MainService.this, Constant
-// .SP_VISION_APP, 0);
-//                            if (Integer.parseInt(connectReportBean.getGuanggao()) > appVision) {
-//                                Log.i(TAG, "心跳中有APP信息更新");
-//                            }
-                                float tonggaoVision = (float) SPUtil.get(MainService.this, Constant
-                                        .SP_VISION_TONGGAO, 0f);
-                                if (Float.parseFloat(connectReportBean.getTonggao()) > tonggaoVision) {
-                                    Log.i(TAG, "心跳中有通告信息更新");
-                                    if (noticesStatus == 0) {//判断是否正在下载
-                                        getTongGaoInfo(Float.parseFloat(connectReportBean.getTonggao()));
-                                    }
+                            Log.i(TAG, "心跳--当前广告图片版本：" + guanggaoVision + "   服务器广告图片版本：" + Float.parseFloat
+                                    (connectReportBean.getGuanggaopic()));
+                            if (Float.parseFloat(connectReportBean.getGuanggaopic()) > guanggaoVision) {
+                                Log.i(TAG, "心跳中有广告图片信息更新");
+                                //getGuangGao(Float.parseFloat(connectReportBean.getGuanggaopic()));
+                            }
+                            float guanggaoVadioVision = (float) SPUtil.get(MainService.this, Constant
+                                    .SP_VISION_GUANGGAO_VIDEO, 0f);
+                            if (connectReportBean.getGuanggaovideo() != null && !"".equals(connectReportBean
+                                    .getGuanggaovideo())) {
+                                Log.i(TAG, "心跳--当前广告视频版本：" + guanggaoVision + "   服务器广告视频版本：" + Float.parseFloat
+                                        (connectReportBean.getGuanggaovideo()));
+                                if (Float.parseFloat(connectReportBean.getGuanggaovideo()) > guanggaoVadioVision) {
+                                    Log.i(TAG, "心跳中有广告视频信息更新");
+                                    getGuangGao(Float.parseFloat(connectReportBean.getGuanggaovideo()));
                                 }
                             }
+                            //// TODO: 2018/5/17 拿app版本信息 去掉点
+                            float appVision = (float) SPUtil.get(MainService.this, Constant.SP_VISION_APP, Float
+                                    .parseFloat(getVersionName()));
+                            Log.i(TAG, "心跳--当前app版本：" + appVision + "   服务器app版本：" + Float.parseFloat
+                                    (connectReportBean.getVersion()));
+                            if (Float.parseFloat(connectReportBean.getVersion()) > appVision) {
+                                Log.i(TAG, "心跳中有APP信息更新");
+                                downloadApp();
+                            }
+                            float tonggaoVision = (float) SPUtil.get(MainService.this, Constant.SP_VISION_TONGGAO, 0f);
+                            if (Float.parseFloat(connectReportBean.getTonggao()) > tonggaoVision) {
+                                Log.i(TAG, "心跳中有通告信息更新");
+                                if (noticesStatus == 0) {//判断是否正在下载
+                                    getTongGaoInfo(Float.parseFloat(connectReportBean.getTonggao()));
+                                }
+                            }
+
                         } else {
                             //服务器异常或没有网络
                             HttpApi.e("getClientInfo()->服务器无响应");
@@ -602,6 +628,207 @@ public class MainService extends Service {
         } catch (JSONException e) {
             e.printStackTrace();
         }
+    }
+
+    /**
+     * 下载app
+     */
+    private String lastVersionStatus = "L"; //L: last version N: find new version D：downloading
+    // P: pending to install I: installing  版本更新状态
+    private int downloadingFlag = 0; //0：not downloading 1:downloading 2:stop download  apk下载状态
+
+    private void downloadApp() {
+        getVersionInfo();
+    }
+
+    private void getVersionInfo() {
+        try {
+            String url = API.VERSION_ADDRESS;
+            String result = HttpApi.getInstance().loadHttpforGet(url, httpServerToken);
+            OkHttpUtils.get().addHeader("Authorization", httpServerToken).build().execute(new StringCallback() {
+
+
+                @Override
+                public void onError(Call call, Exception e, int id) {
+                    Log.i(TAG, "onError 获取app下载地址" + e.toString());
+                }
+
+                @Override
+                public void onResponse(String response, int id) {
+                    Log.i(TAG, "onResponse 获取app下载地址" + response);
+
+                }
+            });
+
+            if (result != null) {
+                HttpApi.e("connectReportInfo()->" + result);
+                JSONObject resultObj = Ajax.getJSONObject(result);
+                int code = resultObj.getInt("code");
+                if (code == 0) {
+                    //已获取下载地址
+                    if (getDownloadingFlag() == 0) {
+                        String address = "";
+                        String fileName = "";
+                        Log.v(TAG, "UpdateService " + "开始下载APK");
+                        lastVersionStatus = "D";//正在下载最新包
+                        String lastFile = downloadFile(address, fileName);
+                        Log.v(TAG, "UpdateService " + "download file begin==url:==" + url + "  " + "fileName:" + " "
+                                + fileName);
+                        if (lastFile != null) {//下载完成
+                            if (lastVersionStatus.equals("D")) {
+                                Log.v("UpdateService", "change status to P");
+                                lastVersionStatus = "P";//已下载,未安装
+                                // TODO: 2018/4/28 这里要把数据fileName做成成员变量，以供使用
+                                //开始安装
+                                if (lastVersionStatus.equals("P")) {//版本状态为待安装
+                                    lastVersionStatus = "I";//版本状态设为正在安装
+                                    updateApp(fileName);
+                                }
+                            } else {
+                                Log.v("UpdateService", " status is P");
+                                lastVersionStatus = "L";
+                            }
+                        } else {
+                            lastVersionStatus = "L";
+                        }
+                    } else {
+                        lastVersionStatus = "L";
+                    }
+                } else {
+                    lastVersionStatus = "L";
+                }
+            } else {
+                //服务器异常或没有网络
+                HttpApi.e("connectReportInfo()->服务器无响应");
+                lastVersionStatus = "L";
+            }
+        } catch (Exception e) {
+            HttpApi.e("connectReportInfo()->服务器数据解析异常");
+            e.printStackTrace();
+            lastVersionStatus = "L";
+        }
+    }
+
+    /**
+     * 更新应用(保险起见，开子线程前先判断一下)
+     *
+     * @param lastVersionFile 文件名
+     */
+    protected void updateApp(String lastVersionFile) {
+        String SDCard = Environment.getExternalStorageDirectory() + "";
+        String fileName = SDCard + "/" + lastVersionFile;
+        File file = new File(fileName);
+        Log.v(TAG, "UpdateService " + "------>start Update App<------");
+        if (true) {//如果本地版本低于网络版本
+            if (file.exists()) {
+                Log.v(TAG, "UpdateService:" + "check update file OK");
+                startInstallApp(fileName);
+                Log.i(TAG, "UpdateService:" + fileName);
+            }
+        } else {
+            //ToastUtil.showToast("版本已是最新");
+        }
+    }
+
+    /**
+     * 安装apk
+     *
+     * @param fileName
+     */
+    protected void startInstallApp(final String fileName) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                String cmd = "pm install -r" + fileName;
+                HttpApi.i("安装命令：" + cmd);
+                //以下两个方法应该等效
+                ShellUtils.CommandResult result = InstallUtil.executeCmd(cmd);
+//                ShellUtils.CommandResult commandResult = ShellUtils.execCommand(cmd, false);
+                HttpApi.i("安装结果：" + result.toString());
+            }
+        }).start();
+    }
+
+    /**
+     * 下载新apk
+     *
+     * @param url      下载地址
+     * @param fileName 文件名
+     * @return
+     */
+    public String downloadFile(String url, String fileName) {
+        OutputStream output = null;
+        String localFile = null;
+        String result = null;
+        setDownloadingFlag(1);
+        try {
+            URL urlObject = new URL(url);
+            HttpURLConnection conn = (HttpURLConnection) urlObject.openConnection();
+            String SDCard = Environment.getExternalStorageDirectory() + "";
+            localFile = SDCard + "/" + fileName;//文件存储路径
+            Log.v(TAG, "downloadFile " + "File path: " + localFile);
+            File file = new File(localFile);
+            InputStream input = conn.getInputStream();
+            if (!file.exists()) {
+                file.createNewFile();//新建文件
+            } else {
+                Log.v(TAG, "downloadFile " + "File is exists ");
+            }
+            output = new FileOutputStream(file);
+            //读取大文件
+            byte[] buffer = new byte[1024 * 8];
+            BufferedInputStream in = new BufferedInputStream(input, 1024 * 8);
+            BufferedOutputStream out = new BufferedOutputStream(output, 1024 * 8);
+            int count = 0, n = 0;
+            try {
+                while ((n = in.read(buffer, 0, 1024 * 8)) != -1 && getDownloadingFlag() == 1) {
+                    out.write(buffer, 0, n);
+                    count += n;
+                }
+                out.flush();
+                if (getDownloadingFlag() == 1) {
+                    result = localFile;
+                    Log.v(TAG, "downloadFile " + "result:  " + result + "  getDownloadingFlag=" + 1);
+                }
+                Log.v(TAG, "downloadFile " + "result:  " + result + "  getDownloadingFlag=" + getDownloadingFlag());
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                try {
+                    out.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                try {
+                    in.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (output != null) {
+                    output.close();
+                }
+            } catch (Exception e) {
+            }
+        }
+        setDownloadingFlag(0);
+        Log.v(TAG, "UpdateService " + "download file end=" + result);
+        //下载完毕
+        return result;
+    }
+
+    protected synchronized void setDownloadingFlag(int flag) {
+        downloadingFlag = flag;
+    }
+
+    protected synchronized int getDownloadingFlag() {
+        return downloadingFlag;
     }
 
     /**
@@ -692,8 +919,8 @@ public class MainService extends Service {
                                         .class);
                                 GuangGaoBean guangGaoBeen1 = new GuangGaoBean();
                                 guangGaoBeen1.setLeixing("2");
-                                guangGaoBeen1.setNeirong("http://img.taopic" + "" + "" + "" + "" + "" + "" + "" + "" +
-                                        ".com/uploads/allimg/120727/201995-120HG1030762.jpg");
+                                guangGaoBeen1.setNeirong("http://img.taopic" + "" + "" + "" + "" + "" + "" + "" + ""
+                                        + ".com/uploads/allimg/120727/201995-120HG1030762.jpg");
                                 guangGaoBeen.add(guangGaoBeen1);
                                 new Thread(new Runnable() {
                                     @Override
@@ -1017,7 +1244,8 @@ public class MainService extends Service {
         SPUtil.put(MainService.this, Constant.SP_VISION_APP, connectReportBean.getVersion());
         SPUtil.put(MainService.this, Constant.SP_LIXIAN_MIMA, connectReportBean.getLixian_mima());
         SPUtil.put(MainService.this, Constant.SP_VISION_KA, connectReportBean.getKa());
-        SPUtil.put(MainService.this, Constant.SP_VISION_GUANGGAO, connectReportBean.getGuanggao());
+        SPUtil.put(MainService.this, Constant.SP_VISION_GUANGGAO, connectReportBean.getGuanggaopic());
+        SPUtil.put(MainService.this, Constant.SP_VISION_GUANGGAO_VIDEO, connectReportBean.getGuanggaopic());
         SPUtil.put(MainService.this, Constant.SP_VISION_LIAN, connectReportBean.getLian());
         SPUtil.put(MainService.this, Constant.SP_VISION_TONGGAO, connectReportBean.getTonggao());
     }
@@ -1031,7 +1259,8 @@ public class MainService extends Service {
         SPUtil.put(MainService.this, Constant.SP_VISION_APP, connectReportBean.getVersion());
         SPUtil.put(MainService.this, Constant.SP_LIXIAN_MIMA, connectReportBean.getLixian_mima());
         SPUtil.put(MainService.this, Constant.SP_VISION_KA, connectReportBean.getKa());
-        SPUtil.put(MainService.this, Constant.SP_VISION_GUANGGAO, connectReportBean.getGuanggao());
+        SPUtil.put(MainService.this, Constant.SP_VISION_GUANGGAO, connectReportBean.getGuanggaopic());
+        SPUtil.put(MainService.this, Constant.SP_VISION_GUANGGAO_VIDEO, connectReportBean.getGuanggaovideo());
         SPUtil.put(MainService.this, Constant.SP_VISION_LIAN, connectReportBean.getLian());
         SPUtil.put(MainService.this, Constant.SP_VISION_TONGGAO, connectReportBean.getTonggao());
     }
@@ -2181,8 +2410,10 @@ public class MainService extends Service {
                     result_afr);
             Log.d("com.arcsoft", "Face=" + result_afr.getFeatureData()[0] + "," + result_afr.getFeatureData()[1] + "," +
                     "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + ""
-                    + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + result_afr.getFeatureData()[2] + "," +
-                    err_afr.getCode());
+                    + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" +
+                    "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + ""
+                    + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + result_afr
+                    .getFeatureData()[2] + "," + "" + "" + err_afr.getCode());
             if (err_afr.getCode() == err_afr.MOK) {//人脸特征检测成功
                 mAFR_FSDKFace = result_afr.clone();
                 // TODO: 2018/5/15 保存mAFR_FSDKFace人脸信息，操作数据库
