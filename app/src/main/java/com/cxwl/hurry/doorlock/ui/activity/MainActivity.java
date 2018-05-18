@@ -136,6 +136,7 @@ import static com.cxwl.hurry.doorlock.config.Constant.MSG_INVALID_CARD;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_LOADLOCAL_DATA;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_LOCK_OPENED;
 import static com.cxwl.hurry.doorlock.config.Constant.arc_appid;
+import static com.cxwl.hurry.doorlock.config.Constant.fr_key;
 import static com.cxwl.hurry.doorlock.config.Constant.ft_key;
 import static com.cxwl.hurry.doorlock.config.DeviceConfig.DEVICE_KEYCODE_POUND;
 import static com.cxwl.hurry.doorlock.config.DeviceConfig.DEVICE_KEYCODE_STAR;
@@ -2239,14 +2240,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         //检测输入的图像中存在的人脸，输出结果和初始化时设置的参数有密切关系,检测到的人脸会add到此result
         AFT_FSDKError err = engine.AFT_FSDK_FaceFeatureDetect(data, width, height, AFT_FSDKEngine
                 .CP_PAF_NV21, result);
-        Log.d(TAG, "AFT_FSDK_FaceFeatureDetect =" + err.getCode());
+//        Log.d(TAG, "AFT_FSDK_FaceFeatureDetect =" + err.getCode());
 //        Log.d(TAG, "Face=" + result.size());
-        for (AFT_FSDKFace face : result) {
-            Log.d(TAG, "虹软:" + face.toString());
-//            Rect(145, 164 - 385, 404),1
-//            Rect(169, 166 - 429, 426),1
-//            Rect(140, 164 - 404, 428),1
-        }
+//        for (AFT_FSDKFace face : result) {
+//            Log.d(TAG, "虹软:" + face.toString());
+////            Rect(145, 164 - 385, 404),1
+////            Rect(169, 166 - 429, 426),1
+////            Rect(140, 164 - 404, 428),1
+//        }
         if (mImageNV21 == null) {
             if (!result.isEmpty()) {
                 mAFT_FSDKFace = result.get(0).clone();//保存集合中第一个人脸信息
@@ -2349,7 +2350,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         @Override
         public void setup() {
-            AFR_FSDKError error = engine.AFR_FSDK_InitialEngine(arc_appid, ft_key);
+//            Log.e("人脸识别", "这里走了吗");
+            AFR_FSDKError error = engine.AFR_FSDK_InitialEngine(arc_appid, fr_key);
             //Log.v(FACE_TAG, "AFR_FSDK_InitialEngine = " + error.getCode());
             error = engine.AFR_FSDK_GetVersion(version);
             //Log.v(FACE_TAG, "FR=" + version.toString() + "," + error.getCode()); //(210, 178 -
@@ -2393,9 +2395,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     }
                     for (AFR_FSDKFace face : fr.mFaceList) {
                         //比较两份人脸特征信息的匹配度(result 脸部特征信息对象,face 脸部特征信息对象,score 匹配度对象)
+                        Log.e("人脸识别 比较值 ", "result " + result.toString() + " face " + face.toString());
                         error = engine.AFR_FSDK_FacePairMatching(result, face, score);
-                        Log.d(TAG, "Score:" + score.getScore());
-                        // + error.getCode());
+                        Log.d("人脸识别", "Score:" + score.getScore() + " error " + error.getCode());
                         if (max < score.getScore()) {
                             max = score.getScore();//匹配度赋值
                             name = fr.mName;

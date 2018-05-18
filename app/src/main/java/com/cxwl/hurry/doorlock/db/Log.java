@@ -13,14 +13,19 @@ import org.greenrobot.greendao.annotation.Generated;
 public class Log {
     @Id
     private Long id;
+
     @Property(nameInDb = "mac")
     private String mac;
+
     @Property(nameInDb = "kaimenshijian")
     private String kaimenshijian;
+
     @Property(nameInDb = "kaimenfangshi")
     private String kaimenfangshi;
+
     @Property(nameInDb = "kaimenjietu")
     private String kaimenjietu;
+
     @Generated(hash = 1623580919)
     public Log(Long id, String mac, String kaimenshijian, String kaimenfangshi,
             String kaimenjietu) {

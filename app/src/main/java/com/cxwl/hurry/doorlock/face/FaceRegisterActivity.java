@@ -205,6 +205,7 @@ public class FaceRegisterActivity extends AppCompatActivity implements SurfaceHo
                     error1 = engine1.AFR_FSDK_GetVersion(version1);
                     Log.d("com.arcsoft", "FR=" + version.toString() + "," + error1.getCode()); //
                     // (210, 178 - 478, 446), degree = 1　780, 2208 - 1942, 3370
+                    ////检测输入图像中的人脸特征信息，输出结果保存在 AFR_FSDKFace feature
                     error1 = engine1.AFR_FSDK_ExtractFRFeature(data, mBitmap.getWidth(), mBitmap
                             .getHeight(), AFR_FSDKEngine.CP_PAF_NV21, new Rect(result.get(0)
                             .getRect()), result.get(0).getDegree(), result1);
