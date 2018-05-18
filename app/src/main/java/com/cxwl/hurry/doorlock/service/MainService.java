@@ -53,6 +53,7 @@ import com.cxwl.hurry.doorlock.utils.MacUtils;
 import com.cxwl.hurry.doorlock.utils.SPUtil;
 import com.cxwl.hurry.doorlock.utils.ShellUtils;
 import com.cxwl.hurry.doorlock.utils.SoundPoolUtil;
+import com.cxwl.hurry.doorlock.utils.ToastUtil;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -60,6 +61,7 @@ import com.google.gson.reflect.TypeToken;
 import com.guo.android_extend.image.ImageConverter;
 import com.zhy.http.okhttp.OkHttpUtils;
 import com.zhy.http.okhttp.callback.Callback;
+import com.zhy.http.okhttp.callback.FileCallBack;
 import com.zhy.http.okhttp.callback.StringCallback;
 
 import org.json.JSONArray;
@@ -219,7 +221,9 @@ public class MainService extends Service {
     private int noticesStatus = 0;//门禁卡信息版本状态(默认为0)// 0:不一致（等待下载数据）1:不一致（正在下载数据）
     private int faceStatus = 0;//人脸信息版本状态(默认为0)// 0:不一致（等待下载数据）1:不一致（正在下载数据）
     private int cardInfoStatus = 0;//门禁卡信息版本状态(默认为0)// 0:不一致（等待下载数据）1:不一致（正在下载数据）
-    private int appStatus = 0;//门禁app信息版本状态(默认为0)// 0:不一致（等待下载数据）1:不一致（正在下载数据）
+    private String lastVersionStatus = "L"; //L: last version N: find new version D：downloading
+    // P: pending to install I: installing  版本更新状态
+    private int downloadingFlag = 0; //0：not downloading 1:downloading 2:stop download  apk下载状态
 
     @Override
     public void onCreate() {
@@ -613,7 +617,25 @@ public class MainService extends Service {
                                     (connectReportBean.getVersion()));
                             if (Float.parseFloat(connectReportBean.getVersion()) > appVision) {
                                 Log.i(TAG, "心跳中有APP信息更新");
-                                downloadApp();
+                                if (lastVersionStatus.equals("D")) {//正在下载最新包
+                                    //不获取地址
+                                    Log.e(TAG, "正在下载最新包,不获取地址");
+//                                    setDownloadingFlag(2);
+                                } else if (lastVersionStatus.equals("P")) {//已下载,未安装
+                                    // TODO: 2018/4/28 这里的数据fileName会做成成员变量，以供使用
+//                                    lastVersionStatus = "I";//版本状态设为正在安装
+//                                    updateApp(fileName);
+                                    //不获取地址
+                                    Log.e(TAG, "已下载等待未安装,不获取地址");
+                                } else if (lastVersionStatus.equals("I")) {//已下载,安装中
+                                    //不获取地址
+                                    Log.e(TAG, "已下载,安装中,不获取地址");
+                                } else if (lastVersionStatus.equals("L")) {//未下载状态
+                                    getVersionInfo();
+                                } else if (lastVersionStatus.equals("N")) {//正在获取下载地址
+                                    //不获取地址
+                                    Log.e(TAG, "未下载,正在获取下载地址,不获取地址");
+                                }
                             }
                             float tonggaoVision = (float) SPUtil.get(MainService.this, Constant.SP_VISION_TONGGAO, 0f);
                             if (Float.parseFloat(connectReportBean.getTonggao()) > tonggaoVision) {
@@ -636,81 +658,72 @@ public class MainService extends Service {
     }
 
     /**
-     * 下载app
+     * 下载app文件
+     *
+     * @param address
+     * @param fileName
      */
-    private String lastVersionStatus = "L"; //L: last version N: find new version D：downloading
-    // P: pending to install I: installing  版本更新状态
-    private int downloadingFlag = 0; //0：not downloading 1:downloading 2:stop download  apk下载状态
+    private void downloadApp(String address, String fileName) {
+        Log.v(TAG, "UpdateService " + "开始下载APK");
+        lastVersionStatus = "D";//正在下载最新包
 
-    private void downloadApp() {
-        getVersionInfo();
+        String lastFile = downloadFile(address, fileName);
+
+        Log.v(TAG, "UpdateService " + "  " + "fileName:" + " " + fileName);
+
+        if (lastFile != null) {//下载完成
+            if (lastVersionStatus.equals("D")) {
+                Log.v("UpdateService", "change status to P");
+                lastVersionStatus = "P";//已下载,未安装
+                if (lastVersionStatus.equals("P")) {//版本状态为待安装
+                    //开始安装
+                    // TODO: 2018/4/28 这里要把数据fileName做成成员变量，以供使用
+                    updateApp(fileName);
+                }
+            } else {
+                Log.v("UpdateService", "不会出现这种情况 status is " + lastVersionStatus);
+//                lastVersionStatus = "L";
+            }
+        } else {
+            // TODO: 2018/5/18  下载失败，整理.temp文件  absolutePath为apk存储路径的文件夹
+//            File file = new File(absolutePath + "/" + fileName);
+//            if (file.exists()) {
+//                Log.e("下载", "删除");
+//                file.delete();
+//            }
+            lastVersionStatus = "L";//等待下次心跳重新获取URL下载apk文件
+        }
     }
 
+    /**
+     * 获取APP更新路径接口
+     */
     private void getVersionInfo() {
+        lastVersionStatus = "N";
         try {
             String url = API.VERSION_ADDRESS;
             String result = HttpApi.getInstance().loadHttpforGet(url, httpServerToken);
             OkHttpUtils.get().addHeader("Authorization", httpServerToken).build().execute(new StringCallback() {
 
-
                 @Override
                 public void onError(Call call, Exception e, int id) {
                     Log.i(TAG, "onError 获取app下载地址" + e.toString());
+                    lastVersionStatus = "L";//等待下次心跳重新获取URL
                 }
 
                 @Override
                 public void onResponse(String response, int id) {
                     Log.i(TAG, "onResponse 获取app下载地址" + response);
-
+                    String address = "";
+                    String fileName = "";
+                    downloadApp(address, fileName);
                 }
             });
 
-            if (result != null) {
-                HttpApi.e("connectReportInfo()->" + result);
-                JSONObject resultObj = Ajax.getJSONObject(result);
-                int code = resultObj.getInt("code");
-                if (code == 0) {
-                    //已获取下载地址
-                    if (getDownloadingFlag() == 0) {
-                        String address = "";
-                        String fileName = "";
-                        Log.v(TAG, "UpdateService " + "开始下载APK");
-                        lastVersionStatus = "D";//正在下载最新包
-                        String lastFile = downloadFile(address, fileName);
-                        Log.v(TAG, "UpdateService " + "download file begin==url:==" + url + "  " + "fileName:" + " "
-                                + fileName);
-                        if (lastFile != null) {//下载完成
-                            if (lastVersionStatus.equals("D")) {
-                                Log.v("UpdateService", "change status to P");
-                                lastVersionStatus = "P";//已下载,未安装
-                                // TODO: 2018/4/28 这里要把数据fileName做成成员变量，以供使用
-                                //开始安装
-                                if (lastVersionStatus.equals("P")) {//版本状态为待安装
-                                    lastVersionStatus = "I";//版本状态设为正在安装
-                                    updateApp(fileName);
-                                }
-                            } else {
-                                Log.v("UpdateService", " status is P");
-                                lastVersionStatus = "L";
-                            }
-                        } else {
-                            lastVersionStatus = "L";
-                        }
-                    } else {
-                        lastVersionStatus = "L";
-                    }
-                } else {
-                    lastVersionStatus = "L";
-                }
-            } else {
-                //服务器异常或没有网络
-                HttpApi.e("connectReportInfo()->服务器无响应");
-                lastVersionStatus = "L";
-            }
         } catch (Exception e) {
             HttpApi.e("connectReportInfo()->服务器数据解析异常");
             e.printStackTrace();
-            lastVersionStatus = "L";
+            lastVersionStatus = "L";//等待下次心跳重新获取URL
         }
     }
 
@@ -726,12 +739,13 @@ public class MainService extends Service {
         Log.v(TAG, "UpdateService " + "------>start Update App<------");
         if (true) {//如果本地版本低于网络版本
             if (file.exists()) {
+                lastVersionStatus = "I";//版本状态设为正在安装
                 Log.v(TAG, "UpdateService:" + "check update file OK");
                 startInstallApp(fileName);
                 Log.i(TAG, "UpdateService:" + fileName);
             }
         } else {
-            //ToastUtil.showToast("版本已是最新");
+//            ToastUtil.showToast("版本已是最新");
         }
     }
 
@@ -758,10 +772,10 @@ public class MainService extends Service {
      * 下载新apk
      *
      * @param url      下载地址
-     * @param fileName 文件名
+     * @param fileName 文件名(带后缀.temp)
      * @return
      */
-    public String downloadFile(String url, String fileName) {
+    public String downloadFile(String url, final String fileName) {
         OutputStream output = null;
         String localFile = null;
         String result = null;
@@ -793,9 +807,11 @@ public class MainService extends Service {
                 out.flush();
                 if (getDownloadingFlag() == 1) {
                     result = localFile;
-                    Log.v(TAG, "downloadFile " + "result:  " + result + "  getDownloadingFlag=" + 1);
+                    Log.v(TAG, "downloadFile " + "result:  " + result + "  getDownloadingFlag=" +
+                            1);
                 }
-                Log.v(TAG, "downloadFile " + "result:  " + result + "  getDownloadingFlag=" + getDownloadingFlag());
+                Log.v(TAG, "downloadFile " + "result:  " + result + "  getDownloadingFlag=" +
+                        getDownloadingFlag());
             } catch (IOException e) {
                 e.printStackTrace();
             } finally {
@@ -1095,8 +1111,9 @@ public class MainService extends Service {
             JSONObject data = new JSONObject();
             data.put("mac", mac);
 
-            OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse("application/json; "
-                    + "charset=utf-8")).addHeader("Authorization", httpServerToken).tag(this).build().execute(new StringCallback() {
+            OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse
+                    ("application/json; " + "charset=utf-8")).addHeader("Authorization",
+                    httpServerToken).tag(this).build().execute(new StringCallback() {
                 @Override
                 public void onError(Call call, Exception e, int id) {
                     Log.e(TAG, "通告信息 服务器异常或没有网络 " + e.toString());
@@ -1152,9 +1169,9 @@ public class MainService extends Service {
                 String url = API.CALLALL_CARDS;
                 JSONObject data = new JSONObject();
                 data.put("mac", mac);
-                OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse
-                        ("application/json; " + "charset=utf-8")).addHeader("Authorization", httpServerToken).tag
-                        (this).build().execute(new StringCallback() {
+                OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType
+                        .parse("application/json; " + "charset=utf-8")).addHeader
+                        ("Authorization", httpServerToken).tag(this).build().execute(new StringCallback() {
                     @Override
                     public void onError(Call call, Exception e, int id) {
                         Log.e(TAG, "onError 卡信息接口getCardInfo" + e.toString());
@@ -2392,7 +2409,8 @@ public class MainService extends Service {
     private void initFaceEngine() {
         //在这里初始化人脸检测和识别相关类，之后抽取方法
         //人脸检测初始化引擎，设置检测角度、范围，数量。创建对象后，必须先于其他成员函数调用
-        err_afd = engine_afd.AFD_FSDK_InitialFaceEngine(arc_appid, fd_key, AFD_FSDKEngine.AFD_OPF_0_HIGHER_EXT, 16, 5);
+        err_afd = engine_afd.AFD_FSDK_InitialFaceEngine(arc_appid, fd_key, AFD_FSDKEngine
+                .AFD_OPF_0_HIGHER_EXT, 16, 5);
 
         //人脸识别初始化引擎，设置检测角度、范围，数量。创建对象后，必须先于其他成员函数调用
         err_afr = engine_afr.AFR_FSDK_InitialEngine(arc_appid, fr_key);
@@ -2498,19 +2516,20 @@ public class MainService extends Service {
 
         //这个函数功能为检测输入的图像中存在的人脸,data 输入的图像数据,width 图像宽度,height 图像高度,format 图像格式,List<AFD_FSDKFace>
         // list 检测到的人脸会放到到该列表里
-        err_afd = engine_afd.AFD_FSDK_StillImageFaceDetection(data, mBitmap.getWidth(), mBitmap.getHeight(),
-                AFD_FSDKEngine.CP_PAF_NV21, result_afd);
-        Log.d(TAG, "AFD_FSDK_StillImageFaceDetection =" + err_afd.getCode() + "<" + result_afd.size());
+        err_afd = engine_afd.AFD_FSDK_StillImageFaceDetection(data, mBitmap.getWidth(), mBitmap
+                .getHeight(), AFD_FSDKEngine.CP_PAF_NV21, result_afd);
+        Log.d(TAG, "AFD_FSDK_StillImageFaceDetection =" + err_afd.getCode() + "<" + result_afd
+                .size());
 
         if (!result_afd.isEmpty() && result_afd.size() != 0) {//人脸数据结果不为空
 
             //检测输入图像中的人脸特征信息，输出结果保存在 AFR_FSDKFace feature
-            err_afr = engine_afr.AFR_FSDK_ExtractFRFeature(data, mBitmap.getWidth(), mBitmap.getHeight(),
-                    AFR_FSDKEngine.CP_PAF_NV21, new Rect(result_afd.get(0).getRect()), result_afd.get(0).getDegree(),
-                    result_afr);
-            Log.d("com.arcsoft", "Face=" + result_afr.getFeatureData()[0] + "," + result_afr.getFeatureData()[1] + "," +
-                    "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "result_afr" +
-                    result_afr.toString() + "  " + "" + result_afr.getFeatureData()[2] + "," + err_afr.getCode());
+            err_afr = engine_afr.AFR_FSDK_ExtractFRFeature(data, mBitmap.getWidth(), mBitmap
+                    .getHeight(), AFR_FSDKEngine.CP_PAF_NV21, new Rect(result_afd.get(0).getRect
+                    ()), result_afd.get(0).getDegree(), result_afr);
+            Log.d("com.arcsoft", "Face=" + result_afr.getFeatureData()[0] + "," + result_afr
+                    .getFeatureData()[1] + "," + "result_afr" + result_afr.toString() + "  " +
+                    result_afr.getFeatureData()[2] + "," + err_afr.getCode());
             if (err_afr.getCode() == err_afr.MOK) {//人脸特征检测成功
                 mAFR_FSDKFace = result_afr.clone();
                 // TODO: 2018/5/15 保存mAFR_FSDKFace人脸信息，操作数据库

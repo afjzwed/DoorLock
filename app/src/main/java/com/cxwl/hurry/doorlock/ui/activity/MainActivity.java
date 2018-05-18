@@ -1996,7 +1996,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         break;
                     case R.id.action_settings7://重启
                         Log.e(TAG, "menu 重启");
-//                        DoorLock.getInstance().runReboot();
+                        DoorLock.getInstance().runReboot();
                         break;
                     case R.id.action_settings10://退出
 //                        LogDoor.e(TAG,"menu 退出");
