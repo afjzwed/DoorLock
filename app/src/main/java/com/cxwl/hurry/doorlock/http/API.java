@@ -15,7 +15,7 @@ public interface API {
 
     String OPENDOOR_BYTEMPKEY = HTTP_HOST+"/xdoor/device/openDoorByTempKey";//密码验证
 
-    String LOG = HTTP_HOST+"/xdoor/device/createAccessLog";//日志提交
+    String LOG = HTTP_HOST+"/xdoor/device/createAccessLog";//日志提交 开门方式:1卡2手机3人脸4邀请码5离线密码6临时密码'
 
     String CALLALL_CARDS = HTTP_HOST + "/xdoor/device/callAllCards";//获取门禁卡信息
 

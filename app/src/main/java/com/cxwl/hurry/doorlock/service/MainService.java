@@ -1,7 +1,9 @@
 package com.cxwl.hurry.doorlock.service;
 
 import android.app.Activity;
+import android.app.ActivityManager;
 import android.app.Service;
+import android.content.ComponentName;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
@@ -39,6 +41,7 @@ import com.cxwl.hurry.doorlock.entity.NoticeBean;
 import com.cxwl.hurry.doorlock.entity.XdoorBean;
 import com.cxwl.hurry.doorlock.entity.YeZhuBean;
 import com.cxwl.hurry.doorlock.http.API;
+import com.cxwl.hurry.doorlock.ui.activity.MainActivity;
 import com.cxwl.hurry.doorlock.utils.AexUtil;
 import com.cxwl.hurry.doorlock.utils.Ajax;
 import com.cxwl.hurry.doorlock.utils.BitmapUtils;
@@ -225,6 +228,18 @@ public class MainService extends Service {
     // P: pending to install I: installing  版本更新状态
     private int downloadingFlag = 0; //0：not downloading 1:downloading 2:stop download  apk下载状态
 
+    private ActivityManager activityManager;//Activity管理类
+    private boolean isPullTime = false;
+    private Timer activityTimer = null;
+    private Runnable startMain = new Runnable() {
+        @Override
+        public void run() {
+            Intent i = new Intent(MainService.this, MainActivity.class);
+            i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            MainService.this.startActivity(i);
+        }
+    };
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -340,6 +355,15 @@ public class MainService extends Service {
                     case MSG_FACE_OPENLOCK:
                         sendMessageToMainAcitivity(MSG_LOCK_OPENED, "");
 //                        openLock();
+                        LogDoor data = new LogDoor();
+                        data.setMac(mac);
+                        data.setKaimenfangshi("3");
+                        data.setKaimenjietu("");
+                        data.setKaimenshijian(System.currentTimeMillis() + "");
+                        data.setUuid("");
+                        List<LogDoor> list = new ArrayList<>();
+                        list.add(data);
+                        createAccessLog(list);
                         break;
                     default:
                         break;
@@ -668,7 +692,6 @@ public class MainService extends Service {
         lastVersionStatus = "D";//正在下载最新包
 
         String lastFile = downloadFile(address, fileName);
-
         Log.v(TAG, "UpdateService " + "  " + "fileName:" + " " + fileName);
 
         if (lastFile != null) {//下载完成
@@ -1300,7 +1323,7 @@ public class MainService extends Service {
         Log.i("MainService", "init AEX");
         // TODO: 2018/5/8  initSqlUtil();  初始化卡相关数据库工具类
         Log.i("MainService", "init SQL");
-        // TODO: 2018/5/8   initCheckTopActivity();检查最上层界面
+         initCheckTopActivity();//检查最上层界面
 
         //xiaozd add
         if (netWorkstate) {
@@ -1308,6 +1331,39 @@ public class MainService extends Service {
         } else {
             initWhenOffline(); //开始离线版本
         }
+    }
+
+    /**
+     * 检查最上层界面
+     */
+    private void initCheckTopActivity() {
+        if (activityTimer != null) {
+            activityTimer.cancel();
+            activityTimer = null;
+        }
+        if (activityTimer == null) {
+            activityTimer = new Timer();
+        }
+        activityTimer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                if (activityManager != null) {
+                    ComponentName cn = activityManager.getRunningTasks(1).get(0).topActivity;
+                    if (!cn.getPackageName().equals(MainService.this.getPackageName())) {
+                        HttpApi.i("TopActivity_", "不在当前程序");
+                        if (!isPullTime) {
+                            HttpApi.i("TopActivity_", "倒计时进入MainActivity");
+                            mHandler.postDelayed(startMain, 30 * 1000);
+                            isPullTime = true;
+                        }
+                    } else {
+                        HttpApi.i("TopActivity_", "处于当前程序");
+                        mHandler.removeCallbacks(startMain);
+                        isPullTime = false;
+                    }
+                }
+            }
+        }, 500, 3000);
     }
 
     /**
@@ -1824,43 +1880,43 @@ public class MainService extends Service {
         }
     }
 
-    private void test() {
-        String url = API.LOG;
-        JSONObject data = new JSONObject();
-        try {
-            data.put("mac", "44:2c:05:e6:9c:c5");
-            data.put("phone", "454");
-            data.put("ka_id", "");
-            data.put("kaimenfangshi", "1");
-            data.put("kaimenjietu", "");
-            data.put("kaimenshijian", System.currentTimeMillis());
-            data.put("uuid", "");
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-        LogDoor logDoor = JsonUtil.parseJsonToBean(data.toString(), LogDoor.class);
-        List<LogDoor> door = new ArrayList<>();
-        door.add(logDoor);
-        LogListBean logListBean = new LogListBean();
-        logListBean.setMac("44:2c:05:e6:9c:c5");
-        logListBean.setXdoorOneOpenDtos(door);
-        String s = JsonUtil.parseBeanToJson(logListBean);
-        Log.e(TAG, "test" + JsonUtil.parseBeanToJson(logListBean));
-        OkHttpUtils.postString().url(url).content(s).mediaType(MediaType.parse("application/json;" + " " +
-                "charset=utf-8")).addHeader("Authorization", httpServerToken).tag(this).build().execute(new StringCallback() {
-
-
-            @Override
-            public void onError(Call call, Exception e, int id) {
-                Log.e(TAG, e.toString());
-            }
-
-            @Override
-            public void onResponse(String response, int id) {
-                Log.e(TAG, response);
-            }
-        });
-    }
+//    private void test() {
+//        String url = API.LOG;
+//        JSONObject data = new JSONObject();
+//        try {
+//            data.put("mac", "44:2c:05:e6:9c:c5");
+//            data.put("phone", "454");
+//            data.put("ka_id", "");
+//            data.put("kaimenfangshi", "1");
+//            data.put("kaimenjietu", "");
+//            data.put("kaimenshijian", System.currentTimeMillis());
+//            data.put("uuid", "");
+//        } catch (JSONException e) {
+//            e.printStackTrace();
+//        }
+//        LogDoor logDoor = JsonUtil.parseJsonToBean(data.toString(), LogDoor.class);
+//        List<LogDoor> door = new ArrayList<>();
+//        door.add(logDoor);
+//        LogListBean logListBean = new LogListBean();
+//        logListBean.setMac("44:2c:05:e6:9c:c5");
+//        logListBean.setXdoorOneOpenDtos(door);
+//        String s = JsonUtil.parseBeanToJson(logListBean);
+//        Log.e(TAG, "test" + JsonUtil.parseBeanToJson(logListBean));
+//        OkHttpUtils.postString().url(url).content(s).mediaType(MediaType.parse("application/json;" + " " +
+//                "charset=utf-8")).addHeader("Authorization", httpServerToken).tag(this).build().execute(new StringCallback() {
+//
+//
+//            @Override
+//            public void onError(Call call, Exception e, int id) {
+//                Log.e(TAG, e.toString());
+//            }
+//
+//            @Override
+//            public void onResponse(String response, int id) {
+//                Log.e(TAG, response);
+//            }
+//        });
+//    }
 
     /**
      * 上传开门日志
@@ -2566,7 +2622,30 @@ public class MainService extends Service {
         Log.v("MainService", "onDestroy()");
         // TODO: 2018/5/15 还有资源未释放
 
+        if (activityTimer != null) {
+            activityTimer.cancel();
+            activityTimer = null;
+        }
 
+        if (callConnection != null) {
+            callConnection.disconnect();
+            callConnection = null;
+            Message message = Message.obtain();
+            message.what = MSG_RTC_DISCONNECT;
+            try {
+                sendMessageToMainAcitivity(MSG_RTC_DISCONNECT, "");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        if (device != null) {
+            device.release();
+            device = null;
+        }
+        if (rtcClient != null) {
+            rtcClient.release();
+            rtcClient = null;
+        }
         if (aexUtil != null) {
             aexUtil.close();
         }

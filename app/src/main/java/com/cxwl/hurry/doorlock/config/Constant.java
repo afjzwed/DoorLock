@@ -28,7 +28,7 @@ public class Constant {
     public static final int MSG_FACE_INFO = 11106;//获取人脸照片URL
     public static final int MSG_FACE_DOWNLOAD = 11107;//下载照片并录入人脸
 
-    public static final int MSG_FACE_OPENLOCK = 40000;
+    public static final int MSG_FACE_OPENLOCK = 40000;//人脸开门
     /********************虹软相关*********************/
 
     /********************天翼RTC相关******************/
@@ -88,4 +88,5 @@ public class Constant {
     public static final int MSG_GET_NOTICE = 20100;//获取通告成功
 
     public static final int MSG_ADVERTISE_REFRESH = 10013;//刷新广告
+
 }

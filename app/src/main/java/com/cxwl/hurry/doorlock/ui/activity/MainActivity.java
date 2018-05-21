@@ -588,7 +588,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         Log.i(TAG, "刷新广告");
                         onAdvertiseRefresh(msg.obj);
                         break;
-                    case  MSG_ADVERTISE_IMAGE:
+                    case MSG_ADVERTISE_IMAGE:
                         onAdvertiseImageChange(msg.obj);
                         break;
                     default:
@@ -600,14 +600,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mainMessage = new Messenger(handler);
 
     }
+
     protected void onAdvertiseImageChange(Object obj) {
         String source = (String) obj;
         source = HttpUtils.getLocalFileFromUrl(source);
         Bitmap bm = BitmapFactory.decodeFile(source);
         imageView.setImageBitmap(bm);
     }
+
     /**
      * 刷新广告
+     *
      * @param obj
      */
     public void onAdvertiseRefresh(Object obj) {
@@ -616,6 +619,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         advertiseHandler.initData(obj1, mainMessage, (currentStatus == ONVIDEO_MODE),
                 adverErrorCallBack);
     }
+
     /**
      * 开门
      */
@@ -817,7 +821,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             e.printStackTrace();
         }
     }
-
 
 
     /**
@@ -1263,7 +1266,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         setDialValue(blockNo);
         setCurrentStatus(CALL_MODE);
         //启动广告
-            advertiseHandler.start(adverErrorCallBack);
+        advertiseHandler.start(adverErrorCallBack);
 
         videoLayout.setVisibility(View.INVISIBLE);
         setVideoSurfaceVisibility(View.INVISIBLE);
@@ -1273,7 +1276,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         setCurrentStatus(ONVIDEO_MODE);
         setDialValue("");
 //        暂时停止广告播放
-         advertiseHandler.pause(adverErrorCallBack);
+        advertiseHandler.pause(adverErrorCallBack);
     }
 
     public void onRtcVideoOn() {
@@ -2381,8 +2384,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //                LogDoor.d(TAG, "AFR_FSDK_ExtractFRFeature cost :" + (System.currentTimeMillis() -
 //                 time) + "ms");
                 Log.d(TAG, "Face=" + result.getFeatureData()[0] + "," + result.getFeatureData()
-                 [1] + "," + result
-                 .getFeatureData()[2] + "," + error.getCode());
+                        [1] + "," + result.getFeatureData()[2] + "," + error.getCode());
                 AFR_FSDKMatching score = new AFR_FSDKMatching();//这个类用来保存特征信息匹配度
                 float max = 0.0f;//匹配度的值
                 String name = null;
@@ -2395,7 +2397,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     }
                     for (AFR_FSDKFace face : fr.mFaceList) {
                         //比较两份人脸特征信息的匹配度(result 脸部特征信息对象,face 脸部特征信息对象,score 匹配度对象)
-                        Log.e("人脸识别 比较值 ", "result " + result.toString() + " face " + face.toString());
+                        Log.e("人脸识别 比较值 ", "result " + result.toString() + " face " + face
+                                .toString());
                         error = engine.AFR_FSDK_FacePairMatching(result, face, score);
                         Log.d("人脸识别", "Score:" + score.getScore() + " error " + error.getCode());
                         if (max < score.getScore()) {
@@ -2433,13 +2436,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     protected void onStart() {
         super.onStart();
 
-        // TODO: 2018/5/15   以下暂时注释
-         if (isRestartPlay) {
-        isRestartPlay = false;
-        advertiseHandler.start(adverErrorCallBack);
+        if (isRestartPlay) {
+            isRestartPlay = false;
+            advertiseHandler.start(adverErrorCallBack);
+        }
     }
-    }
-        private boolean isRestartPlay = false;
+
+    private boolean isRestartPlay = false;
+
     @Override
     protected void onResume() {
         super.onResume();
@@ -2453,7 +2457,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     protected void onPause() {
         super.onPause();
-        // TODO: 2018/5/15   以下暂时注释
+
         advertiseHandler.pause(adverErrorCallBack);
         isRestartPlay = true;
     }
