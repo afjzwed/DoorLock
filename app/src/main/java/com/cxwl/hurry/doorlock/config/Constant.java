@@ -15,7 +15,7 @@ public class Constant {
     public static String gender_key = "79kKgHjTgz27bkMMkKA8G6UjHeRAg5TZNJ4u8sPEKj9m";//性别识别
     // (Gender) Key :
 
-    public static final String PIC_PREFIX = "arcsoft_";//
+//    public static final String PIC_PREFIX = "arcsoft_";//虹软人脸照片文件夹名
     public static final int MSG_FACE_DETECT_CONTRAST = 11100;//人脸识别对比
     public static final int MSG_FACE_DETECT_INPUT = 11101;//人脸识别录入
     public static final int MSG_FACE_DETECT_PAUSE = 11102;//人脸识别暂停
@@ -90,5 +90,6 @@ public class Constant {
 
     public static final int MSG_ADVERTISE_REFRESH = 10013;//刷新广告
     public static final int MSG_ADVERTISE_REFRESH_PIC = 10014;//刷新广告图片
+
 
 }

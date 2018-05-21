@@ -23,16 +23,15 @@ import android.net.wifi.WifiManager;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.os.Messenger;
 import android.os.RemoteException;
-import android.os.SystemClock;
 import android.provider.Settings;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -43,7 +42,6 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.EditText;
-import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
@@ -65,10 +63,7 @@ import com.cxwl.hurry.doorlock.MainApplication;
 import com.cxwl.hurry.doorlock.R;
 import com.cxwl.hurry.doorlock.callback.AdverErrorCallBack;
 import com.cxwl.hurry.doorlock.callback.GlideImagerBannerLoader;
-import com.cxwl.hurry.doorlock.config.Constant;
 import com.cxwl.hurry.doorlock.config.DeviceConfig;
-import com.cxwl.hurry.doorlock.db.Lian;
-import com.cxwl.hurry.doorlock.db.LogDoor;
 import com.cxwl.hurry.doorlock.entity.GuangGaoBean;
 import com.cxwl.hurry.doorlock.entity.NoticeBean;
 import com.cxwl.hurry.doorlock.entity.XdoorBean;
@@ -76,12 +71,11 @@ import com.cxwl.hurry.doorlock.face.ArcsoftManager;
 import com.cxwl.hurry.doorlock.face.FaceDB;
 import com.cxwl.hurry.doorlock.face.PhotographActivity2;
 import com.cxwl.hurry.doorlock.interfac.TakePictureCallback;
+import com.cxwl.hurry.doorlock.service.DoorLock;
 import com.cxwl.hurry.doorlock.service.MainService;
 import com.cxwl.hurry.doorlock.utils.AdvertiseHandler;
-import com.cxwl.hurry.doorlock.utils.Ajax;
 import com.cxwl.hurry.doorlock.utils.DbUtils;
 import com.cxwl.hurry.doorlock.utils.DialogUtil;
-import com.cxwl.hurry.doorlock.utils.DoorLock;
 import com.cxwl.hurry.doorlock.utils.HttpApi;
 import com.cxwl.hurry.doorlock.utils.HttpUtils;
 import com.cxwl.hurry.doorlock.utils.Intenet;
@@ -89,7 +83,6 @@ import com.cxwl.hurry.doorlock.utils.JsonUtil;
 import com.cxwl.hurry.doorlock.utils.NetWorkUtils;
 import com.cxwl.hurry.doorlock.utils.NfcReader;
 import com.cxwl.hurry.doorlock.utils.SoundPoolUtil;
-import com.cxwl.hurry.doorlock.utils.UploadUtil;
 import com.google.gson.reflect.TypeToken;
 import com.guo.android_extend.java.AbsLoop;
 import com.guo.android_extend.widget.CameraFrameData;
@@ -98,16 +91,11 @@ import com.guo.android_extend.widget.CameraSurfaceView;
 import com.qiniu.android.common.FixedZone;
 import com.qiniu.android.http.ResponseInfo;
 import com.qiniu.android.storage.Configuration;
-import com.qiniu.android.storage.UpCancellationSignal;
 import com.qiniu.android.storage.UpCompletionHandler;
-import com.qiniu.android.storage.UpProgressHandler;
 import com.qiniu.android.storage.UploadManager;
-import com.qiniu.android.storage.UploadOptions;
 import com.youth.banner.Banner;
 import com.youth.banner.BannerConfig;
-import com.youth.banner.listener.OnBannerListener;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
@@ -122,43 +110,34 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.UUID;
 
-import javax.crypto.Mac;
-
 import jni.util.Utils;
 
+import static com.cxwl.hurry.doorlock.config.Constant.CALLING_MODE;
 import static com.cxwl.hurry.doorlock.config.Constant.CALL_MODE;
+import static com.cxwl.hurry.doorlock.config.Constant.ERROR_MODE;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_ADVERTISE_REFRESH;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_ADVERTISE_REFRESH_PIC;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_CALLMEMBER_ERROR;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_CALLMEMBER_NO_ONLINE;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_CALLMEMBER_SERVER_ERROR;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_CALLMEMBER_TIMEOUT;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_CANCEL_CALL;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_DISCONNECT_VIEDO;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_DETECT_CHECK;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_DETECT_CONTRAST;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_DETECT_INPUT;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_DETECT_PAUSE;
-import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_DOWNLOAD;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_INFO;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_OPENLOCK;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_GET_NOTICE;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_ID_CARD_DETECT_INPUT;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_ID_CARD_DETECT_PAUSE;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_ID_CARD_DETECT_RESTART;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_INPUT_CARDINFO;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_INVALID_CARD;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_LIXIAN_PASSWORD_CHECK_AFTER;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_LOADLOCAL_DATA;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_LOCK_OPENED;
-import static com.cxwl.hurry.doorlock.config.Constant.arc_appid;
-import static com.cxwl.hurry.doorlock.config.Constant.fr_key;
-import static com.cxwl.hurry.doorlock.config.Constant.ft_key;
-import static com.cxwl.hurry.doorlock.config.DeviceConfig.DEVICE_KEYCODE_POUND;
-import static com.cxwl.hurry.doorlock.config.DeviceConfig.DEVICE_KEYCODE_STAR;
-import static com.cxwl.hurry.doorlock.config.Constant.CALLING_MODE;
-
-import static com.cxwl.hurry.doorlock.config.Constant.ERROR_MODE;
-import static com.cxwl.hurry.doorlock.config.Constant.MSG_CALLMEMBER_NO_ONLINE;
-import static com.cxwl.hurry.doorlock.config.Constant.MSG_CALLMEMBER_SERVER_ERROR;
-import static com.cxwl.hurry.doorlock.config.Constant.MSG_CALLMEMBER_TIMEOUT;
-import static com.cxwl.hurry.doorlock.config.Constant.MSG_CANCEL_CALL;
-import static com.cxwl.hurry.doorlock.config.Constant.MSG_DISCONNECT_VIEDO;
-import static com.cxwl.hurry.doorlock.config.Constant.MSG_INPUT_CARDINFO;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_LOGIN_AFTER;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_PASSWORD_CHECK;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_RTC_DISCONNECT;
@@ -168,6 +147,11 @@ import static com.cxwl.hurry.doorlock.config.Constant.MSG_RTC_REGISTER;
 import static com.cxwl.hurry.doorlock.config.Constant.ONVIDEO_MODE;
 import static com.cxwl.hurry.doorlock.config.Constant.PASSWORD_CHECKING_MODE;
 import static com.cxwl.hurry.doorlock.config.Constant.PASSWORD_MODE;
+import static com.cxwl.hurry.doorlock.config.Constant.arc_appid;
+import static com.cxwl.hurry.doorlock.config.Constant.fr_key;
+import static com.cxwl.hurry.doorlock.config.Constant.ft_key;
+import static com.cxwl.hurry.doorlock.config.DeviceConfig.DEVICE_KEYCODE_POUND;
+import static com.cxwl.hurry.doorlock.config.DeviceConfig.DEVICE_KEYCODE_STAR;
 import static com.cxwl.hurry.doorlock.utils.NetWorkUtils.NETWOKR_TYPE_ETHERNET;
 import static com.cxwl.hurry.doorlock.utils.NetWorkUtils.NETWOKR_TYPE_MOBILE;
 import static com.cxwl.hurry.doorlock.utils.NetWorkUtils.NETWORK_TYPE_NONE;
@@ -194,6 +178,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private ImageView iv_setting, imageView, wifi_image;
     private TextView headPaneTextView, tv_message, tv_battery, showMacText;
     private EditText et_blackno, et_unitno, tv_input_text;
+    private TextView tv_gonggao_title;
 
     private Handler handler;
     private Messenger mainMessage;
@@ -275,7 +260,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         hwservice.EnterFullScreen();//hwservice为appLibs的服务
 
         initView();//初始化View
-        initDB();//初始化数据库
+//        initDB();//初始化数据库
         initQiniu();//初始化七牛
         initScreen();
         initHandle();
@@ -469,6 +454,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         showMacText = (TextView) findViewById(R.id.show_mac);//mac地址
         videoLayout = (LinearLayout) findViewById(R.id.ll_video);//用于添加视频通话的根布局
         banner = (Banner) findViewById(R.id.banner);//用于添加视频通话的根布局
+        tv_gonggao_title = (TextView) findViewById(R.id.gonggao_title);
         //getBgBanners();// 网络获得轮播背景图片数据
 
         rl.setOnClickListener(this);
@@ -592,10 +578,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         ArrayList<NoticeBean> noticeBeanList = (ArrayList<NoticeBean>) JsonUtil.parseJsonToList
                                 (value, new TypeToken<List<NoticeBean>>() {
                         }.getType());
-                        String neirong = noticeBeanList.get(0).getNeirong();
+
+                        NoticeBean noticeBean = noticeBeanList.get(0);
                         Log.e(TAG, "设置通告" + noticeBeanList.toString());
 
-                        setTongGaoInfo(neirong);
+                        setTongGaoInfo(noticeBean);
                         break;
                     case MSG_ADVERTISE_REFRESH://刷新广告
                         Log.i(TAG, "刷新广告");
@@ -703,7 +690,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     }
                 });
             } else {
-                Log.i(TAG, "有网");
+                HttpApi.e("有网");
                 setStatusBarIcon(true);
                 initSystemtime();
             }
@@ -764,7 +751,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     /**
-     * 每隔一秒检查一次网络是否可用
+     * 每隔十秒检查一次网络是否可用
      */
     private void initNetListen() {
         netTimer.schedule(new TimerTask() {
@@ -776,6 +763,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         //关闭读卡
                         disableReaderMode();//没网时打开过一次
                         //时间更新
+                        HttpApi.e("网络监测线程");
                         initSystemtime();
                     } else {//当前没网，之前有网
                         enableReaderMode(); //打开读卡
@@ -804,6 +792,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      * 校时(校正本地时间)  之后放在心跳包接口里做
      */
     private void initSystemtime() {
+        HttpApi.e("开始校时 "+NetWorkUtils.isNetworkAvailable(this));
         if (NetWorkUtils.isNetworkAvailable(this)) {
             new Thread(new Runnable() {
                 @Override
@@ -816,6 +805,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             String time = d.format(c.getTime());
                             cmd = cmd.replace("[_update_time]", time);
                             // TODO: 2018/5/9 这里的校时要用到工控相关hwservice,暂时不注释,之后解决
+                            HttpApi.e("走了吗"+cmd.toString());
                             if (hwservice==null){
                                 return;
                             }
@@ -825,9 +815,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             HttpApi.e("系统与服务器时间差小，不更新");
                         }
                     } else {
-                        HttpApi.i("获取服务器时间出错！");
+                        HttpApi.e("获取服务器时间出错！");
                     }
-
                 }
             }).start();
         }
@@ -1826,11 +1815,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         });
     }
 
-    private void setTongGaoInfo(final String value) {
+    private void setTongGaoInfo(final NoticeBean value) {
         handler.post(new Runnable() {
             @Override
             public void run() {
-                setTextView(R.id.gonggao, value);
+                setTextView(R.id.gonggao, value.getNeirong());
+                setTextView(R.id.gonggao_title,value.getBiaoti());
             }
         });
     }

@@ -22,7 +22,6 @@ import com.arcsoft.facetracking.AFT_FSDKError;
 import com.arcsoft.facetracking.AFT_FSDKFace;
 import com.arcsoft.facetracking.AFT_FSDKVersion;
 import com.cxwl.hurry.doorlock.R;
-import com.cxwl.hurry.doorlock.config.Constant;
 import com.cxwl.hurry.doorlock.config.DeviceConfig;
 import com.guo.android_extend.widget.CameraFrameData;
 import com.guo.android_extend.widget.CameraGLSurfaceView;
@@ -37,15 +36,16 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import static com.cxwl.hurry.doorlock.config.Constant.PIC_PREFIX;
 import static com.cxwl.hurry.doorlock.config.Constant.arc_appid;
 import static com.cxwl.hurry.doorlock.config.Constant.ft_key;
+import static com.cxwl.hurry.doorlock.config.DeviceConfig.LOCAL_FACE_PATH;
 
 /**
  * Created by William on 2018/5/17.
  */
 
-public class PhotographActivity2 extends AppCompatActivity implements Camera.PictureCallback, View.OnClickListener, CameraSurfaceView.OnCameraListener {
+public class PhotographActivity2 extends AppCompatActivity implements Camera.PictureCallback,
+        View.OnClickListener, CameraSurfaceView.OnCameraListener {
 
     private static final String TAG = PhotographActivity2.class.getSimpleName();
 
@@ -74,7 +74,8 @@ public class PhotographActivity2 extends AppCompatActivity implements Camera.Pic
         mSurfaceView.setupGLSurafceView(mGLSurfaceView, true, true, 0);
         mSurfaceView.debug_print_fps(true, false);
 
-        AFT_FSDKError err = engine.AFT_FSDK_InitialFaceEngine(arc_appid, ft_key, AFT_FSDKEngine.AFT_OPF_0_HIGHER_EXT, 16, 5);
+        AFT_FSDKError err = engine.AFT_FSDK_InitialFaceEngine(arc_appid, ft_key, AFT_FSDKEngine
+                .AFT_OPF_0_HIGHER_EXT, 16, 5);
         Log.d(TAG, "AFT_FSDK_InitialFaceEngine =" + err.getCode());
         err = engine.AFT_FSDK_GetVersion(version);
         Log.d(TAG, "AFT_FSDK_GetVersion:" + version.toString() + "," + err.getCode());
@@ -101,7 +102,8 @@ public class PhotographActivity2 extends AppCompatActivity implements Camera.Pic
                             runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
-                                    Toast.makeText(PhotographActivity2.this, "拍照成功", Toast.LENGTH_LONG).show();
+                                    Toast.makeText(PhotographActivity2.this, "拍照成功", Toast
+                                            .LENGTH_LONG).show();
                                     finishActivity();
                                 }
                             });
@@ -152,18 +154,26 @@ public class PhotographActivity2 extends AppCompatActivity implements Camera.Pic
     }
 
     private File getOutputMediaFile() {
-        //get the mobile Pictures directory
+//        get the mobile Pictures directory
         File picDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
         //get the current time
         String timeStamp = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
-        String path = picDir.getPath() + File.separator + PIC_PREFIX + timeStamp + ".jpg";// File.separator,与系统有关的默认名称分隔符
+        String path = picDir.getPath() + File.separator + LOCAL_FACE_PATH + File.separator +
+                LOCAL_FACE_PATH + timeStamp + ".jpg";//File.separator,与系统有关的默认名称分隔符
         ///storage/sdcard/Pictures/arcsoft_20180315154351.jpg
+
+//        String SDCard = Environment.getExternalStorageDirectory() + "";
+//        String timeStamp = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
+//        String path = SDCard + "/" + DeviceConfig.LOCAL_FACE_PATH + "/" + timeStamp + ".jpg";
+// /storage/sdcard/myface/20180521164044.jpg
+//        /storage/sdcard/Pictures/myface20180521164533.jpg
         Log.v("人脸识别", "getOutputMediaFile-->" + path);
         return new File(path);
     }
 
     /**
      * 保存照片
+     *
      * @param data
      * @return
      */
@@ -307,7 +317,8 @@ public class PhotographActivity2 extends AppCompatActivity implements Camera.Pic
 
     @Override
     public Object onPreview(byte[] data, int width, int height, int format, long timestamp) {
-        AFT_FSDKError err = engine.AFT_FSDK_FaceFeatureDetect(data, width, height, AFT_FSDKEngine.CP_PAF_NV21, result);
+        AFT_FSDKError err = engine.AFT_FSDK_FaceFeatureDetect(data, width, height, AFT_FSDKEngine
+                .CP_PAF_NV21, result);
         Log.d(TAG, "AFT_FSDK_FaceFeatureDetect =" + err.getCode());
         Log.d(TAG, "Face=" + result.size());
         for (AFT_FSDKFace face : result) {

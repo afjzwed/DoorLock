@@ -189,8 +189,8 @@
                         android:layout_toRightOf="@+id/tv_input_label"
                         android:gravity="center_vertical"
                         android:hint="确认键切换房号/密码"
-                        android:textColor="#ffffff"
                         android:maxLength="11"
+                        android:textColor="#ffffff"
                         android:textColorHint="#878686"
                         android:textSize="20sp"
                         android:textStyle="bold"/>
@@ -377,19 +377,38 @@
                 android:visibility="gone"/>
         </FrameLayout>
 
-        <!--通告-->
-        <TextView
-            android:id="@+id/gonggao"
+        <LinearLayout
             android:layout_width="240dp"
             android:layout_height="match_parent"
-            android:ellipsize="marquee"
-            android:focusable="true"
-            android:focusableInTouchMode="true"
-            android:marqueeRepeatLimit="marquee_forever"
-            android:scrollHorizontally="true"
-            android:text="我们发大水口附近我们发大水口附近防守打我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送法胜多负少防守打法爽肤水发送我们发大水口附近防守打我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送法胜多负少防守打法爽肤水发送我们发大水口附近防守打我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送法胜多负少防守打法爽肤水发送我们发大水口附近防守打我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送法胜多负少防守打法爽肤水发送我们发大水口附近防守打我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送法胜多负少防守打法爽肤水发送我们发大水口附近防守打我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送法胜多负少防守打法爽肤水发送防守打我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送我们发大水口附近防守打法胜多负少防守打法爽肤水发送法胜多负少防守打法爽肤水发送"
-            android:textColor="@android:color/white"
-            android:textSize="20sp"/>
+            android:orientation="vertical">
+
+            <!--通告标题-->
+            <TextView
+                android:id="@+id/gonggao_title"
+                android:layout_width="match_parent"
+                android:ellipsize="marquee"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:text="标题"
+                android:textColor="@android:color/white"
+                android:textSize="20sp"/>
+
+            <!--通告内容-->
+            <TextView
+                android:id="@+id/gonggao"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:ellipsize="marquee"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                android:marqueeRepeatLimit="marquee_forever"
+                android:scrollHorizontally="true"
+                android:text="    暂无通知"
+                android:textColor="@android:color/white"
+                android:textSize="20sp"/>
+
+        </LinearLayout>
+
 
     </LinearLayout>
 
@@ -402,7 +421,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:layout_toLeftOf="@+id/face_container_rel"
-           />
+            />
 
         <!--人脸识别-->
         <LinearLayout

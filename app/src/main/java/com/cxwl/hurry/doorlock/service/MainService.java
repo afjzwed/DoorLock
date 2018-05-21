@@ -16,7 +16,6 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.Messenger;
 import android.os.RemoteException;
-import android.support.annotation.IntDef;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
@@ -37,7 +36,6 @@ import com.cxwl.hurry.doorlock.entity.DoorBean;
 import com.cxwl.hurry.doorlock.entity.FaceUrlBean;
 import com.cxwl.hurry.doorlock.entity.GuangGaoBean;
 import com.cxwl.hurry.doorlock.entity.LogListBean;
-import com.cxwl.hurry.doorlock.entity.NoticeBean;
 import com.cxwl.hurry.doorlock.entity.XdoorBean;
 import com.cxwl.hurry.doorlock.entity.YeZhuBean;
 import com.cxwl.hurry.doorlock.http.API;
@@ -47,7 +45,6 @@ import com.cxwl.hurry.doorlock.utils.Ajax;
 import com.cxwl.hurry.doorlock.utils.BitmapUtils;
 import com.cxwl.hurry.doorlock.utils.CardRecord;
 import com.cxwl.hurry.doorlock.utils.DbUtils;
-import com.cxwl.hurry.doorlock.utils.DoorLock;
 import com.cxwl.hurry.doorlock.utils.HttpApi;
 import com.cxwl.hurry.doorlock.utils.HttpUtils;
 import com.cxwl.hurry.doorlock.utils.InstallUtil;
@@ -56,18 +53,11 @@ import com.cxwl.hurry.doorlock.utils.MacUtils;
 import com.cxwl.hurry.doorlock.utils.SPUtil;
 import com.cxwl.hurry.doorlock.utils.ShellUtils;
 import com.cxwl.hurry.doorlock.utils.SoundPoolUtil;
-import com.cxwl.hurry.doorlock.utils.ToastUtil;
-import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 import com.guo.android_extend.image.ImageConverter;
 import com.zhy.http.okhttp.OkHttpUtils;
-import com.zhy.http.okhttp.callback.Callback;
-import com.zhy.http.okhttp.callback.FileCallBack;
 import com.zhy.http.okhttp.callback.StringCallback;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -92,8 +82,6 @@ import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import javax.crypto.Mac;
-
 import jni.http.HttpManager;
 import jni.http.HttpResult;
 import jni.http.RtcHttpClient;
@@ -110,7 +98,6 @@ import rtc.sdk.iface.ConnectionListener;
 import rtc.sdk.iface.Device;
 import rtc.sdk.iface.DeviceListener;
 import rtc.sdk.iface.RtcClient;
-
 
 import static com.cxwl.hurry.doorlock.config.Constant.CALL_VIDEO_CONNECTING;
 import static com.cxwl.hurry.doorlock.config.Constant.CALL_WAITING;
@@ -148,7 +135,6 @@ import static com.cxwl.hurry.doorlock.config.Constant.SP_XINTIAO_TIME;
 import static com.cxwl.hurry.doorlock.config.Constant.arc_appid;
 import static com.cxwl.hurry.doorlock.config.Constant.fd_key;
 import static com.cxwl.hurry.doorlock.config.Constant.fr_key;
-import static com.cxwl.hurry.doorlock.config.Constant.ft_key;
 
 
 /**
@@ -1541,22 +1527,22 @@ public class MainService extends Service {
      * 开启登录线程
      */
     protected void initClientInfo() {
-//        new Thread() {
-//            public void run() {
-//                boolean result = false;
-//                try {
-//                    do {
-//                        result = deviceLogin();
-//                        if (!result) {
-//                            sleep(1000 * 10);//重新登录间隔10秒
-//                        }
-//                    } while (!result);
-//                } catch (Exception e) {
-//                }
-//            }
-//        }.start();
+        new Thread() {
+            public void run() {
+                boolean result = false;
+                try {
+                    do {
+                        result = deviceLogin();
+                        if (!result) {
+                            sleep(1000 * 10);//重新登录间隔10秒
+                        }
+                    } while (!result);
+                } catch (Exception e) {
+                }
+            }
+        }.start();
 
-        getClientInfo();
+//        getClientInfo();
     }
 
     /**
@@ -1568,7 +1554,7 @@ public class MainService extends Service {
         boolean resultValue = false;
         try {
             String url = API.DEVICE_LOGIN;
-//            String url = API.CONNECT_REPORT;
+
             JSONObject data = new JSONObject();
             data.put("mac", mac);
             data.put("key", key);
