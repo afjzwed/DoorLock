@@ -11,7 +11,8 @@ public class DeviceConfig {
 //    public static final String SERVER_URL="http://www.lockaxial.com";
     public static final String SERVER_URL = "http://192.168.8.142:8084";
 
-    public static final String GET_QINIUTOKEN = "http://wy.iot.xin/qiniu/qiniu_getQiniuToken.action";
+//    public static final String GET_QINIUTOKEN = "http://wy.iot.xin/qiniu/qiniu_getQiniuToken.action";
+    public static final String GET_QINIUTOKEN = "http://192.168.8.133:8080/wygl/qiniu/qiniu_getQiniuToken.action";//七牛访问地址
     //   public static final String SERVER_URL = "http://www.lockaxial.com";
 
     public static final String LOCAL_FILE_PATH = "adv";//广告储存位置

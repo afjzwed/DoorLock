@@ -5,7 +5,7 @@ package com.cxwl.hurry.doorlock.interfac;
  */
 
 public  interface TakePictureCallback {
-    public void beforeTakePickture(final String thisValue, final boolean isCall, String uuid);
+    public void beforeTakePickture(final String thisValue,  String fileUrl,final boolean isCall, String uuid);
 
     public void afterTakePickture(final String thisValue, String fileUrl, final boolean isCall, String uuid);
 }

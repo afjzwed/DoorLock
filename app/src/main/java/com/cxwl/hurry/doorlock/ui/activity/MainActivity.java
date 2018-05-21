@@ -816,6 +816,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             String time = d.format(c.getTime());
                             cmd = cmd.replace("[_update_time]", time);
                             // TODO: 2018/5/9 这里的校时要用到工控相关hwservice,暂时不注释,之后解决
+                            if (hwservice==null){
+                                return;
+                            }
                             hwservice.execRootCommand(cmd);
                             HttpApi.e("时间更新：" + time);
                         } else {
@@ -1389,7 +1392,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             final String uuid = getUUID(); //随机生成UUID
             lastImageUuid = uuid;
             setImageUuidAvaibale(uuid);
-            callback.beforeTakePickture(thisValue, isCall, uuid);
+            //创建地址
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            String date = sdf.format(new Date(System.currentTimeMillis()));
+            final String curUrl = "upload/menjin/img/" + "android_" + date+".jpg";
+            callback.beforeTakePickture(thisValue,curUrl, isCall, uuid);
             Log.v("MainActivity", "开始启动拍照");
             new Thread() {
                 @Override
@@ -1401,7 +1408,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     }
                     final String thisUuid = uuid;
                     if (checkTakePictureAvailable(thisUuid)) {
-                        doTakePicture(thisValue, isCall, uuid, callback);
+                        doTakePicture(thisValue,curUrl, isCall, uuid, callback);
                     } else {
                         Log.v("MainActivity", "取消拍照");
                     }
@@ -1410,7 +1417,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    private synchronized void doTakePicture(final String thisValue, final boolean isCall, final String uuid, final
+    private synchronized void doTakePicture(final String thisValue, final String curUrl, final boolean isCall, final String uuid, final
     TakePictureCallback callback) {
         mCamerarelease = false;
         try {
@@ -1446,27 +1453,25 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream);
                             outputStream.close();
                             final String url = DeviceConfig.SERVER_URL + "/app/upload/image";
-                            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-mm-dd hh:mm:ss");
-                            String date = sdf.format(new Date(System.currentTimeMillis()));
-                            final String curUrl = "upload/menjin/img/" + "android_" + date;
+
                             if (checkTakePictureAvailable(uuid)) {
                                 new Thread() {
                                     @Override
                                     public void run() {
                                         Log.i(TAG, "开始上传照片");
-                                        String s = HttpApi.getInstance().loadHttpforGet(DeviceConfig.GET_QINIUTOKEN,
-                                                "");
-                                        String token = "";
-                                        if (s != null && !"".equals(s)) {
-                                            JSONObject jsonObject = Ajax.getJSONObject(s);
-
-                                            try {
-                                                token = (String) jsonObject.get("uptoken");
-                                            } catch (JSONException e) {
-                                                e.printStackTrace();
-                                            }
-                                        }
-                                        Log.e(TAG, "Token==" + token);
+//                                        String s = HttpApi.getInstance().loadHttpforGet(DeviceConfig.GET_QINIUTOKEN,
+//                                                "");
+//                                        String token = "";
+//                                        if (s != null && !"".equals(s)) {
+//                                            JSONObject jsonObject = Ajax.getJSONObject(s);
+//
+//                                            try {
+//                                                token = (String) jsonObject.get("uptoken");
+//                                            } catch (JSONException e) {
+//                                                e.printStackTrace();
+//                                            }
+//                                        }
+//                                        Log.e(TAG, "Token==" + token);
                                         Log.e(TAG, "file七牛储存地址：" + curUrl);
                                         Log.e(TAG, "file本地地址：" + file.getPath() + "file大小" + file.length());
                                         uploadManager.put(file.getPath(), curUrl, "", new UpCompletionHandler() {
@@ -1528,8 +1533,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     @Override
-    public void beforeTakePickture(String thisValue, boolean isCall, String uuid) {
-        startDialorPasswordDirectly(thisValue, null, isCall, uuid);
+    public void beforeTakePickture(String thisValue,String curUrl, boolean isCall, String uuid) {
+        startDialorPasswordDirectly(thisValue, curUrl, isCall, uuid);
     }
 
     @Override

@@ -38,7 +38,7 @@ public class Constant {
     public static final int MSG_RTC_NEWCALL = 10000;//收到新的来电
     public static final int MSG_RTC_ONVIDEO = 10001;//视频通话连接
     public static final int MSG_RTC_DISCONNECT = 10002;//视频通话断开
-    public static final int MSG_DISCONNECT_VIEDO = 20009;//
+    public static final int MSG_DISCONNECT_VIEDO = 200010;//
 
     public static final int MSG_CALLMEMBER_SERVER_ERROR = 12105; //呼叫服务器没返回值错误
     public static final int MSG_CALLMEMBER_ERROR = 10005;//呼叫错误

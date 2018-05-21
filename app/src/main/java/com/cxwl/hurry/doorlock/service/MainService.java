@@ -121,6 +121,7 @@ import static com.cxwl.hurry.doorlock.config.Constant.MSG_CALLMEMBER_NO_ONLINE;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_CALLMEMBER_SERVER_ERROR;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_CALLMEMBER_TIMEOUT;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_CANCEL_CALL;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_DISCONNECT_VIEDO;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_DOWNLOAD;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_INFO;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_OPENLOCK;
@@ -180,7 +181,7 @@ public class MainService extends Service {
     private Handler mHandler;
     private Messenger serviceMessage;
     private Messenger mainMessage;
-    public static String httpServerToken = null;//服务器拿到的token
+    public static String httpServerToken = "";//服务器拿到的token
     RtcClient rtcClient;
     boolean isRtcInit = false; //RtcSDK初始化状态
     //天翼登陆参数
@@ -289,6 +290,10 @@ public class MainService extends Service {
                         Log.i(TAG, "取消呼叫");
                         cancelCurrentCall();
                         break;
+                    case MSG_DISCONNECT_VIEDO:
+                        Log.i(TAG, "挂断正在通话的视频");
+                        disconnectCallingConnection();
+                        break;
                     case MSG_START_DIAL:
                         Log.i(TAG, "开始呼叫");
                         String[] parameters = (String[]) msg.obj;
@@ -328,7 +333,7 @@ public class MainService extends Service {
                         tempKey = parameters3[0];
                         imageUrl = parameters3[1];
                         imageUuid = parameters3[2];
-                        startCheckGuestPasswordAppendImage();
+                        //   startCheckGuestPasswordAppendImage();
                         break;
                     case MSG_CARD_INCOME: {
                         // TODO: 2018/5/8 下面的方法中进行卡信息处理（判定及开门等）
@@ -2162,6 +2167,17 @@ public class MainService extends Service {
     }
 
     /**
+     * 挂断正在进行的呼叫
+     */
+    protected void disconnectCallingConnection() {
+        if (callConnection != null) {
+            callConnection.disconnect();
+            callConnection = null;
+            sendMessageToMainAcitivity(MSG_RTC_DISCONNECT, "");
+        }
+    }
+
+    /**
      * 呼叫超时停止线程
      */
     private void stopTimeoutCheckThread() {
@@ -2249,8 +2265,8 @@ public class MainService extends Service {
             if (triedUserList.size() > 0) {
                 Iterator iterator = triedUserList.iterator();
                 while (iterator.hasNext()) {
-                    JSONObject userObject = (JSONObject) iterator.next();
-                    String username = (String) userObject.get("username");
+                    YeZhuBean userObject = (YeZhuBean) iterator.next();
+                    String username = userObject.getYezhu_dianhua();
                     if (username.length() == 17) {
                         username = username.replaceAll(":", "");
                     }
@@ -2671,7 +2687,7 @@ public class MainService extends Service {
                     AFR_FSDKEngine.CP_PAF_NV21, new Rect(result_afd.get(0).getRect()), result_afd.get(0).getDegree(),
                     result_afr);
             Log.d("com.arcsoft", "Face=" + result_afr.getFeatureData()[0] + "," + result_afr.getFeatureData()[1] + "," +
-                    "" + "" + "" + "" + "" + "" + "" + "" + "" + "result_afr" + result_afr.toString() + "  " +
+                    "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "result_afr" + result_afr.toString() + "  " +
                     result_afr.getFeatureData()[2] + "," + err_afr.getCode());
             if (err_afr.getCode() == err_afr.MOK) {//人脸特征检测成功
                 mAFR_FSDKFace = result_afr.clone();
