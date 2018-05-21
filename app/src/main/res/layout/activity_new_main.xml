@@ -397,18 +397,12 @@
         android:layout_width="match_parent"
         android:layout_height="200dp">
 
-        <ImageView
-            android:src="@drawable/ic_launcher"
-            android:layout_width="200dp"
-            android:layout_height="200dp"/>
-
-        <TextView
-            android:layout_centerVertical="true"
-            android:layout_marginLeft="200dp"
-            android:text="图片广告"
-            android:textSize="50sp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
+        <com.youth.banner.Banner
+            android:id="@+id/banner"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_toLeftOf="@+id/face_container_rel"
+           />
 
         <!--人脸识别-->
         <LinearLayout
