@@ -420,7 +420,7 @@
             android:id="@+id/banner"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_toLeftOf="@+id/face_container_rel"
+           android:layout_marginRight="357dp"
             />
 
         <!--人脸识别-->

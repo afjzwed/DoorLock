@@ -1381,6 +1381,18 @@ public class MainService extends Service {
     }
 
     /**
+     * 重置广告，图片，通知版本为0，下次登录时重新加载
+     */
+    private void saveVisionInfo() {
+
+        SPUtil.put(MainService.this, Constant.SP_VISION_GUANGGAO, 0f);
+        SPUtil.put(MainService.this, Constant.SP_VISION_GUANGGAO_VIDEO, 0f);
+        SPUtil.put(MainService.this, Constant.SP_VISION_TONGGAO, 0f);
+
+//        Log.e(TAG, "广告，图片，通知版本" + SPUtil.get(MainService.this, Constant.SP_VISION_GUANGGAO, 0f));
+    }
+
+    /**
      * 比对心跳接口当前版本信息
      *
      * @param connectReportBean
@@ -2709,6 +2721,8 @@ public class MainService extends Service {
     public void onDestroy() {
         super.onDestroy();
         Log.v("MainService", "onDestroy()");
+
+        saveVisionInfo();
         // TODO: 2018/5/15 还有资源未释放
 
         if (activityTimer != null) {
