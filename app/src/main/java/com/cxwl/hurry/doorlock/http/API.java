@@ -5,7 +5,7 @@ package com.cxwl.hurry.doorlock.http;
  */
 
 public interface API {
-    String HTTP_HOST = "http://192.168.8.142:8084";
+    String HTTP_HOST = "http://192.168.8.142:80";
 
     String DEVICE_LOGIN = HTTP_HOST + "/xdoor/device/deviceLogin";//登录
 

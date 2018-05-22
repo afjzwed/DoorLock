@@ -34,6 +34,8 @@
     <!--允许使用PowerManager的WakeLocks保持进程在休眠时从屏幕消失-->
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
 
+    <!-- 静默安装 -->
+    <uses-permission android:name="android.permission.INSTALL_PACKAGES" />
     <application
         android:name=".MainApplication"
         android:allowBackup="true"

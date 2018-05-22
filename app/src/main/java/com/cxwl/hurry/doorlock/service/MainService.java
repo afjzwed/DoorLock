@@ -82,6 +82,8 @@ import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import javax.crypto.Mac;
+
 import jni.http.HttpManager;
 import jni.http.HttpResult;
 import jni.http.RtcHttpClient;
@@ -135,6 +137,7 @@ import static com.cxwl.hurry.doorlock.config.Constant.SP_XINTIAO_TIME;
 import static com.cxwl.hurry.doorlock.config.Constant.arc_appid;
 import static com.cxwl.hurry.doorlock.config.Constant.fd_key;
 import static com.cxwl.hurry.doorlock.config.Constant.fr_key;
+import static com.cxwl.hurry.doorlock.config.DeviceConfig.LOCAL_APK_PATH;
 
 
 /**
@@ -774,6 +777,7 @@ public class MainService extends Service {
 
         if (lastFile != null) {//下载完成
             if (lastVersionStatus.equals("D")) {
+                Log.v(TAG, "UpdateService " + "  " + "lastFile:" + " " + lastFile.length());
                 Log.v("UpdateService", "change status to P");
                 lastVersionStatus = "P";//已下载,未安装
                 if (lastVersionStatus.equals("P")) {//版本状态为待安装
@@ -803,9 +807,12 @@ public class MainService extends Service {
         lastVersionStatus = "N";
         try {
             String url = API.VERSION_ADDRESS;
-            String result = HttpApi.getInstance().loadHttpforGet(url, httpServerToken);
-            OkHttpUtils.get().addHeader("Authorization", httpServerToken).build().execute(new StringCallback() {
-
+            Map<String, String> map = new HashMap<>();
+            map.put("mac", mac);
+            map.put("version", getVersionName());
+            OkHttpUtils.postString().url(url).content(JsonUtil.parseMapToJson(map)).mediaType(MediaType.parse
+                    ("application/json; " + "charset=utf-8")).addHeader("Authorization", httpServerToken).tag(this)
+                    .build().execute(new StringCallback() {
                 @Override
                 public void onError(Call call, Exception e, int id) {
                     Log.i(TAG, "onError 获取app下载地址" + e.toString());
@@ -815,9 +822,17 @@ public class MainService extends Service {
                 @Override
                 public void onResponse(String response, int id) {
                     Log.i(TAG, "onResponse 获取app下载地址" + response);
-                    String address = "";
-                    String fileName = "";
-                    downloadApp(address, fileName);
+
+                    String result = JsonUtil.getResult(response);
+                    final String address = JsonUtil.getFieldValue(result, "dizhi");
+                    final String fileName = "menjin";
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            downloadApp(address, fileName);
+                        }
+                    }).start();
+
                 }
             });
 
@@ -835,7 +850,7 @@ public class MainService extends Service {
      */
     protected void updateApp(String lastVersionFile) {
         String SDCard = Environment.getExternalStorageDirectory() + "";
-        String fileName = SDCard + "/" + lastVersionFile;
+        String fileName = SDCard + "/"+LOCAL_APK_PATH +"/"+ lastVersionFile+".apk";//文件存储路径;
         File file = new File(fileName);
         Log.v(TAG, "UpdateService " + "------>start Update App<------");
         if (true) {//如果本地版本低于网络版本
@@ -860,11 +875,11 @@ public class MainService extends Service {
             @Override
             public void run() {
                 String cmd = "pm install -r" + fileName;
-                HttpApi.i("安装命令：" + cmd);
+                HttpApi.i("UpdateService安装命令：" + cmd);
                 //以下两个方法应该等效
                 ShellUtils.CommandResult result = InstallUtil.executeCmd(cmd);
 //                ShellUtils.CommandResult commandResult = ShellUtils.execCommand(cmd, false);
-                HttpApi.i("安装结果：" + result.toString());
+                HttpApi.i("UpdateService安装结果：" + result.toString());
             }
         }).start();
     }
@@ -885,14 +900,19 @@ public class MainService extends Service {
             URL urlObject = new URL(url);
             HttpURLConnection conn = (HttpURLConnection) urlObject.openConnection();
             String SDCard = Environment.getExternalStorageDirectory() + "";
-            localFile = SDCard + "/" + fileName;//文件存储路径
+            localFile = SDCard + "/"+LOCAL_APK_PATH +"/"+ fileName+".apk";//文件存储路径
             Log.v(TAG, "downloadFile " + "File path: " + localFile);
             File file = new File(localFile);
             InputStream input = conn.getInputStream();
+            File fileParent = file.getParentFile();
+            if(!fileParent.exists()){
+                fileParent.mkdirs();
+            }
             if (!file.exists()) {
                 file.createNewFile();//新建文件
             } else {
                 Log.v(TAG, "downloadFile " + "File is exists ");
+                file.delete();
             }
             output = new FileOutputStream(file);
             //读取大文件
@@ -1944,7 +1964,11 @@ public class MainService extends Service {
 //            if (!rejectUserList.contains(from)) {
 //                rejectUserList.add(from);
 //            }
-        } else if (content.startsWith("{\"")) {
+        } else if (content.startsWith("{")) {
+            LogDoor logDoor = JsonUtil.parseJsonToBean(content, LogDoor.class);
+            if (!logDoor.getMac().equals(mac)){
+                return;
+            }
             cancelOtherMembers(from);
             Log.v("MainService", "用户直接开门，取消其他呼叫");
             resetCallMode();
@@ -1954,7 +1978,6 @@ public class MainService extends Service {
             //// TODO: 2018/5/16  暂时直接开锁
             sendMessageToMainAcitivity(MSG_LOCK_OPENED, "");//开锁
             //上传日志
-            LogDoor logDoor = JsonUtil.parseJsonToBean(content, LogDoor.class);
             List<LogDoor> list = new ArrayList<>();
             list.add(logDoor);
             createAccessLog(list);
@@ -2685,8 +2708,8 @@ public class MainService extends Service {
                     AFR_FSDKEngine.CP_PAF_NV21, new Rect(result_afd.get(0).getRect()), result_afd.get(0).getDegree(),
                     result_afr);
             Log.d("com.arcsoft", "Face=" + result_afr.getFeatureData()[0] + "," + result_afr.getFeatureData()[1] + "," +
-                    "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "result_afr" + result_afr.toString() + "  " +
-                    result_afr.getFeatureData()[2] + "," + err_afr.getCode());
+                    "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "result_afr" +
+                    result_afr.toString() + "  " + "" + result_afr.getFeatureData()[2] + "," + err_afr.getCode());
             if (err_afr.getCode() == err_afr.MOK) {//人脸特征检测成功
                 mAFR_FSDKFace = result_afr.clone();
                 // TODO: 2018/5/15 保存mAFR_FSDKFace人脸信息，操作数据库
