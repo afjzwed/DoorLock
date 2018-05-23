@@ -548,8 +548,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         // TODO: 2018/5/16   //做UI显示，并开启其他的任务
                         Log.i(TAG, "开锁");
                         onLockOpened();
-                        // TODO: 2018/5/21 暂时加上
-                        SoundPoolUtil.getSoundPoolUtil().loadVoice(getBaseContext(), 011111);
                         final Dialog weituoDialog = DialogUtil.showBottomDialog(MainActivity.this);
                         final TimerTask task = new TimerTask() {
                             @Override
@@ -2193,6 +2191,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public Camera setupCamera() {
 //        LogDoor.e(TAG, "相机" + "setupCamera");
 
+
         try {//这里其实不用捕捉错误
             mCamera = Camera.open();
 
@@ -2246,7 +2245,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      */
     @Override
     public void setupChanged(int format, int width, int height) {
-//        LogDoor.e(TAG, "相机" + "setupChanged");
+//        Log.e(TAG, "相机" + "setupChanged");
     }
 
     /**

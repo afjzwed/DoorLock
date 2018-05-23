@@ -352,8 +352,7 @@ public class MainService extends Service {
                         break;
                     }
                     case MSG_FACE_OPENLOCK:
-                        sendMessageToMainAcitivity(MSG_LOCK_OPENED, "");
-//                        openLock();
+                        openLock();
                         LogDoor data = new LogDoor();
                         data.setMac(mac);
                         data.setKaimenfangshi("3");
@@ -372,7 +371,6 @@ public class MainService extends Service {
         };
         serviceMessage = new Messenger(mHandler);
     }
-
 
     /**
      * 开启心跳线程
@@ -530,7 +528,8 @@ public class MainService extends Service {
             if ("0".equals(result)) {
                 Log.e(TAG, "-----------------密码开门成功  开门开门------------------");
                 //// TODO: 2018/5/16 调用开门接口
-                sendMessageToMainAcitivity(MSG_LOCK_OPENED, "");
+//                sendMessageToMainAcitivity(MSG_LOCK_OPENED, "");
+                openLock();
                 List<LogDoor> list = new ArrayList<>();
                 LogDoor logDoor = new LogDoor();
                 logDoor.setMac(mac);
@@ -555,7 +554,8 @@ public class MainService extends Service {
             if (result) {
                 Log.e(TAG, "-----------------离线密码开门成功  开门开门------------------");
                 //// TODO: 2018/5/16 调用开门接口
-                sendMessageToMainAcitivity(MSG_LOCK_OPENED, "");
+
+//                sendMessageToMainAcitivity(MSG_LOCK_OPENED, "");
                 List<LogDoor> list = new ArrayList<>();
                 LogDoor logDoor = new LogDoor();
                 logDoor.setMac(mac);
@@ -1975,8 +1975,7 @@ public class MainService extends Service {
             stopTimeoutCheckThread();
             //开门操作
             Log.e(TAG, "进行开门操作 开门开门");
-            //// TODO: 2018/5/16  暂时直接开锁
-            sendMessageToMainAcitivity(MSG_LOCK_OPENED, "");//开锁
+            openLock();
             //上传日志
             List<LogDoor> list = new ArrayList<>();
             list.add(logDoor);
@@ -2800,10 +2799,9 @@ public class MainService extends Service {
             Ka kaInfo = DbUtils.getInstans().getKaInfo(card);
             if (kaInfo != null) {//判断数据库中是否有卡
                 Log.i(TAG, "刷卡开门成功" + card);
-                sendMessageToMainAcitivity(MSG_LOCK_OPENED, "");
-//                 openLock();
+//                sendMessageToMainAcitivity(MSG_LOCK_OPENED, "");
+                 openLock();
                 Log.e(TAG, "onCard====:" + card);
-                // TODO: 2018/5/16 调用日志接口,传卡号 startCardAccessLog(card);
 
                 LogDoor data = new LogDoor();
                 data.setMac(mac);
