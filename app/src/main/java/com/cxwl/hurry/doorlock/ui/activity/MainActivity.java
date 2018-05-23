@@ -31,6 +31,7 @@ import android.os.Message;
 import android.os.Messenger;
 import android.os.RemoteException;
 import android.provider.Settings;
+import android.support.v4.view.ViewPager;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
 import android.util.DisplayMetrics;
@@ -62,8 +63,10 @@ import com.arcsoft.facetracking.AFT_FSDKVersion;
 import com.cxwl.hurry.doorlock.MainApplication;
 import com.cxwl.hurry.doorlock.R;
 import com.cxwl.hurry.doorlock.callback.AdverErrorCallBack;
+import com.cxwl.hurry.doorlock.callback.AdverTongJiCallBack;
 import com.cxwl.hurry.doorlock.callback.GlideImagerBannerLoader;
 import com.cxwl.hurry.doorlock.config.DeviceConfig;
+import com.cxwl.hurry.doorlock.entity.AdTongJiBean;
 import com.cxwl.hurry.doorlock.entity.GuangGaoBean;
 import com.cxwl.hurry.doorlock.entity.NoticeBean;
 import com.cxwl.hurry.doorlock.entity.XdoorBean;
@@ -197,7 +200,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private Camera camera = null;
     private SurfaceHolder autoCameraHolder = null;
     private SurfaceView autoCameraSurfaceView = null;
-    private boolean mCamerarelease = true; //判断照相机是否释放
+
     private AdvertiseHandler advertiseHandler = null;//广告播放类
     public appLibsService hwservice;//hwservice为安卓工控appLibs的服务
 
@@ -237,6 +240,20 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     Timer timer = new Timer();
 
+    private boolean mCamerarelease = true; //判断照相机是否释放
+    private Handler cameraHandler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            if (msg.what == 0x01) {
+                if (mCamerarelease) {
+                    cameraHandler.removeMessages(0x01);
+                    buildVideo();
+                } else {
+                    cameraHandler.sendEmptyMessageDelayed(0x01, 200);
+                }
+            }
+        }
+    };
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         // TODO: 2018/5/8  此处hwservice实例化没以MainActivity继承AndroidExActivityBase实现
@@ -280,8 +297,30 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         //初始化人脸相关与身份证识别
         initFaceDetectAndIDCard();
-
+//测试自动关广告
+      //  textColseAd();
     }
+//测试自动关广告
+    private void textColseAd() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(30000);
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            advertiseHandler.onDestroy();
+                        }
+                    });
+
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+    }
+
 /*************************************************初始化一些基本东西start
  * ********************************************/
     /**
@@ -331,6 +370,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private TextView textViewGongGao;
     private SurfaceView videoView;
     private AdverErrorCallBack adverErrorCallBack;
+    private AdverTongJiCallBack adverTongJiCallBack;
 
     protected void initAdvertiseHandler() {
         if (advertiseHandler == null) {
@@ -345,6 +385,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             @Override
             public void ErrorAdver() {
                 imageView.setVisibility(View.VISIBLE);
+            }
+        };
+        adverTongJiCallBack=new AdverTongJiCallBack(){
+            @Override
+            public void sendTj(List<AdTongJiBean> list) {
+                Log.e("adv", list.toString());
             }
         };
 //        advertiseHandler.initData(rows, dialMessenger, (currentStatus == ONVIDEO_MODE),
@@ -560,7 +606,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                 });
                             }
                         };
-                        timer.schedule(task, 500, 5000);
+                        timer.schedule(task, 2000, 5000);
                         break;
                     case MSG_INVALID_CARD:
                         //无效房卡
@@ -618,7 +664,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public void onAdvertiseRefresh(Object obj) {
         List<GuangGaoBean> obj1 = (List<GuangGaoBean>) obj;
         Log.d(TAG, "UpdateAdvertise: 8");
-        advertiseHandler.initData(obj1, mainMessage, (currentStatus == ONVIDEO_MODE), adverErrorCallBack);
+        advertiseHandler.initData(obj1, mainMessage, (currentStatus == ONVIDEO_MODE), adverErrorCallBack,adverTongJiCallBack);
     }
 
     /**
@@ -634,6 +680,24 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         banner.setBannerStyle(BannerConfig.NOT_INDICATOR);
         //设置图片集合
         banner.setImages(obj1);
+        banner.setDelayTime(10000);
+        banner.setOnPageChangeListener(new ViewPager.OnPageChangeListener() {
+            @Override
+            public void onPageScrolled(int i, float v, int i1) {
+                Log.i("banner", "onPageScrolled" + i);
+            }
+
+            @Override
+            public void onPageSelected(int i) {
+                Log.i("banner", "onPageSelected" + i);
+                //// TODO: 2018/5/22 这里记录广告播放次数 
+            }
+
+            @Override
+            public void onPageScrollStateChanged(int i) {
+                Log.i("banner", "onPageScrollStateChanged" + i);
+            }
+        });
         //banner设置方法全部调用完毕时最后调用
         banner.start();
     }
@@ -1320,10 +1384,20 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         setDialValue("正在和" + blockNo + "视频通话");
         initVideoViews();
         Log.e(TAG, "开始创建remoteView");
-        MainService.callConnection.buildVideo(remoteView);
+        if (mCamerarelease) {
+            buildVideo();
+        } else {
+            cameraHandler.sendEmptyMessageDelayed(0x01, 200);
+        }
+        videoLayout.setVisibility(View.VISIBLE);
         setVideoSurfaceVisibility(View.VISIBLE);
     }
-
+    private void buildVideo() {
+        if (MainService.callConnection != null) {
+            if (remoteView == null) return;
+            MainService.callConnection.buildVideo(remoteView);//此处接听过快的会导致崩溃
+        }
+    }
     /**
      * 创建本地view和远端
      */
@@ -1480,7 +1554,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                                 Log.v(TAG, "正常清除" + uuid);
                                                 try {
                                                     if (file != null) {
-                                                        file.deleteOnExit();
+                                                        file.delete();
                                                     }
                                                 } catch (Exception e) {
                                                 }
@@ -2509,6 +2583,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     @Override
     protected void onDestroy() {
+        Log.i(TAG, "onDestroy");
         unbindService(serviceConnection);
         unregisterReceiver(receive);
         disableReaderMode();

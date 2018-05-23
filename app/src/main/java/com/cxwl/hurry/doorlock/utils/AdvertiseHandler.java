@@ -15,6 +15,8 @@ import android.widget.TextView;
 
 
 import com.cxwl.hurry.doorlock.callback.AdverErrorCallBack;
+import com.cxwl.hurry.doorlock.callback.AdverTongJiCallBack;
+import com.cxwl.hurry.doorlock.entity.AdTongJiBean;
 import com.cxwl.hurry.doorlock.entity.GuangGaoBean;
 
 import org.json.JSONArray;
@@ -42,28 +44,35 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
     private MediaPlayer voicePlayer;
     private String mediaPlayerSource;
     private List<GuangGaoBean> list = new ArrayList<>();
+    private List<AdTongJiBean> listCount = new ArrayList<>();
     private int listIndex = 0;
     ImageDisplayThread imageDialpayThread = null;
     private JSONArray imageList = null;
     private int imageListIndex = 0;
     private int imagePeroid = 5000;
     private boolean surfaceViewCreate = false;
+    //统计
+    private List<AdTongJiBean> mTongJiBeanList;
+    private AdTongJiBean mAdTongJiBean;
+    private String start_time;
+    private String endTime;
+    private AdverTongJiCallBack mAdverTongJiCallBack;
 
     protected Messenger dialMessenger;
     private int position;
-    private Handler mHandler = new Handler(){
+    private Handler mHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
-            switch (msg.what){
+            switch (msg.what) {
                 case 0x01:
-                    Log.i("xiao_","检测SurfaceView是否被创建");
-                    if(surfaceViewCreate){
-                        Log.i("xiao_","检测到SurfaceView已经被创建");
+                    Log.i("xiao_", "检测SurfaceView是否被创建");
+                    if (surfaceViewCreate) {
+                        Log.i("xiao_", "检测到SurfaceView已经被创建");
                         mHandler.removeMessages(0x01);
                         handlerStart((AdverErrorCallBack) msg.obj);
-                    }else{
-                        Log.i("xiao_","检测到SurfaceView未被创建，延时200ms");
-                        sendHandlerMessage(0x01,msg.obj,200);
+                    } else {
+                        Log.i("xiao_", "检测到SurfaceView未被创建，延时200ms");
+                        sendHandlerMessage(0x01, msg.obj, 200);
                     }
                     break;
             }
@@ -85,7 +94,7 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
      */
     public void init(TextView textView, SurfaceView videoView, ImageView imageView) {
         Log.d("AdvertiseHandler", "UpdateAdvertise: init");
-        this.mTextView=textView;
+        this.mTextView = textView;
         this.videoView = videoView;
         this.imageView = imageView;
         prepareMediaView();
@@ -108,7 +117,7 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
         //创建
-        Log.i("xiao_","SurfaceView 创建成功");
+        Log.i("xiao_", "SurfaceView 创建成功");
         surfaceViewCreate = true;
         //必须在surface创建后才能初始化MediaPlayer,否则不会显示图像
         //startMediaPlay(mediaPlayerSource);
@@ -120,20 +129,30 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
         //销毁
-        Log.i("xiao_","SurfaceView 销毁成功");
+        Log.i("xiao_", "SurfaceView 销毁成功");
         surfaceViewCreate = false;
     }
 
-    public void initData(List<GuangGaoBean> rows, Messenger dialMessenger, boolean isOnVideo, AdverErrorCallBack errorCallBack) {
+    public void initData(List<GuangGaoBean> rows, Messenger dialMessenger, boolean isOnVideo, AdverErrorCallBack
+            errorCallBack,AdverTongJiCallBack mCallBack) {
         this.dialMessenger = dialMessenger;
-            list = rows;
-            listIndex = 0;
-            //initScreen();
-            play();
-            if (isOnVideo) {
-                pause(errorCallBack);
-            }
+        list = rows;
+        listIndex = 0;
+        mAdverTongJiCallBack=mCallBack;
+        //initScreen();
+        initInterger();
+        play();
+        if (isOnVideo) {
+            pause(errorCallBack);
+        }
 
+    }
+
+    private void initInterger() {
+        for (int i = 0; i < list.size(); i++) {
+            AdTongJiBean tongJiBean = new AdTongJiBean();
+            listCount.add(tongJiBean);
+        }
     }
 
     public void next() {
@@ -147,23 +166,23 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
 
     protected String getCurrentAdType() {
         String adType = "2";
-            if (list != null && list.size() > 0) {
-                GuangGaoBean item = list.get(listIndex);
-                adType = item.getLeixing();
-            }
+        if (list != null && list.size() > 0) {
+            GuangGaoBean item = list.get(listIndex);
+            adType = item.getLeixing();
+        }
 
         return adType;
     }
 
     public void play() {
 
-            GuangGaoBean item = list.get(listIndex);
-            String adType = item.getLeixing();
-            if (adType.equals("1")) {
-                playVideo(item);
-            } else if (adType.equals("2")) {
-                playImage(item);
-            }
+        GuangGaoBean item = list.get(listIndex);
+        String adType = item.getLeixing();
+        if (adType.equals("1")) {
+            playVideo(item);
+        } else if (adType.equals("2")) {
+            playImage(item);
+        }
 
     }
 
@@ -174,6 +193,7 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
 
             String source = HttpUtils.getLocalFileFromUrl(fileUrls);
             if (source != null) {
+                start_time = ""+System.currentTimeMillis();
                 mTextView.setVisibility(View.VISIBLE);
                 videoView.setVisibility(View.VISIBLE);
                 imageView.setVisibility(View.INVISIBLE);
@@ -182,7 +202,7 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
                 startMediaPlay(mediaPlayerSource);
             } else {
                 Log.e("广告", "next");
-              //  next();
+                //  next();
             }
         } catch (Exception e) {
         }
@@ -190,18 +210,18 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
 
     public void playImage(GuangGaoBean item) {
 
-            String fileUrls = item.getNeirong();
+        String fileUrls = item.getNeirong();
 
-            String source = HttpUtils.getLocalFileFromUrl(fileUrls);
-            if (source != null) {
-                videoView.setVisibility(View.INVISIBLE);
-                imageView.setVisibility(View.VISIBLE);
-                startImageDisplay(item);
-                initVoicePlayer();
-                startVoicePlay(source);
-            } else {
-                next();
-            }
+        String source = HttpUtils.getLocalFileFromUrl(fileUrls);
+        if (source != null) {
+            videoView.setVisibility(View.INVISIBLE);
+            imageView.setVisibility(View.VISIBLE);
+            startImageDisplay(item);
+            initVoicePlayer();
+            startVoicePlay(source);
+        } else {
+            next();
+        }
 
     }
 
@@ -209,6 +229,7 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
         stopImageDisplay();
         Log.v("AdvertiseHandler", "------>start image display thread<-------" + new Date());
         imageDialpayThread = new ImageDisplayThread() {
+            @Override
             public void run() {
                 showImage(item);
                 while (!isInterrupted() && isWorking) { //检查线程没有被停止
@@ -240,11 +261,11 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
 
     public void showImage(GuangGaoBean item) {
 
-       //     JSONObject image = imageList.getJSONObject(imageListIndex);
-            String imageFile = item.getNeirong();
-            if (dialMessenger != null) {
-                sendDialMessenger(MSG_ADVERTISE_IMAGE, imageFile);
-            }
+        //     JSONObject image = imageList.getJSONObject(imageListIndex);
+        String imageFile = item.getNeirong();
+        if (dialMessenger != null) {
+            sendDialMessenger(MSG_ADVERTISE_IMAGE, imageFile);
+        }
 
     }
 
@@ -278,7 +299,7 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
         mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
             @Override
             public void onCompletion(MediaPlayer mp) {
-                Log.i("xiao_","视频播放完成，继续播放下一个视频文件");
+                Log.i("xiao_", "视频播放完成，继续播放下一个视频文件");
                 onMediaPlayerComplete();
             }
         });
@@ -305,6 +326,15 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
 
     protected void onMediaPlayerComplete() {
         //mediaPlayer.release();
+        endTime = System.currentTimeMillis() + "";
+        mTongJiBeanList=new ArrayList<>();
+        mAdTongJiBean= new AdTongJiBean();
+        mAdTongJiBean.setStart_time(start_time);
+        mAdTongJiBean.setEnd_time(endTime);
+        mAdTongJiBean.setAdd_id(1);
+        mTongJiBeanList.add(mAdTongJiBean);
+        mAdverTongJiCallBack.sendTj(mTongJiBeanList);
+
         next();
     }
 
@@ -354,6 +384,10 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
         } catch (IllegalStateException e) {
             Log.d("AdvertiseHandler", "UpdateAdvertise: onDestroy error");
         }
+        Log.e("AdvertiseHandler", "停止播放");
+        videoView.setVisibility(View.GONE);
+        imageView.setVisibility(View.VISIBLE);
+        voicePlayer=null;
     }
 
     public void onStop() {
@@ -384,37 +418,37 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
     }
 
     public void start(AdverErrorCallBack errorCallBack) {
-        sendHandlerMessage(0x01,errorCallBack,0);
+        sendHandlerMessage(0x01, errorCallBack, 0);
     }
 
-    private void sendHandlerMessage(int what, Object msg, int delay){
+    private void sendHandlerMessage(int what, Object msg, int delay) {
         Message message = new Message();
         message.what = what;
-        if(msg!=null){
+        if (msg != null) {
             message.obj = msg;
         }
-        if(delay>0){
-            mHandler.sendMessageDelayed(message,delay);
-        }else{
-           mHandler.sendMessage(message);
+        if (delay > 0) {
+            mHandler.sendMessageDelayed(message, delay);
+        } else {
+            mHandler.sendMessage(message);
         }
 
     }
 
-    private void handlerStart(AdverErrorCallBack errorCallBack){
+    private void handlerStart(AdverErrorCallBack errorCallBack) {
         try {
-            Log.i("xiao_","handlerStart->");
+            Log.i("xiao_", "handlerStart->");
             if (mediaPlayer != null) {
                 if (!mediaPlayer.isPlaying()) {
-                    Log.i("xiao_","handlerStart->setDisplay");
+                    Log.i("xiao_", "handlerStart->setDisplay");
                     mediaPlayer.setDisplay(surfaceHolder);
-                    Log.i("xiao_","handlerStart->start");
+                    Log.i("xiao_", "handlerStart->start");
                     int vis = videoView.getVisibility();
-                    Log.i("xiao_","SurfaceView is show = "+ vis);
+                    Log.i("xiao_", "SurfaceView is show = " + vis);
                     mediaPlayer.start();
                 }
-            }else{
-                Log.i("xiao_","mediaPlayer = null");
+            } else {
+                Log.i("xiao_", "mediaPlayer = null");
             }
             if (getCurrentAdType().equals("V")) {
             } else if (getCurrentAdType().equals("I")) {

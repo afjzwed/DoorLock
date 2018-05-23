@@ -31,6 +31,7 @@ import com.cxwl.hurry.doorlock.config.Constant;
 import com.cxwl.hurry.doorlock.config.DeviceConfig;
 import com.cxwl.hurry.doorlock.db.Ka;
 import com.cxwl.hurry.doorlock.db.LogDoor;
+import com.cxwl.hurry.doorlock.entity.AdTongJiBean;
 import com.cxwl.hurry.doorlock.entity.ConnectReportBean;
 import com.cxwl.hurry.doorlock.entity.DoorBean;
 import com.cxwl.hurry.doorlock.entity.FaceUrlBean;
@@ -53,6 +54,7 @@ import com.cxwl.hurry.doorlock.utils.MacUtils;
 import com.cxwl.hurry.doorlock.utils.SPUtil;
 import com.cxwl.hurry.doorlock.utils.ShellUtils;
 import com.cxwl.hurry.doorlock.utils.SoundPoolUtil;
+import com.cxwl.hurry.doorlock.utils.StringUtils;
 import com.google.gson.reflect.TypeToken;
 import com.guo.android_extend.image.ImageConverter;
 import com.zhy.http.okhttp.OkHttpUtils;
@@ -243,7 +245,35 @@ public class MainService extends Service {
         initHandler();
         // TODO: 2018/5/14 放在MainActivity中  initDB();
         initMacKey();
+        //testTJ();
+    }
 
+
+    /**
+     * 测试统计接口
+     */
+    private void testTJ() {
+        List<AdTongJiBean> list = new ArrayList<>();
+        AdTongJiBean ad = new AdTongJiBean();
+        ad.setAdd_id(20);
+        ad.setMac("44:2c:05:e6:9c:c5");
+        ad.setEnd_time("12324");
+        ad.setStart_time("454");
+        list.add(ad);
+        String json = JsonUtil.parseListToJson(list);
+        Log.e(TAG, "json" + json);
+        OkHttpUtils.postString().url(API.ADV_TONGJI).content(json).mediaType(MediaType.parse("application/json; " +
+                "charset=utf-8")).tag(this).build().execute(new StringCallback() {
+            @Override
+            public void onError(Call call, Exception e, int id) {
+                Log.e(TAG, "er");
+            }
+
+            @Override
+            public void onResponse(String response, int id) {
+                Log.e(TAG, "onResponse" + response);
+            }
+        });
     }
 
     /**
@@ -554,7 +584,7 @@ public class MainService extends Service {
             if (result) {
                 Log.e(TAG, "-----------------离线密码开门成功  开门开门------------------");
                 //// TODO: 2018/5/16 调用开门接口
-
+                openLock();
 //                sendMessageToMainAcitivity(MSG_LOCK_OPENED, "");
                 List<LogDoor> list = new ArrayList<>();
                 LogDoor logDoor = new LogDoor();
@@ -603,6 +633,7 @@ public class MainService extends Service {
                     if (null != response) {
                         String code = JsonUtil.getFieldValue(response, "code");
                         if (code.equals("0")) {
+
                             /**
                              * {"id":1,"ka":"1","ka_gx":"2018-05-09 17:20:50","lian":"1","lian_gx":"2018-05-09
                              * 17:20:42","guanggaopic":"1","guanggaovideo":"","guanggao_gx":"2018-05-09 17:56:49",
@@ -615,80 +646,91 @@ public class MainService extends Service {
                                     .class);
                             //测试上传日志
                             //test();
-                            //保存离线密码 默认123456
-                            Log.i(TAG, "心跳--服务器返回的离线密码" + connectReportBean.getLixian_mima());
-                            SPUtil.put(MainService.this, Constant.SP_LIXIAN_MIMA, connectReportBean.getLixian_mima());
-                            //保存心跳时间 默认一分钟
+
+                            if (StringUtils.isNoEmpty(connectReportBean.getLixian_mima())) {
+                                Log.i(TAG, "心跳--服务器返回的离线密码" + connectReportBean.getLixian_mima());
+                                SPUtil.put(MainService.this, Constant.SP_LIXIAN_MIMA, connectReportBean
+                                        .getLixian_mima());
+                            }
                             Log.i(TAG, "心跳--服务器返回的心跳时间（秒）" + (long) (connectReportBean.getXintiao_time() * 1000));
                             SPUtil.put(MainService.this, Constant.SP_XINTIAO_TIME, (long) (connectReportBean
                                     .getXintiao_time() * 1000));
-                            float kaVision = (float) SPUtil.get(MainService.this, Constant.SP_VISION_KA, 0f);
-                            Log.i(TAG, "心跳--当前卡版本：" + kaVision + "   服务器卡版本：" + Float.parseFloat(connectReportBean
-                                    .getKa()));
-                            if (Float.parseFloat(connectReportBean.getKa()) > kaVision) {
-                                Log.i(TAG, "心跳中有卡信息更新");
-                                getCardInfo(Float.parseFloat(connectReportBean.getKa()));
-                            }
-                            float lianVision = (float) SPUtil.get(MainService.this, Constant.SP_VISION_LIAN, 0f);
-                            if (Float.parseFloat(connectReportBean.getLian()) > lianVision) {
-                                Log.i(TAG, "心跳中有脸信息更新");
-                                if (faceStatus == 0) {
-                                    //判断是否正在下载
-//                                    getFaceUrlInfo();
+                            if (StringUtils.isNoEmpty(connectReportBean.getKa())) {
+                                float kaVision = (float) SPUtil.get(MainService.this, Constant.SP_VISION_KA, 0f);
+                                Log.i(TAG, "心跳--当前卡版本：" + kaVision + "   服务器卡版本：" + Float.parseFloat
+                                        (connectReportBean.getKa()));
+                                if (Float.parseFloat(connectReportBean.getKa()) > kaVision) {
+                                    Log.i(TAG, "心跳中有卡信息更新");
+                                    getCardInfo(Float.parseFloat(connectReportBean.getKa()));
                                 }
                             }
-
-                            float guanggaoVision = (float) SPUtil.get(MainService.this, Constant.SP_VISION_GUANGGAO,
-                                    0f);
-                            Log.i(TAG, "心跳--当前广告图片版本：" + guanggaoVision + "   服务器广告图片版本：" + Float.parseFloat
-                                    (connectReportBean.getGuanggaopic()));
-                            if (Float.parseFloat(connectReportBean.getGuanggaopic()) > guanggaoVision) {
-                                Log.i(TAG, "心跳中有广告图片信息更新");
-                                getGuangGaoPic(Float.parseFloat(connectReportBean.getGuanggaopic()));
+                            if (StringUtils.isNoEmpty(connectReportBean.getLian())) {
+                                float lianVision = (float) SPUtil.get(MainService.this, Constant.SP_VISION_LIAN, 0f);
+                                if (Float.parseFloat(connectReportBean.getLian()) > lianVision) {
+                                    Log.i(TAG, "心跳中有脸信息更新");
+                                    if (faceStatus == 0) {
+                                        //判断是否正在下载
+//                                    getFaceUrlInfo();
+                                    }
+                                }
                             }
-                            float guanggaoVadioVision = (float) SPUtil.get(MainService.this, Constant
-                                    .SP_VISION_GUANGGAO_VIDEO, 0f);
-                            if (connectReportBean.getGuanggaovideo() != null && !"".equals(connectReportBean
-                                    .getGuanggaovideo())) {
-                                Log.i(TAG, "心跳--当前广告视频版本：" + guanggaoVision + "   服务器广告视频版本：" + Float.parseFloat
+                            if (StringUtils.isNoEmpty(connectReportBean.getGuanggaopic())) {
+                                float guanggaoVision = (float) SPUtil.get(MainService.this, Constant
+                                        .SP_VISION_GUANGGAO, 0f);
+                                Log.i(TAG, "心跳--当前广告图片版本：" + guanggaoVision + "   服务器广告图片版本：" + Float.parseFloat
+                                        (connectReportBean.getGuanggaopic()));
+                                if (Float.parseFloat(connectReportBean.getGuanggaopic()) > guanggaoVision) {
+                                    Log.i(TAG, "心跳中有广告图片信息更新");
+                                    getGuangGaoPic(Float.parseFloat(connectReportBean.getGuanggaopic()));
+                                }
+                            }
+                            if (StringUtils.isNoEmpty(connectReportBean.getGuanggaovideo())) {
+                                float guanggaoVadioVision = (float) SPUtil.get(MainService.this, Constant
+                                        .SP_VISION_GUANGGAO_VIDEO, 0f);
+                                Log.i(TAG, "心跳--当前广告视频版本：" + guanggaoVadioVision + "   服务器广告视频版本：" + Float.parseFloat
                                         (connectReportBean.getGuanggaovideo()));
                                 if (Float.parseFloat(connectReportBean.getGuanggaovideo()) > guanggaoVadioVision) {
                                     Log.i(TAG, "心跳中有广告视频信息更新");
-//                                    getGuangGaoVideo(Float.parseFloat(connectReportBean.getGuanggaovideo()));
+                                    getGuangGaoVideo(Float.parseFloat(connectReportBean.getGuanggaovideo()));
                                 }
                             }
                             //// TODO: 2018/5/17 拿app版本信息 去掉点
-                            float appVision = (float) SPUtil.get(MainService.this, Constant.SP_VISION_APP, Float
-                                    .parseFloat(getVersionName()));
-                            Log.i(TAG, "心跳--当前app版本：" + appVision + "   服务器app版本：" + Float.parseFloat
-                                    (connectReportBean.getVersion()));
-                            if (Float.parseFloat(connectReportBean.getVersion()) > appVision) {
-                                Log.i(TAG, "心跳中有APP信息更新");
-                                if (lastVersionStatus.equals("D")) {//正在下载最新包
-                                    //不获取地址
-                                    Log.e(TAG, "正在下载最新包,不获取地址");
+                            if (StringUtils.isNoEmpty(connectReportBean.getVersion())) {
+                                float appVision = (float) SPUtil.get(MainService.this, Constant.SP_VISION_APP, Float
+                                        .parseFloat(getVersionName()));
+                                Log.i(TAG, "心跳--当前app版本：" + appVision + "   服务器app版本：" + Float.parseFloat
+                                        (connectReportBean.getVersion()));
+                                if (Float.parseFloat(connectReportBean.getVersion()) > appVision) {
+                                    Log.i(TAG, "心跳中有APP信息更新");
+                                    if (lastVersionStatus.equals("D")) {//正在下载最新包
+                                        //不获取地址
+                                        Log.e(TAG, "正在下载最新包,不获取地址");
 //                                    setDownloadingFlag(2);
-                                } else if (lastVersionStatus.equals("P")) {//已下载,未安装
-                                    // TODO: 2018/4/28 这里的数据fileName会做成成员变量，以供使用
+                                    } else if (lastVersionStatus.equals("P")) {//已下载,未安装
+                                        // TODO: 2018/4/28 这里的数据fileName会做成成员变量，以供使用
 //                                    lastVersionStatus = "I";//版本状态设为正在安装
 //                                    updateApp(fileName);
-                                    //不获取地址
-                                    Log.e(TAG, "已下载等待未安装,不获取地址");
-                                } else if (lastVersionStatus.equals("I")) {//已下载,安装中
-                                    //不获取地址
-                                    Log.e(TAG, "已下载,安装中,不获取地址");
-                                } else if (lastVersionStatus.equals("L")) {//未下载状态
-                                    getVersionInfo();
-                                } else if (lastVersionStatus.equals("N")) {//正在获取下载地址
-                                    //不获取地址
-                                    Log.e(TAG, "未下载,正在获取下载地址,不获取地址");
+                                        //不获取地址
+                                        Log.e(TAG, "已下载等待未安装,不获取地址");
+                                    } else if (lastVersionStatus.equals("I")) {//已下载,安装中
+                                        //不获取地址
+                                        Log.e(TAG, "已下载,安装中,不获取地址");
+                                    } else if (lastVersionStatus.equals("L")) {//未下载状态
+                                        getVersionInfo();
+                                    } else if (lastVersionStatus.equals("N")) {//正在获取下载地址
+                                        //不获取地址
+                                        Log.e(TAG, "未下载,正在获取下载地址,不获取地址");
+                                    }
                                 }
                             }
-                            float tonggaoVision = (float) SPUtil.get(MainService.this, Constant.SP_VISION_TONGGAO, 0f);
-                            if (Float.parseFloat(connectReportBean.getTonggao()) > tonggaoVision) {
-                                Log.i(TAG, "心跳中有通告信息更新");
-                                if (noticesStatus == 0) {//判断是否正在下载
-                                    getTongGaoInfo(Float.parseFloat(connectReportBean.getTonggao()));
+                            if (StringUtils.isNoEmpty(connectReportBean.getTonggao())) {
+                                float tonggaoVision = (float) SPUtil.get(MainService.this, Constant
+                                        .SP_VISION_TONGGAO, 0f);
+                                if (Float.parseFloat(connectReportBean.getTonggao()) > tonggaoVision) {
+                                    Log.i(TAG, "心跳中有通告信息更新");
+                                    if (noticesStatus == 0) {//判断是否正在下载
+                                        getTongGaoInfo(Float.parseFloat(connectReportBean.getTonggao()));
+                                    }
                                 }
                             }
                         } else {
@@ -850,7 +892,7 @@ public class MainService extends Service {
      */
     protected void updateApp(String lastVersionFile) {
         String SDCard = Environment.getExternalStorageDirectory() + "";
-        String fileName = SDCard + "/"+LOCAL_APK_PATH +"/"+ lastVersionFile+".apk";//文件存储路径;
+        String fileName = SDCard + "/" + LOCAL_APK_PATH + "/" + lastVersionFile + ".apk";//文件存储路径;
         File file = new File(fileName);
         Log.v(TAG, "UpdateService " + "------>start Update App<------");
         if (true) {//如果本地版本低于网络版本
@@ -900,12 +942,12 @@ public class MainService extends Service {
             URL urlObject = new URL(url);
             HttpURLConnection conn = (HttpURLConnection) urlObject.openConnection();
             String SDCard = Environment.getExternalStorageDirectory() + "";
-            localFile = SDCard + "/"+LOCAL_APK_PATH +"/"+ fileName+".apk";//文件存储路径
+            localFile = SDCard + "/" + LOCAL_APK_PATH + "/" + fileName + ".apk";//文件存储路径
             Log.v(TAG, "downloadFile " + "File path: " + localFile);
             File file = new File(localFile);
             InputStream input = conn.getInputStream();
             File fileParent = file.getParentFile();
-            if(!fileParent.exists()){
+            if (!fileParent.exists()) {
                 fileParent.mkdirs();
             }
             if (!file.exists()) {
@@ -1966,9 +2008,6 @@ public class MainService extends Service {
 //            }
         } else if (content.startsWith("{")) {
             LogDoor logDoor = JsonUtil.parseJsonToBean(content, LogDoor.class);
-            if (!logDoor.getMac().equals(mac)){
-                return;
-            }
             cancelOtherMembers(from);
             Log.v("MainService", "用户直接开门，取消其他呼叫");
             resetCallMode();
@@ -2259,6 +2298,7 @@ public class MainService extends Service {
                         Log.v("MainService", "--->取消" + username);
                         String userUrl = RtcRules.UserToRemoteUri_new(username, RtcConst.UEType_Any);
                         Log.e(TAG, "发送取消呼叫的消息");
+                        Log.e("device", "userUrl" + userUrl + "command" + command.toString());
                         device.sendIm(userUrl, "cmd/json", command.toString());
                     }
                 }
@@ -2291,6 +2331,7 @@ public class MainService extends Service {
                         username = username.replaceAll(":", "");
                     }
                     String userUrl = RtcRules.UserToRemoteUri_new(username, RtcConst.UEType_Any);
+                    Log.e("device", "userUrl" + userUrl + "command" + data.toString());
                     int sendResult = device.sendIm(userUrl, "cmd/json", data.toString());
                     Log.v("MainService", "发送访客图片-->" + username);
                     Log.v("MainService", "sendIm(): " + sendResult);
@@ -2474,6 +2515,7 @@ public class MainService extends Service {
                     String userUrl = RtcRules.UserToRemoteUri_new(username, RtcConst.UEType_Any);
                     HttpApi.i("拨号中->准备拨号userUrl = " + userUrl);
                     HttpApi.i("拨号中->准备拨号data = " + data.toString());
+                    Log.e("device", "userUrl" + userUrl + "command" + data.toString());
                     int sendResult = device.sendIm(userUrl, "cmd/json", data.toString());
                     Log.v("MainService", "sendIm(): " + sendResult);
                     HttpApi.i("拨号中->sendIm()" + sendResult);
@@ -2707,8 +2749,9 @@ public class MainService extends Service {
                     AFR_FSDKEngine.CP_PAF_NV21, new Rect(result_afd.get(0).getRect()), result_afd.get(0).getDegree(),
                     result_afr);
             Log.d("com.arcsoft", "Face=" + result_afr.getFeatureData()[0] + "," + result_afr.getFeatureData()[1] + "," +
-                    "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "result_afr" +
-                    result_afr.toString() + "  " + "" + result_afr.getFeatureData()[2] + "," + err_afr.getCode());
+                    "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + ""
+                    + "" + "" + "" + "" + "result_afr" + result_afr.toString() + "  " + "" + result_afr
+                    .getFeatureData()[2] + "," + err_afr.getCode());
             if (err_afr.getCode() == err_afr.MOK) {//人脸特征检测成功
                 mAFR_FSDKFace = result_afr.clone();
                 // TODO: 2018/5/15 保存mAFR_FSDKFace人脸信息，操作数据库
@@ -2800,7 +2843,7 @@ public class MainService extends Service {
             if (kaInfo != null) {//判断数据库中是否有卡
                 Log.i(TAG, "刷卡开门成功" + card);
 //                sendMessageToMainAcitivity(MSG_LOCK_OPENED, "");
-                 openLock();
+                openLock();
                 Log.e(TAG, "onCard====:" + card);
 
                 LogDoor data = new LogDoor();
