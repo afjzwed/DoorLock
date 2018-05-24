@@ -17,7 +17,6 @@ import android.os.Message;
 import android.os.Messenger;
 import android.os.RemoteException;
 import android.support.annotation.Nullable;
-import android.text.TextUtils;
 import android.util.Log;
 
 import com.arcsoft.facedetection.AFD_FSDKEngine;
@@ -84,8 +83,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
-
-import javax.crypto.Mac;
 
 import jni.http.HttpManager;
 import jni.http.HttpResult;
@@ -660,11 +657,14 @@ public class MainService extends Service {
                                         connectReportBean.getLixian_mima());
                             }
 
-                            long xintiao_time = connectReportBean.getXintiao_time();
-                            Log.i(TAG, "心跳--服务器返回的心跳时间（秒）" + xintiao_time * 1000);
-                            if (0L != xintiao_time) {
-                                Log.e(TAG, "心跳--服务器返回的心跳时间（秒）");
-                                SPUtil.put(MainService.this, Constant.SP_XINTIAO_TIME, xintiao_time* 1000);
+                            Log.i(TAG, "心跳--服务器返回的心跳时间（秒）" + (long) (connectReportBean
+                                    .getXintiao_time() * 1000));
+                            if (0L != ((long) (connectReportBean.getXintiao_time()))) {
+                                SPUtil.put(MainService.this, Constant.SP_XINTIAO_TIME, (long)
+                                        (connectReportBean.getXintiao_time() * 1000));
+                            } else {
+                                SPUtil.put(MainService.this, Constant.SP_XINTIAO_TIME, (long)
+                                        (60000));
                             }
 
                             Log.e(TAG, "心跳--服务器返回的心跳时间（秒）" + (long) SPUtil.get(MainService.this,

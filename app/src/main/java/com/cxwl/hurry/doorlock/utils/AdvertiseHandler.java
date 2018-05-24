@@ -13,15 +13,12 @@ import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-
 import com.cxwl.hurry.doorlock.callback.AdverErrorCallBack;
 import com.cxwl.hurry.doorlock.callback.AdverTongJiCallBack;
 import com.cxwl.hurry.doorlock.entity.AdTongJiBean;
 import com.cxwl.hurry.doorlock.entity.GuangGaoBean;
 
 import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -83,8 +80,10 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
 
     }
 
-    /* public void init(SurfaceView videoView,ImageView imageView,LinearLayout videoPane,LinearLayout imagePane){
- //    public void init(SurfaceView videoView,ImageView imageView,LinearLayout videoPane,LinearLayout imagePane){
+    /* public void init(SurfaceView videoView,ImageView imageView,LinearLayout videoPane,
+    LinearLayout imagePane){
+ //    public void init(SurfaceView videoView,ImageView imageView,LinearLayout videoPane,
+ LinearLayout imagePane){
  //        this.videoView=videoView;
  //        this.imageView=imageView;
  //        this.videoPane=videoPane;
@@ -133,12 +132,12 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
         surfaceViewCreate = false;
     }
 
-    public void initData(List<GuangGaoBean> rows, Messenger dialMessenger, boolean isOnVideo, AdverErrorCallBack
-            errorCallBack,AdverTongJiCallBack mCallBack) {
+    public void initData(List<GuangGaoBean> rows, Messenger dialMessenger, boolean isOnVideo,
+                         AdverErrorCallBack errorCallBack, AdverTongJiCallBack mCallBack) {
         this.dialMessenger = dialMessenger;
         list = rows;
         listIndex = 0;
-        mAdverTongJiCallBack=mCallBack;
+        mAdverTongJiCallBack = mCallBack;
         //initScreen();
         initInterger();
         play();
@@ -194,7 +193,7 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
 
             String source = HttpUtils.getLocalFileFromUrl(fileUrls);
             if (source != null) {
-                start_time = ""+System.currentTimeMillis();
+                start_time = "" + System.currentTimeMillis();
                 mTextView.setVisibility(View.VISIBLE);
                 videoView.setVisibility(View.VISIBLE);
                 imageView.setVisibility(View.INVISIBLE);
@@ -328,8 +327,8 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
     protected void onMediaPlayerComplete() {
         //mediaPlayer.release();
         endTime = System.currentTimeMillis() + "";
-        mTongJiBeanList=new ArrayList<>();
-        mAdTongJiBean= new AdTongJiBean();
+        mTongJiBeanList = new ArrayList<>();
+        mAdTongJiBean = new AdTongJiBean();
         mAdTongJiBean.setStart_time(start_time);
         mAdTongJiBean.setEnd_time(endTime);
         mAdTongJiBean.setAdd_id(1);
@@ -388,7 +387,7 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
         Log.e("AdvertiseHandler", "停止播放");
         videoView.setVisibility(View.GONE);
         imageView.setVisibility(View.VISIBLE);
-        voicePlayer=null;
+        voicePlayer = null;
     }
 
     public void onStop() {
