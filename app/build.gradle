@@ -23,6 +23,22 @@ android {
             dirs 'libs'
         }
     }
+    signingConfigs {
+        release {
+            storeFile file("../signapk/androidex.jks")
+            storePassword '123456'
+            keyAlias 'androidex'
+            keyPassword '123456'
+        }
+
+        debug {
+            storeFile file("../signapk/androidex.jks")
+            storePassword '123456'
+            keyAlias 'androidex'
+            keyPassword '123456'
+        }
+    }
+
 
     greendao {
         schemaVersion 3

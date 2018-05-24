@@ -7,6 +7,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Message;
@@ -45,6 +46,7 @@ import java.util.List;
 import static com.cxwl.hurry.doorlock.config.Constant.arc_appid;
 import static com.cxwl.hurry.doorlock.config.Constant.fd_key;
 import static com.cxwl.hurry.doorlock.config.Constant.fr_key;
+import static com.cxwl.hurry.doorlock.config.DeviceConfig.LOCAL_FACE_PATH;
 
 /**
  * Created by William on 2018/5/17.
@@ -137,7 +139,8 @@ public class FaceRegisterActivity extends AppCompatActivity implements SurfaceHo
                 AFD_FSDKEngine engine = new AFD_FSDKEngine();
                 AFD_FSDKVersion version = new AFD_FSDKVersion();
                 List<AFD_FSDKFace> result = new ArrayList<AFD_FSDKFace>();
-                AFD_FSDKError err = engine.AFD_FSDK_InitialFaceEngine(arc_appid, fd_key, AFD_FSDKEngine.AFD_OPF_0_HIGHER_EXT, 16, 5);
+                AFD_FSDKError err = engine.AFD_FSDK_InitialFaceEngine(arc_appid, fd_key,
+                        AFD_FSDKEngine.AFD_OPF_0_HIGHER_EXT, 16, 5);
                 Log.d(TAG, "AFD_FSDK_InitialFaceEngine = " + err.getCode());
                 if (err.getCode() != AFD_FSDKError.MOK) {//FD初始化失败
                     Message reg = Message.obtain();
@@ -193,7 +196,7 @@ public class FaceRegisterActivity extends AppCompatActivity implements SurfaceHo
                     AFR_FSDKVersion version1 = new AFR_FSDKVersion();
                     AFR_FSDKEngine engine1 = new AFR_FSDKEngine();
                     AFR_FSDKFace result1 = new AFR_FSDKFace();
-                    AFR_FSDKError error1 = engine1.AFR_FSDK_InitialEngine(arc_appid,fr_key);
+                    AFR_FSDKError error1 = engine1.AFR_FSDK_InitialEngine(arc_appid, fr_key);
                     Log.d("com.arcsoft", "AFR_FSDK_InitialEngine = " + error1.getCode());
                     if (error1.getCode() != AFD_FSDKError.MOK) {
                         Message reg = Message.obtain();
@@ -368,8 +371,8 @@ public class FaceRegisterActivity extends AppCompatActivity implements SurfaceHo
                                         houseNumber = mEditText1.getText().toString().trim();
                                         phoneNumber = mEditText2.getText().toString().trim();
                                         int key = convertKeyCode(keyCode);
-                                        Log.v("人脸识别", "onKey1-->" + keyCode + "/" + houseNumber
-                                                + "/" + phoneNumber + "/" + key + "/" + focus);
+                                        Log.v("人脸识别", "onKey1-->" + keyCode + "/" + houseNumber +
+                                                "/" + phoneNumber + "/" + key + "/" + focus);
                                         if (key >= 0) {
                                             if (focus) {//输入账号
                                                 callInput(key, mEditText1);
@@ -404,7 +407,8 @@ public class FaceRegisterActivity extends AppCompatActivity implements SurfaceHo
                                                 mEditText1.requestFocus();
                                                 mEditText1.requestFocusFromTouch();
                                             }
-                                        } else if (keyCode == DeviceConfig.DEVICE_KEYCODE_POUND) {//确认键
+                                        } else if (keyCode == DeviceConfig.DEVICE_KEYCODE_POUND)
+                                        {//确认键
                                             if (focus) {
                                                 if (TextUtils.isEmpty(houseNumber)) {
                                                     Toast.makeText(FaceRegisterActivity.this,
@@ -499,6 +503,24 @@ public class FaceRegisterActivity extends AppCompatActivity implements SurfaceHo
         }
         if (handlerThread != null) {
             handlerThread.quit();
+        }
+        File picDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
+//        String path = picDir.getPath() + File.separator + LOCAL_FACE_PATH;
+//        File file = new File(path);
+        deleteFile(picDir);
+    }
+
+    private void deleteFile(File file) {
+        if (file.isDirectory()) {
+            File[] files = file.listFiles();
+            for (int i = 0; i < files.length; i++) {
+                File f = files[i];
+                deleteFile(f);
+            }
+            Log.e("wh", "走了删除吗");
+//            file.delete();//如要保留文件夹，只删除文件，请注释这行
+        } else if (file.exists()) {
+            file.delete();
         }
     }
 

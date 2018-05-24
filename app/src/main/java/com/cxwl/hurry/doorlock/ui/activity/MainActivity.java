@@ -794,7 +794,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             sendMainMessager(MSG_RTC_REGISTER, null);
             //初始化社区信息
             setCommunityName(result.getXiangmu_name() == null ? "欣社区" : result.getXiangmu_name());
-            setLockName(result.getDanyuan_name() == null ? "1单元" : result.getDanyuan_name());
+            setLockName(result.getDanyuan_name() == null ? "大门" : result.getDanyuan_name());
 
             Log.e(TAG, "可以读卡");
             enableReaderMode();//登录成功后开启读卡
@@ -2298,7 +2298,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             mCamera.setParameters(parameters);
         } catch (Exception e) {
             e.printStackTrace();
-//            LogDoor.v(TAG, "setupCamera-->" + e.getMessage());
+//            Log.v(TAG, "setupCamera-->" + e.getMessage());
         }
 
         if (mCamera != null) {
@@ -2329,7 +2329,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      */
     @Override
     public boolean startPreviewLater() {
-//        LogDoor.e(TAG, "相机" + "startPreviewLater");
+//        Log.e(TAG, "相机" + "startPreviewLater");
         return false;
     }
 
@@ -2345,13 +2345,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      */
     @Override
     public Object onPreview(byte[] data, int width, int height, int format, long timestamp) {
-//        LogDoor.e(TAG, "相机" + "onPreview");
+//        Log.e(TAG, "相机" + "onPreview");
         //检测输入的图像中存在的人脸，输出结果和初始化时设置的参数有密切关系,检测到的人脸会add到此result
         AFT_FSDKError err = engine.AFT_FSDK_FaceFeatureDetect(data, width, height, AFT_FSDKEngine.CP_PAF_NV21, result);
-//        LogDoor.d(TAG, "AFT_FSDK_FaceFeatureDetect =" + err.getCode());
-//        LogDoor.d(TAG, "Face=" + result.size());
+//        Log.d(TAG, "AFT_FSDK_FaceFeatureDetect =" + err.getCode());
+//        Log.d(TAG, "Face=" + result.size());
 //        for (AFT_FSDKFace face : result) {
-//            LogDoor.d(TAG, "虹软:" + face.toString());
+//            Log.d(TAG, "虹软:" + face.toString());
 ////            Rect(145, 164 - 385, 404),1
 ////            Rect(169, 166 - 429, 426),1
 ////            Rect(140, 164 - 404, 428),1
@@ -2383,7 +2383,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      */
     @Override
     public void onBeforeRender(CameraFrameData data) {
-//        LogDoor.e(TAG, "相机" + "onBeforeRender");
+//        Log.e(TAG, "相机" + "onBeforeRender");
     }
 
     /**
@@ -2393,9 +2393,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      */
     @Override
     public void onAfterRender(CameraFrameData data) {
-//        LogDoor.e(TAG, "相机" + "onAfterRender");
+//        Log.e(TAG, "相机" + "onAfterRender");
 //        if (null == data.getParams()) {
-//            LogDoor.e(TAG, "相机" + "getParams" + "为空");
+//            Log.e(TAG, "相机" + "getParams" + "为空");
 //        }
         mGLSurfaceView.getGLES2Render().draw_rect((Rect[]) data.getParams(), Color.GREEN, 2);
     }
@@ -2458,18 +2458,18 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         @Override
         public void setup() {
-//            LogDoor.e("人脸识别", "这里走了吗");
+//            Log.e("人脸识别", "这里走了吗");
             AFR_FSDKError error = engine.AFR_FSDK_InitialEngine(arc_appid, fr_key);
-            //LogDoor.v(FACE_TAG, "AFR_FSDK_InitialEngine = " + error.getCode());
+            //Log.v(FACE_TAG, "AFR_FSDK_InitialEngine = " + error.getCode());
             error = engine.AFR_FSDK_GetVersion(version);
-            //LogDoor.v(FACE_TAG, "FR=" + version.toString() + "," + error.getCode()); //(210, 178 -
+            //Log.v(FACE_TAG, "FR=" + version.toString() + "," + error.getCode()); //(210, 178 -
             // 478, 446), degree =
             // 1　780, 2208 - 1942, 3370
         }
 
         @Override
         public void loop() {
-//            LogDoor.v(FACE_TAG, "loop1:" + mImageNV21 + "/" + identification);
+//            Log.v(FACE_TAG, "loop1:" + mImageNV21 + "/" + identification);
             while (pause) {
                 onPause();
             }
@@ -2485,7 +2485,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 // feature 检测到的人脸特征信息
                 AFR_FSDKError error = engine.AFR_FSDK_ExtractFRFeature(mImageNV21, mWidth, mHeight, AFR_FSDKEngine
                         .CP_PAF_NV21, mAFT_FSDKFace.getRect(), mAFT_FSDKFace.getDegree(), result);
-//                LogDoor.d(TAG, "AFR_FSDK_ExtractFRFeature cost :" + (System.currentTimeMillis() -
+//                Log.d(TAG, "AFR_FSDK_ExtractFRFeature cost :" + (System.currentTimeMillis() -
 //                 time) + "ms");
                 Log.d(TAG, "Face=" + result.getFeatureData()[0] + "," + result.getFeatureData()[1] + "," + result
                         .getFeatureData()[2] + "," + error.getCode());
@@ -2515,11 +2515,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 }
 
 
-                //LogDoor.v(FACE_TAG, "fit Score:" + max + ", NAME:" + name);
+                //Log.v(FACE_TAG, "fit Score:" + max + ", NAME:" + name);
                 if (max > 0.618f) {//匹配度的值高于设定值,发出消息,开门
                     //fr success.
                     final float max_score = max;
-                    //LogDoor.v(FACE_TAG, "置信度：" + (float) ((int) (max_score * 1000)) / 1000.0);
+                    //Log.v(FACE_TAG, "置信度：" + (float) ((int) (max_score * 1000)) / 1000.0);
                     sendMainMessager(MSG_FACE_OPENLOCK, null);
                 }
                 mImageNV21 = null;
@@ -2529,7 +2529,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         @Override
         public void over() {
             AFR_FSDKError error = engine.AFR_FSDK_UninitialEngine();//销毁引擎，释放内存资源
-            //LogDoor.v(FACE_TAG, "AFR_FSDK_UninitialEngine : " + error.getCode());
+            //Log.v(FACE_TAG, "AFR_FSDK_UninitialEngine : " + error.getCode());
         }
     }
     /****************************虹软相关end*********************************************/

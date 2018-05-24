@@ -158,8 +158,7 @@ public class PhotographActivity2 extends AppCompatActivity implements Camera.Pic
         File picDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
         //get the current time
         String timeStamp = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
-        String path = picDir.getPath() + File.separator + LOCAL_FACE_PATH + File.separator +
-                LOCAL_FACE_PATH + timeStamp + ".jpg";//File.separator,与系统有关的默认名称分隔符
+        String path = picDir.getPath() + File.separator + LOCAL_FACE_PATH  + timeStamp + ".jpg";//File.separator,与系统有关的默认名称分隔符
         ///storage/sdcard/Pictures/arcsoft_20180315154351.jpg
 
 //        String SDCard = Environment.getExternalStorageDirectory() + "";
