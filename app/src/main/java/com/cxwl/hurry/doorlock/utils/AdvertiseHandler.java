@@ -161,6 +161,7 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
         } else {
             listIndex++;
         }
+        Log.e("AdvertiseHandler", list.size() + "----" + listIndex);
         play();
     }
 
