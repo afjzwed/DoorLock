@@ -686,9 +686,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      */
     private List<AdTongJiBean> mTongJiBeanList;
     private AdTongJiBean mAdTongJiBean;
+    private String startTime;
+    private String endTime;
     public void onAdvertiseRefreshPic(Object obj) {
+
         final List<GuangGaoBean> obj1 = (List<GuangGaoBean>) obj;
-        Log.d(TAG, "banner加载图片");
+        if (obj1.size()==1){
+            //表示只有一张图片 需要轮播 在添加一张一样的开始轮播
+            obj1.add(obj1.get(0));
+        }
+        Log.d(TAG, "banner加载图片 size"+obj1.size());
         //白天banner
         banner.setImageLoader(new GlideImagerBannerLoader());
         banner.setBannerStyle(BannerConfig.NOT_INDICATOR);
@@ -703,16 +710,20 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
             @Override
             public void onPageSelected(int i) {
+                //设置第张图片结束播放时间
+                endTime = System.currentTimeMillis() + "";
                 Log.i("banner", "onPageSelected" + i);
                 //// TODO: 2018/5/22 这里记录广告播放次数
                 mTongJiBeanList = new ArrayList<>();
                 mAdTongJiBean = new AdTongJiBean();
-//                mAdTongJiBean.setStart_time("");
-//                mAdTongJiBean.setEnd_time("");
+                mAdTongJiBean.setStart_time(startTime);
+                mAdTongJiBean.setEnd_time(endTime);
                 mAdTongJiBean.setAdd_id(obj1.get(i).getId());
                 mAdTongJiBean.setMac(MacUtils.getMac());
                 mTongJiBeanList.add(mAdTongJiBean);
                 sendMainMessager(MSG_TONGJI_PIC, mTongJiBeanList);
+                //设置下一张图片开始播放时间
+                startTime=endTime;
             }
 
             @Override
@@ -720,9 +731,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 Log.i("banner", "onPageScrollStateChanged" + i);
             }
         });
-        //banner设置方法全部调用完毕时最后调用
+        //设置第一张图片开始播放时间
+        startTime = System.currentTimeMillis() + "";
         banner.start();
     }
+
 
     /**
      * 开门
