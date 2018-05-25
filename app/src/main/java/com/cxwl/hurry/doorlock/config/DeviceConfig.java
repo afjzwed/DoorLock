@@ -39,7 +39,7 @@ public class DeviceConfig {
     public static int MOBILE_NO_LENGTH = 11;//手机号长度
     public static int UNIT_NO_LENGTH = 4;//房屋号长度
     public static int BLOCK_NO_LENGTH = 2;
-    public static int BLOCK_LENGTH = 6;//楼栋房屋号长度
+    public static int BLOCK_LENGTH = 8;//楼栋房屋号长度
 
 
     public static final int DEVICE_KEYCODE_POUND = 66;//确认键

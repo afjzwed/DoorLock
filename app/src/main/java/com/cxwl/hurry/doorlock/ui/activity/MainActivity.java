@@ -801,7 +801,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             sendMainMessager(MSG_RTC_REGISTER, null);
             //初始化社区信息
             setCommunityName(result.getXiangmu_name() == null ? "欣社区" : result.getXiangmu_name());
-            setLockName(result.getDanyuan_name() == null ? "大门" : result.getDanyuan_name());
+            setLockName(MainService.lockName);
+            if ("C".equals(DeviceConfig.DEVICE_TYPE)) {//判断是否社区大门
+                setDialStatus("请输入楼栋编号");
+            }
 
             Log.e(TAG, "可以读卡");
             enableReaderMode();//登录成功后开启读卡
@@ -1060,7 +1063,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         }
                     } else {//输入框有值走呼叫或密码
                         if (currentStatus == CALL_MODE) {//呼叫
-                            if ("C".equals(DeviceConfig.DEVICE_TYPE)) {
+                            if ("C".equals(DeviceConfig.DEVICE_TYPE)) {//大门
                                 if (blockNo.length() == DeviceConfig.BLOCK_LENGTH) {
                                     startDialing(blockNo);
                                 } else if (blockNo.length() == DeviceConfig.MOBILE_NO_LENGTH) {//手机号
@@ -1068,16 +1071,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                         startDialing(blockNo);
                                     }
                                 }
-                            } else {
-//                                if (blockNo.length() == DeviceConfig.UNIT_NO_LENGTH) {
-//                                    startDialing(blockNo);
-//                                } else if (blockNo.length() == DeviceConfig.MOBILE_NO_LENGTH)
-// {//手机号
-//                                    if (true) {//正则判断
-//                                        startDialing(blockNo);
-//                                    }
-//                                }
-                                startDialing(blockNo);
+                            } else {//单元
+                                if (blockNo.length() == DeviceConfig.UNIT_NO_LENGTH) {
+                                    startDialing(blockNo);
+                                } else if (blockNo.length() == DeviceConfig.MOBILE_NO_LENGTH){//手机号
+                                    if (true) {//正则判断
+                                        startDialing(blockNo);
+                                    }
+                                }
                             }
                         } else {//密码开门
                             if (guestPassword.length() == 6) {
@@ -1128,7 +1129,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 if (blockNo.length() < DeviceConfig.BLOCK_LENGTH) {
                     blockNo = blockNo + key;
                     setDialValue(blockNo);
-                    Log.i(TAG, "输入的楼栋编号长度不为6 blockNo" + blockNo);
+                    Log.i(TAG, "输入的楼栋编号长度不为8 blockNo" + blockNo);
                     Log.e("blockNo", "1===" + blockNo);
                 }
                 if (blockNo.length() == DeviceConfig.BLOCK_NO_LENGTH) {
@@ -1711,13 +1712,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      * @param blockNo
      */
     private void startDialing(String blockNo) {
-        if (blockNo.equals("9999") && faceHandler != null) {
-            //人脸识别录入
-            faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_PAUSE, 100);
-            faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_INPUT, 100);
-            return;
+        if (blockNo.equals("9999")||blockNo.equals("99999999")) {
+            if (faceHandler != null) {
+                //人脸识别录入
+                faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_PAUSE, 100);
+                faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_INPUT, 100);
+                return;
+            }
         }
-
 
         //呼叫前，确认摄像头不被占用 虹软
         if (faceHandler != null) {
@@ -1937,7 +1939,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     @Override
-    public void onAccountReceived(String account) {
+    public void onAccountReceived(String acc) {
+      String account =  reverseNum(acc);
+
         //这里接收到刷卡后获得的卡ID
         cardId = account;
         Log.e(TAG, "onAccountReceived 卡信息 account " + account + " cardId " + cardId);
@@ -1956,6 +1960,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             message.obj = account;
             handler.sendMessage(message);
         }
+    }
+
+    /**
+     * 反转卡号（高低位颠倒）
+     * @param acc
+     */
+    private String  reverseNum(String acc) {
+        String s = acc.substring(6, 8) + acc.substring(4, 6) + acc.substring(2, 4) + acc
+                .substring(0, 2);
+        return s.toLowerCase();
     }
 
     /****************************设置一些状态end************************/
