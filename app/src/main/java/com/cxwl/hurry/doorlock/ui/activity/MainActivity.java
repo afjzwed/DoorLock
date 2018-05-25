@@ -1524,14 +1524,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mCamerarelease = false;
         try {
             camera = Camera.open();
-
+            Log.e(TAG, "打开照相机 1");
         } catch (Exception e) {
+            Log.e(TAG, "打开照相机 2 " + e.toString());
         }
         Log.v(TAG, "打开照相机");
         if (camera == null) {
             try {
                 camera = Camera.open(0);
+                Log.e(TAG, "打开照相机 3");
             } catch (Exception e) {
+                Log.e(TAG, "打开照相机 4"+e.toString());
             }
         }
         if (camera != null) {
@@ -1539,7 +1542,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 Camera.Parameters parameters = camera.getParameters();
                 parameters.setPreviewSize(320, 240);
                 camera.setParameters(parameters);
-             //   camera.setPreviewDisplay(autoCameraHolder);
+               camera.setPreviewDisplay(autoCameraHolder);
                 camera.startPreview();
                 camera.autoFocus(null);
                 Log.v("MainActivity", "开始拍照");
@@ -1613,6 +1616,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                 Log.v("MainActivity", "拍照成功，但已取消");
                             }
                         } catch (Exception e) {
+                            Log.e(TAG, "打开照相机 5" + e.toString());
                             e.printStackTrace();
                         }
                     }
@@ -1627,7 +1631,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     clearImageUuidAvaible(uuid);
                 } catch (Exception err) {
                 }
-
             }
         }
     }
@@ -2237,7 +2240,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         }
                         break;
                     case MSG_FACE_DETECT_PAUSE://人脸识别暂停
-                        Log.e(TAG, "人脸" + "识别暂停");
+                        Log.e(TAG, "人脸" + "识别暂停"+"开始照相");
                         identification = false;
                         if (mFRAbsLoop != null) {
                             mFRAbsLoop.pauseThread();
