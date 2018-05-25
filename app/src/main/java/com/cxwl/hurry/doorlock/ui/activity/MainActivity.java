@@ -73,6 +73,7 @@ import com.cxwl.hurry.doorlock.entity.XdoorBean;
 import com.cxwl.hurry.doorlock.face.ArcsoftManager;
 import com.cxwl.hurry.doorlock.face.FaceDB;
 import com.cxwl.hurry.doorlock.face.PhotographActivity2;
+import com.cxwl.hurry.doorlock.http.API;
 import com.cxwl.hurry.doorlock.interfac.TakePictureCallback;
 import com.cxwl.hurry.doorlock.service.DoorLock;
 import com.cxwl.hurry.doorlock.service.MainService;
@@ -97,6 +98,8 @@ import com.qiniu.android.storage.UpCompletionHandler;
 import com.qiniu.android.storage.UploadManager;
 import com.youth.banner.Banner;
 import com.youth.banner.BannerConfig;
+import com.zhy.http.okhttp.OkHttpUtils;
+import com.zhy.http.okhttp.callback.StringCallback;
 
 import org.json.JSONObject;
 
@@ -113,6 +116,7 @@ import java.util.TimerTask;
 import java.util.UUID;
 
 import jni.util.Utils;
+import okhttp3.Call;
 
 import static com.cxwl.hurry.doorlock.config.Constant.CALLING_MODE;
 import static com.cxwl.hurry.doorlock.config.Constant.CALL_MODE;
@@ -1460,6 +1464,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     /**
      * 开始启动拍照
      */
+    String curUrl;
+
     protected void takePicture(final String thisValue, final boolean isCall, final
     TakePictureCallback callback) {
         if (currentStatus == CALLING_MODE || currentStatus == PASSWORD_CHECKING_MODE) {
@@ -1469,7 +1475,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             //创建地址
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
             String date = sdf.format(new Date(System.currentTimeMillis()));
-            final String curUrl = "upload/menjin/img/" + "android_" + date + ".jpg";
+            curUrl = API.PIC+"door/img/" + "android_" + date + ".jpg";
             callback.beforeTakePickture(thisValue, curUrl, isCall, uuid);
             Log.v("MainActivity", "开始启动拍照");
             new Thread() {
@@ -1524,64 +1530,57 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             final File file = new File(Environment.getExternalStorageDirectory(),
                                     System.currentTimeMillis() + ".jpg");
                             FileOutputStream outputStream = new FileOutputStream(file);
-                            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream);
+                            bitmap.compress(Bitmap.CompressFormat.JPEG, 50, outputStream);
                             outputStream.close();
-                            final String url = DeviceConfig.SERVER_URL + "/app/upload/image";
-
                             if (checkTakePictureAvailable(uuid)) {
-                                new Thread() {
+                                OkHttpUtils.post().url(API.QINIU_IMG).build().execute(new StringCallback() {
                                     @Override
-                                    public void run() {
-                                        Log.i(TAG, "开始上传照片");
-//                                        String s = HttpApi.getInstance().loadHttpforGet
-// (DeviceConfig.GET_QINIUTOKEN,
-//                                                "");
-//                                        String token = "";
-//                                        if (s != null && !"".equals(s)) {
-//                                            JSONObject jsonObject = Ajax.getJSONObject(s);
-//
-//                                            try {
-//                                                token = (String) jsonObject.get("uptoken");
-//                                            } catch (JSONException e) {
-//                                                e.printStackTrace();
-//                                            }
-//                                        }
-//                                        Log.e(TAG, "Token==" + token);
-                                        Log.e(TAG, "file七牛储存地址：" + curUrl);
-                                        Log.e(TAG, "file本地地址：" + file.getPath() + "file大小" + file
-                                                .length());
-                                        uploadManager.put(file.getPath(), curUrl, "", new
-                                                UpCompletionHandler() {
-                                            @Override
-                                            public void complete(String key, ResponseInfo info,
-                                                                 JSONObject response) {
-                                                if (info.isOK()) {
-                                                    Log.e(TAG, "七牛上传图片成功");
-
-                                                } else {
-                                                    Log.e(TAG, "七牛上传图片失败");
-                                                }
-                                                if (checkTakePictureAvailable(uuid) && info.isOK
-                                                        ()) {
-                                                    Log.i(TAG, "开始发送图片");
-                                                    callback.afterTakePickture(thisValue, curUrl,
-                                                            isCall, uuid);
-                                                } else {
-                                                    Log.v("MainActivity", "上传照片成功,但已取消");
-                                                }
-                                                clearImageUuidAvaible(uuid);
-                                                Log.v(TAG, "正常清除" + uuid);
-                                                try {
-                                                    if (file != null) {
-                                                        file.delete();
-                                                    }
-                                                } catch (Exception e) {
-                                                }
-                                            }
-                                        }, null);
-
+                                    public void onError(Call call, Exception e, int id) {
+                                        Log.i(TAG, "获取七牛token失败 e" + e.toString());
                                     }
-                                }.start();
+
+                                    @Override
+                                    public void onResponse(final String response, int id) {
+                                        new Thread() {
+                                            @Override
+                                            public void run() {
+                                                String token = JsonUtil.getFieldValue(response, "data");
+                                                Log.i(TAG, "获取七牛token成功 开始上传照片  token"+token);
+                                                Log.e(TAG, "file七牛储存地址：" + curUrl);
+                                                Log.e(TAG, "file本地地址：" + file.getPath() + "file大小" + file.length());
+
+                                                uploadManager.put(file.getPath(), curUrl, token, new UpCompletionHandler
+                                                        () {
+                                                    @Override
+                                                    public void complete(String key, ResponseInfo info, JSONObject
+                                                            response) {
+                                                        if (info.isOK()) {
+                                                            Log.e(TAG, "七牛上传图片成功");
+
+                                                        } else {
+                                                            Log.e(TAG, "七牛上传图片失败");
+                                                        }
+                                                        if (checkTakePictureAvailable(uuid) && info.isOK()) {
+                                                            Log.i(TAG, "开始发送图片");
+                                                            callback.afterTakePickture(thisValue, curUrl, isCall, uuid);
+                                                        } else {
+                                                            Log.v("MainActivity", "上传照片成功,但已取消");
+                                                        }
+                                                        clearImageUuidAvaible(uuid);
+                                                        Log.v(TAG, "正常清除" + uuid);
+                                                        try {
+                                                            if (file != null) {
+                                                                file.delete();
+                                                            }
+                                                        } catch (Exception e) {
+                                                        }
+                                                    }
+                                                }, null);
+
+                                            }
+                                        }.start();
+                                    }
+                                });
                             } else {
                                 Log.v("MainActivity", "拍照成功，但已取消");
                             }
