@@ -331,7 +331,7 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
         mAdTongJiBean = new AdTongJiBean();
         mAdTongJiBean.setStart_time(start_time);
         mAdTongJiBean.setEnd_time(endTime);
-        mAdTongJiBean.setAdd_id(1);
+        mAdTongJiBean.setAdd_id(list.get(listIndex).getId());
         mTongJiBeanList.add(mAdTongJiBean);
         mAdverTongJiCallBack.sendTj(mTongJiBeanList);
 

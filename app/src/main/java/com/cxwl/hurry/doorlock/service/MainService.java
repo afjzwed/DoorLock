@@ -128,6 +128,8 @@ import static com.cxwl.hurry.doorlock.config.Constant.MSG_RTC_DISCONNECT;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_RTC_NEWCALL;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_RTC_ONVIDEO;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_RTC_REGISTER;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_TONGJI_PIC;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_TONGJI_VEDIO;
 import static com.cxwl.hurry.doorlock.config.Constant.RTC_APP_ID;
 import static com.cxwl.hurry.doorlock.config.Constant.RTC_APP_KEY;
 import static com.cxwl.hurry.doorlock.config.Constant.SP_LIXIAN_MIMA;
@@ -177,8 +179,7 @@ public class MainService extends Service {
     private String token;//天翼登陆所需的token；
     private Device device;//天翼登陆连接成功 发消息的类
     private DbUtils mDbUtils;//数据库操作
-    private Hashtable<String, String> currentAdvertisementFiles = new Hashtable<String, String>()
-            ; //广告数据地址
+    private Hashtable<String, String> currentAdvertisementFiles = new Hashtable<String, String>(); //广告数据地址
     private AudioManager audioManager;//音频管理器
 
     private ArrayList<YeZhuBean> allUserList = new ArrayList<>();
@@ -249,20 +250,21 @@ public class MainService extends Service {
 
 
     /**
-     * 测试统计接口
+     * 统计广告视频信息接口
      */
-    private void testTJ() {
-        List<AdTongJiBean> list = new ArrayList<>();
-        AdTongJiBean ad = new AdTongJiBean();
-        ad.setAdd_id(20);
-        ad.setMac("44:2c:05:e6:9c:c5");
-        ad.setEnd_time("12324");
-        ad.setStart_time("454");
-        list.add(ad);
+    private void tongjiVedio(Object obj) {
+        Log.e(TAG, "开始上传统计广告");
+        List<AdTongJiBean> list = (List<AdTongJiBean>) obj;
+//        AdTongJiBean ad = new AdTongJiBean();
+//        ad.setAdd_id(20);
+//        ad.setMac("44:2c:05:e6:9c:c5");
+//        ad.setEnd_time("12324");
+//        ad.setStart_time("454");
+//        list.add(ad);
         String json = JsonUtil.parseListToJson(list);
-        Log.e(TAG, "json" + json);
-        OkHttpUtils.postString().url(API.ADV_TONGJI).content(json).mediaType(MediaType.parse
-                ("application/json; " + "charset=utf-8")).tag(this).build().execute(new StringCallback() {
+        Log.e(TAG, "广告视频统计请求 json " + json);
+        OkHttpUtils.postString().url(API.ADV_TONGJI).content(json).mediaType(MediaType.parse("application/json; " +
+                "charset=utf-8")).tag(this).build().execute(new StringCallback() {
             @Override
             public void onError(Call call, Exception e, int id) {
                 Log.e(TAG, "er");
@@ -276,6 +278,35 @@ public class MainService extends Service {
     }
 
     /**
+     * 统计广告视频信息接口
+     */
+    private void tongjiPic(Object obj) {
+
+        List<AdTongJiBean> list = (List<AdTongJiBean>) obj;
+//        AdTongJiBean ad = new AdTongJiBean();
+//        ad.setAdd_id(20);
+//        ad.setMac("44:2c:05:e6:9c:c5");
+//        ad.setEnd_time("12324");
+//        ad.setStart_time("454");
+//        list.add(ad);
+        String json = JsonUtil.parseListToJson(list);
+        Log.e(TAG, "广告图片统计请求 json " + json);
+        OkHttpUtils.postString().url(API.ADV_TONGJI).content(json).mediaType(MediaType.parse("application/json; " +
+                "charset=utf-8")).tag(this).build().execute(new StringCallback() {
+            @Override
+            public void onError(Call call, Exception e, int id) {
+                Log.e(TAG, "er");
+            }
+
+            @Override
+            public void onResponse(String response, int id) {
+                Log.e(TAG, "onResponse" + response);
+            }
+        });
+    }
+
+
+    /**
      * 初始化handle
      */
     private void initHandler() {
@@ -286,8 +317,7 @@ public class MainService extends Service {
                     case MAIN_ACTIVITY_INIT:
                         mainMessage = msg.replyTo;
                         netWorkstate = (Boolean) msg.obj;
-                        Log.i(TAG, "MainActivity初始化完成  MainServic开始初始化" + (netWorkstate ? "有网" :
-                                "没网"));
+                        Log.i(TAG, "MainActivity初始化完成  MainServic开始初始化" + (netWorkstate ? "有网" : "没网"));
                         init();
                         break;
                     case MSG_RTC_REGISTER:
@@ -312,6 +342,14 @@ public class MainService extends Service {
                     case MSG_DISCONNECT_VIEDO:
                         Log.i(TAG, "挂断正在通话的视频");
                         disconnectCallingConnection();
+                        break;
+                    case MSG_TONGJI_VEDIO:
+                        Log.i(TAG, "统计广告视频消息");
+                        tongjiVedio(msg.obj);
+                        break;
+                    case MSG_TONGJI_PIC:
+                        Log.i(TAG, "统计广告图片消息");
+                        tongjiPic(msg.obj);
                         break;
                     case MSG_START_DIAL:
                         Log.i(TAG, "开始呼叫");
@@ -518,9 +556,8 @@ public class MainService extends Service {
             if (imageUrl != null) {
                 data.put("kaimenjietu", this.imageUrl);
             }
-            OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse
-                    ("application/json; " + "charset=utf-8")).addHeader("Authorization",
-                    httpServerToken).tag(this).build().execute(new StringCallback() {
+            OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse("application/json; "
+                    + "charset=utf-8")).addHeader("Authorization", httpServerToken).tag(this).build().execute(new StringCallback() {
                 @Override
                 public void onError(Call call, Exception e, int id) {
                     HttpApi.e("验证密码接口->服务器异常或没有网络" + e.toString());
@@ -618,9 +655,8 @@ public class MainService extends Service {
         try {
             JSONObject data = new JSONObject();
             data.put("mac", mac);
-            OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse
-                    ("application/json; " + "charset=utf-8")).addHeader("Authorization",
-                    httpServerToken).tag(this).build().execute(new StringCallback() {
+            OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse("application/json; "
+                    + "charset=utf-8")).addHeader("Authorization", httpServerToken).tag(this).build().execute(new StringCallback() {
                 @Override
                 public void onError(Call call, Exception e, int id) {
                     Log.e(TAG, "onError 心跳接口 connectReport " + e.toString());
@@ -646,43 +682,39 @@ public class MainService extends Service {
                              * "lixian_mima":"123465","version":"1.00","token":null}
                              */
                             String result = JsonUtil.getResult(response);
-                            ConnectReportBean connectReportBean = JsonUtil.parseJsonToBean
-                                    (result, ConnectReportBean.class);
+                            ConnectReportBean connectReportBean = JsonUtil.parseJsonToBean(result, ConnectReportBean
+                                    .class);
                             //测试上传日志
                             //test();
 
                             if (StringUtils.isNoEmpty(connectReportBean.getLixian_mima())) {
                                 Log.i(TAG, "心跳--服务器返回的离线密码" + connectReportBean.getLixian_mima());
-                                SPUtil.put(MainService.this, Constant.SP_LIXIAN_MIMA,
-                                        connectReportBean.getLixian_mima());
+                                SPUtil.put(MainService.this, Constant.SP_LIXIAN_MIMA, connectReportBean
+                                        .getLixian_mima());
                             }
 
-                            Log.i(TAG, "心跳--服务器返回的心跳时间（秒）" + (long) (connectReportBean
-                                    .getXintiao_time() * 1000));
+                            Log.i(TAG, "心跳--服务器返回的心跳时间（秒）" + (long) (connectReportBean.getXintiao_time() * 1000));
                             if (0L != ((long) (connectReportBean.getXintiao_time()))) {
-                                SPUtil.put(MainService.this, Constant.SP_XINTIAO_TIME, (long)
-                                        (connectReportBean.getXintiao_time() * 1000));
+                                SPUtil.put(MainService.this, Constant.SP_XINTIAO_TIME, (long) (connectReportBean
+                                        .getXintiao_time() * 1000));
                             } else {
-                                SPUtil.put(MainService.this, Constant.SP_XINTIAO_TIME, (long)
-                                        (60000));
+                                SPUtil.put(MainService.this, Constant.SP_XINTIAO_TIME, (long) (60000));
                             }
 
-                            Log.e(TAG, "心跳--服务器返回的心跳时间（秒）" + (long) SPUtil.get(MainService.this,
-                                    Constant.SP_XINTIAO_TIME, 60000L));
+                            Log.e(TAG, "心跳--服务器返回的心跳时间（秒）" + (long) SPUtil.get(MainService.this, Constant
+                                    .SP_XINTIAO_TIME, 60000L));
 
                             if (StringUtils.isNoEmpty(connectReportBean.getKa())) {
-                                float kaVision = (float) SPUtil.get(MainService.this, Constant
-                                        .SP_VISION_KA, 0f);
-                                Log.i(TAG, "心跳--当前卡版本：" + kaVision + "   服务器卡版本：" + Float
-                                        .parseFloat(connectReportBean.getKa()));
+                                float kaVision = (float) SPUtil.get(MainService.this, Constant.SP_VISION_KA, 0f);
+                                Log.i(TAG, "心跳--当前卡版本：" + kaVision + "   服务器卡版本：" + Float.parseFloat
+                                        (connectReportBean.getKa()));
                                 if (Float.parseFloat(connectReportBean.getKa()) > kaVision) {
                                     Log.i(TAG, "心跳中有卡信息更新");
                                     getCardInfo(Float.parseFloat(connectReportBean.getKa()));
                                 }
                             }
                             if (StringUtils.isNoEmpty(connectReportBean.getLian())) {
-                                float lianVision = (float) SPUtil.get(MainService.this, Constant
-                                        .SP_VISION_LIAN, 0f);
+                                float lianVision = (float) SPUtil.get(MainService.this, Constant.SP_VISION_LIAN, 0f);
                                 if (Float.parseFloat(connectReportBean.getLian()) > lianVision) {
                                     Log.i(TAG, "心跳中有脸信息更新");
                                     if (faceStatus == 0) {
@@ -692,36 +724,31 @@ public class MainService extends Service {
                                 }
                             }
                             if (StringUtils.isNoEmpty(connectReportBean.getGuanggaopic())) {
-                                float guanggaoVision = (float) SPUtil.get(MainService.this,
-                                        Constant.SP_VISION_GUANGGAO, 0f);
-                                Log.i(TAG, "心跳--当前广告图片版本：" + guanggaoVision + "   服务器广告图片版本：" +
-                                        Float.parseFloat(connectReportBean.getGuanggaopic()));
-                                if (Float.parseFloat(connectReportBean.getGuanggaopic()) >
-                                        guanggaoVision) {
+                                float guanggaoVision = (float) SPUtil.get(MainService.this, Constant
+                                        .SP_VISION_GUANGGAO, 0f);
+                                Log.i(TAG, "心跳--当前广告图片版本：" + guanggaoVision + "   服务器广告图片版本：" + Float.parseFloat
+                                        (connectReportBean.getGuanggaopic()));
+                                if (Float.parseFloat(connectReportBean.getGuanggaopic()) > guanggaoVision) {
                                     Log.i(TAG, "心跳中有广告图片信息更新");
-                                    getGuangGaoPic(Float.parseFloat(connectReportBean
-                                            .getGuanggaopic()));
+                                    getGuangGaoPic(Float.parseFloat(connectReportBean.getGuanggaopic()));
                                 }
                             }
                             if (StringUtils.isNoEmpty(connectReportBean.getGuanggaovideo())) {
-                                float guanggaoVadioVision = (float) SPUtil.get(MainService.this,
-                                        Constant.SP_VISION_GUANGGAO_VIDEO, 0f);
-                                Log.i(TAG, "心跳--当前广告视频版本：" + guanggaoVadioVision + "   " +
-                                        "服务器广告视频版本：" + Float.parseFloat(connectReportBean
-                                        .getGuanggaovideo()));
-                                if (Float.parseFloat(connectReportBean.getGuanggaovideo()) >
-                                        guanggaoVadioVision) {
+                                float guanggaoVadioVision = (float) SPUtil.get(MainService.this, Constant
+                                        .SP_VISION_GUANGGAO_VIDEO, 0f);
+                                Log.i(TAG, "心跳--当前广告视频版本：" + guanggaoVadioVision + "   " + "服务器广告视频版本：" + Float
+                                        .parseFloat(connectReportBean.getGuanggaovideo()));
+                                if (Float.parseFloat(connectReportBean.getGuanggaovideo()) > guanggaoVadioVision) {
                                     Log.i(TAG, "心跳中有广告视频信息更新");
-                                    getGuangGaoVideo(Float.parseFloat(connectReportBean
-                                            .getGuanggaovideo()));
+                                    getGuangGaoVideo(Float.parseFloat(connectReportBean.getGuanggaovideo()));
                                 }
                             }
                             //// TODO: 2018/5/17 拿app版本信息 去掉点
                             if (StringUtils.isNoEmpty(connectReportBean.getVersion())) {
-                                float appVision = (float) SPUtil.get(MainService.this, Constant
-                                        .SP_VISION_APP, Float.parseFloat(getVersionName()));
-                                Log.i(TAG, "心跳--当前app版本：" + appVision + "   服务器app版本：" + Float
-                                        .parseFloat(connectReportBean.getVersion()));
+                                float appVision = (float) SPUtil.get(MainService.this, Constant.SP_VISION_APP, Float
+                                        .parseFloat(getVersionName()));
+                                Log.i(TAG, "心跳--当前app版本：" + appVision + "   服务器app版本：" + Float.parseFloat
+                                        (connectReportBean.getVersion()));
                                 if (Float.parseFloat(connectReportBean.getVersion()) > appVision) {
                                     Log.i(TAG, "心跳中有APP信息更新");
                                     if (lastVersionStatus.equals("D")) {//正在下载最新包
@@ -746,14 +773,12 @@ public class MainService extends Service {
                                 }
                             }
                             if (StringUtils.isNoEmpty(connectReportBean.getTonggao())) {
-                                float tonggaoVision = (float) SPUtil.get(MainService.this,
-                                        Constant.SP_VISION_TONGGAO, 0f);
-                                if (Float.parseFloat(connectReportBean.getTonggao()) >
-                                        tonggaoVision) {
+                                float tonggaoVision = (float) SPUtil.get(MainService.this, Constant
+                                        .SP_VISION_TONGGAO, 0f);
+                                if (Float.parseFloat(connectReportBean.getTonggao()) > tonggaoVision) {
                                     Log.i(TAG, "心跳中有通告信息更新");
                                     if (noticesStatus == 0) {//判断是否正在下载
-                                        getTongGaoInfo(Float.parseFloat(connectReportBean
-                                                .getTonggao()));
+                                        getTongGaoInfo(Float.parseFloat(connectReportBean.getTonggao()));
                                     }
                                 }
                             }
@@ -788,9 +813,8 @@ public class MainService extends Service {
             map.put("leixing", "2");
             String json = JsonUtil.parseMapToJson(map);
             Log.i(TAG, "getGuangGaoPic请求图片接口 json=" + json);
-            OkHttpUtils.postString().url(url).content(json).mediaType(MediaType.parse
-                    ("application/json; " + "charset=utf-8")).addHeader("Authorization",
-                    httpServerToken).tag(this).build().execute(new StringCallback() {
+            OkHttpUtils.postString().url(url).content(json).mediaType(MediaType.parse("application/json; " +
+                    "charset=utf-8")).addHeader("Authorization", httpServerToken).tag(this).build().execute(new StringCallback() {
 
                 @Override
                 public void onError(Call call, Exception e, int id) {
@@ -810,8 +834,7 @@ public class MainService extends Service {
                         String result = JsonUtil.getResult(response);
                         String guanggao = JsonUtil.getFieldValue(result, "guanggao");
                         try {
-                            List<GuangGaoBean> guangGaoBeen = JsonUtil.fromJsonArray(guanggao,
-                                    GuangGaoBean.class);
+                            List<GuangGaoBean> guangGaoBeen = JsonUtil.fromJsonArray(guanggao, GuangGaoBean.class);
                             Log.i(TAG, "获取广告图片接口 guangGaoBeen " + guangGaoBeen);
                             sendMessageToMainAcitivity(MSG_ADVERTISE_REFRESH_PIC, guangGaoBeen);
                             adpicInfoStatus = 1;
@@ -878,9 +901,9 @@ public class MainService extends Service {
             Map<String, String> map = new HashMap<>();
             map.put("mac", mac);
             map.put("version", getVersionName());
-            OkHttpUtils.postString().url(url).content(JsonUtil.parseMapToJson(map)).mediaType
-                    (MediaType.parse("application/json; " + "charset=utf-8")).addHeader
-                    ("Authorization", httpServerToken).tag(this).build().execute(new StringCallback() {
+            OkHttpUtils.postString().url(url).content(JsonUtil.parseMapToJson(map)).mediaType(MediaType.parse
+                    ("application/json; " + "charset=utf-8")).addHeader("Authorization", httpServerToken).tag(this)
+                    .build().execute(new StringCallback() {
                 @Override
                 public void onError(Call call, Exception e, int id) {
                     Log.i(TAG, "onError 获取app下载地址" + e.toString());
@@ -996,11 +1019,9 @@ public class MainService extends Service {
                 out.flush();
                 if (getDownloadingFlag() == 1) {
                     result = localFile;
-                    Log.v(TAG, "downloadFile " + "result:  " + result + "  getDownloadingFlag=" +
-                            1);
+                    Log.v(TAG, "downloadFile " + "result:  " + result + "  getDownloadingFlag=" + 1);
                 }
-                Log.v(TAG, "downloadFile " + "result:  " + result + "  getDownloadingFlag=" +
-                        getDownloadingFlag());
+                Log.v(TAG, "downloadFile " + "result:  " + result + "  getDownloadingFlag=" + getDownloadingFlag());
             } catch (IOException e) {
                 e.printStackTrace();
             } finally {
@@ -1058,9 +1079,8 @@ public class MainService extends Service {
             data.put("mac", mac);
             Log.e(TAG, "人脸URL mac " + mac + " url " + url);
 
-            OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse
-                    ("application/json; " + "charset=utf-8")).addHeader("Authorization",
-                    httpServerToken).tag(this).build().execute(new StringCallback() {
+            OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse("application/json; "
+                    + "charset=utf-8")).addHeader("Authorization", httpServerToken).tag(this).build().execute(new StringCallback() {
                 @Override
                 public void onError(Call call, Exception e, int id) {
                     Log.e(TAG, "人脸URL 服务器异常或没有网络 " + e.toString());
@@ -1075,8 +1095,8 @@ public class MainService extends Service {
                         if ("0".equals(code)) {
                             String result = JsonUtil.getResult(response);
                             String list = JsonUtil.getFieldValue(result, "lian");//服务器字段命名错误
-                            faceUrlList = (ArrayList<FaceUrlBean>) JsonUtil.parseJsonToList(list,
-                                    new TypeToken<List<FaceUrlBean>>() {
+                            faceUrlList = (ArrayList<FaceUrlBean>) JsonUtil.parseJsonToList(list, new
+                                    TypeToken<List<FaceUrlBean>>() {
                             }.getType());
 
                             //通知MainActivity开始人脸录入流程
@@ -1116,9 +1136,9 @@ public class MainService extends Service {
                 JSONObject data = new JSONObject();
                 data.put("mac", mac);
                 data.put("leixing", "1");
-                OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType
-                        .parse("application/json; " + "charset=utf-8")).addHeader
-                        ("Authorization", httpServerToken).tag(this).build().execute(new StringCallback() {
+                OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse
+                        ("application/json; " + "charset=utf-8")).addHeader("Authorization", httpServerToken).tag
+                        (this).build().execute(new StringCallback() {
 
                     @Override
                     public void onError(Call call, Exception e, int id) {
@@ -1134,8 +1154,8 @@ public class MainService extends Service {
                                 try {
                                     String result = JsonUtil.getResult(response);
                                     String guanggao = JsonUtil.getFieldValue(result, "guanggao");
-                                    final List<GuangGaoBean> guangGaoBeen = JsonUtil
-                                            .fromJsonArray(guanggao, GuangGaoBean.class);
+                                    final List<GuangGaoBean> guangGaoBeen = JsonUtil.fromJsonArray(guanggao,
+                                            GuangGaoBean.class);
 //                                GuangGaoBean guangGaoBeen1 = new GuangGaoBean();
 //                                guangGaoBeen1.setLeixing("2");
 //                                guangGaoBeen1.setNeirong("http://img.taopic" + "" + "" + "" +
@@ -1314,9 +1334,8 @@ public class MainService extends Service {
             JSONObject data = new JSONObject();
             data.put("mac", mac);
 
-            OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse
-                    ("application/json; " + "charset=utf-8")).addHeader("Authorization",
-                    httpServerToken).tag(this).build().execute(new StringCallback() {
+            OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse("application/json; "
+                    + "charset=utf-8")).addHeader("Authorization", httpServerToken).tag(this).build().execute(new StringCallback() {
                 @Override
                 public void onError(Call call, Exception e, int id) {
                     Log.e(TAG, "通告信息 服务器异常或没有网络 " + e.toString());
@@ -1372,9 +1391,9 @@ public class MainService extends Service {
                 String url = API.CALLALL_CARDS;
                 JSONObject data = new JSONObject();
                 data.put("mac", mac);
-                OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType
-                        .parse("application/json; " + "charset=utf-8")).addHeader
-                        ("Authorization", httpServerToken).tag(this).build().execute(new StringCallback() {
+                OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse
+                        ("application/json; " + "charset=utf-8")).addHeader("Authorization", httpServerToken).tag
+                        (this).build().execute(new StringCallback() {
                     @Override
                     public void onError(Call call, Exception e, int id) {
                         Log.e(TAG, "onError 卡信息接口getCardInfo" + e.toString());
@@ -1438,19 +1457,16 @@ public class MainService extends Service {
             data.put("type", type);
             data.put("version", vision + "");
             data.put("time", System.currentTimeMillis() + "");
-            OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse
-                    ("application/json; " + "charset=utf-8")).addHeader("Authorization",
-                    httpServerToken).tag(this).build().execute(new StringCallback() {
+            OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse("application/json; "
+                    + "charset=utf-8")).addHeader("Authorization", httpServerToken).tag(this).build().execute(new StringCallback() {
                 @Override
                 public void onError(Call call, Exception e, int id) {
-                    Log.e(TAG, "onError同步完成更新信息接口   syncCallBack() type+" + type + "   Exception"
-                            + e.toString());
+                    Log.e(TAG, "onError同步完成更新信息接口   syncCallBack() type+" + type + "   Exception" + e.toString());
                 }
 
                 @Override
                 public void onResponse(String response, int id) {
-                    Log.i(TAG, "onResponse同步完成更新信息接口   syncCallBack() type+" + type + "   " +
-                            "response" + response);
+                    Log.i(TAG, "onResponse同步完成更新信息接口   syncCallBack() type+" + type + "   " + "response" + response);
                     if (null != response) {
                         String code = JsonUtil.getFieldValue(response, "code");
                         if ("0".equals(code)) {
@@ -1479,10 +1495,8 @@ public class MainService extends Service {
         SPUtil.put(MainService.this, Constant.SP_VISION_APP, connectReportBean.getVersion());
         SPUtil.put(MainService.this, Constant.SP_LIXIAN_MIMA, connectReportBean.getLixian_mima());
         SPUtil.put(MainService.this, Constant.SP_VISION_KA, connectReportBean.getKa());
-        SPUtil.put(MainService.this, Constant.SP_VISION_GUANGGAO, connectReportBean
-                .getGuanggaopic());
-        SPUtil.put(MainService.this, Constant.SP_VISION_GUANGGAO_VIDEO, connectReportBean
-                .getGuanggaopic());
+        SPUtil.put(MainService.this, Constant.SP_VISION_GUANGGAO, connectReportBean.getGuanggaopic());
+        SPUtil.put(MainService.this, Constant.SP_VISION_GUANGGAO_VIDEO, connectReportBean.getGuanggaopic());
         SPUtil.put(MainService.this, Constant.SP_VISION_LIAN, connectReportBean.getLian());
         SPUtil.put(MainService.this, Constant.SP_VISION_TONGGAO, connectReportBean.getTonggao());
     }
@@ -1508,10 +1522,8 @@ public class MainService extends Service {
         SPUtil.put(MainService.this, Constant.SP_VISION_APP, connectReportBean.getVersion());
         SPUtil.put(MainService.this, Constant.SP_LIXIAN_MIMA, connectReportBean.getLixian_mima());
         SPUtil.put(MainService.this, Constant.SP_VISION_KA, connectReportBean.getKa());
-        SPUtil.put(MainService.this, Constant.SP_VISION_GUANGGAO, connectReportBean
-                .getGuanggaopic());
-        SPUtil.put(MainService.this, Constant.SP_VISION_GUANGGAO_VIDEO, connectReportBean
-                .getGuanggaovideo());
+        SPUtil.put(MainService.this, Constant.SP_VISION_GUANGGAO, connectReportBean.getGuanggaopic());
+        SPUtil.put(MainService.this, Constant.SP_VISION_GUANGGAO_VIDEO, connectReportBean.getGuanggaovideo());
         SPUtil.put(MainService.this, Constant.SP_VISION_LIAN, connectReportBean.getLian());
         SPUtil.put(MainService.this, Constant.SP_VISION_TONGGAO, connectReportBean.getTonggao());
     }
@@ -1681,9 +1693,8 @@ public class MainService extends Service {
             data.put("key", key);
             data.put("version", getVersionName());
 
-            Response execute = OkHttpUtils.postString().url(url).content(data.toString())
-                    .mediaType(MediaType.parse("application/json; charset=utf-8")).tag(this)
-                    .build().execute();
+            Response execute = OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse
+                    ("application/json; charset=utf-8")).tag(this).build().execute();
             if (null != execute) {
                 String response = execute.body().string();
                 if (null != response) {
@@ -1694,7 +1705,8 @@ public class MainService extends Service {
                         DoorBean doorBean = JsonUtil.parseJsonToBean(result, DoorBean.class);
                         httpServerToken = doorBean.getToken();
                         Log.e(TAG, doorBean.toString());
-
+                        //重置广告，图片，通知版本为0，登录时重新加载
+                        saveVisionInfo();
                         //保存返回数据，通知主线程继续下一步逻辑
                         Message message = mHandler.obtainMessage();
                         message.what = MSG_LOGIN;
@@ -1749,8 +1761,8 @@ public class MainService extends Service {
             data.put("key", key);
             data.put("version", "1.0");
 
-            OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse
-                    ("application/json; " + "charset=utf-8")).tag(url).build().execute(new StringCallback() {
+            OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse("application/json; "
+                    + "charset=utf-8")).tag(url).build().execute(new StringCallback() {
                 @Override
                 public void onError(Call call, Exception e, int id) {
                     Log.e(TAG, "e " + e.toString());
@@ -1827,8 +1839,7 @@ public class MainService extends Service {
     }
 
     protected void loadInfoFromLocal() {
-        SharedPreferences sharedPreferences = getSharedPreferences("residential", Activity
-                .MODE_PRIVATE);
+        SharedPreferences sharedPreferences = getSharedPreferences("residential", Activity.MODE_PRIVATE);
         communityId = sharedPreferences.getInt("communityId", 0);
         blockId = sharedPreferences.getInt("blockId", 0);
         lockId = sharedPreferences.getInt("lockId", 0);
@@ -1836,10 +1847,8 @@ public class MainService extends Service {
         lockName = sharedPreferences.getString("lockName", "");
     }
 
-    protected void saveInfoIntoLocal(int communityId, int blockId, int lockId, String
-            communityName, String lockName) {
-        SharedPreferences sharedPreferences = getSharedPreferences("residential", Activity
-                .MODE_PRIVATE);
+    protected void saveInfoIntoLocal(int communityId, int blockId, int lockId, String communityName, String lockName) {
+        SharedPreferences sharedPreferences = getSharedPreferences("residential", Activity.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPreferences.edit();
         //SPUtil.put(getApplicationContext(),);
         editor.putInt("communityId", communityId);
@@ -1902,10 +1911,8 @@ public class MainService extends Service {
     private void getTokenFromServer() {
         Log.i(TAG, "rtc平台获取token");
         RtcConst.UEAPPID_Current = RtcConst.UEAPPID_Self;//账号体系，包括私有、微博、QQ等，必须在获取token之前确定。
-        JSONObject jsonobj = HttpManager.getInstance().CreateTokenJson(0, key, RtcHttpClient
-                .grantedCapabiltyID, "");
-        HttpResult ret = HttpManager.getInstance().getCapabilityToken(jsonobj, RTC_APP_ID,
-                RTC_APP_KEY);
+        JSONObject jsonobj = HttpManager.getInstance().CreateTokenJson(0, key, RtcHttpClient.grantedCapabiltyID, "");
+        HttpResult ret = HttpManager.getInstance().getCapabilityToken(jsonobj, RTC_APP_ID, RTC_APP_KEY);
         onResponseGetToken(ret);
     }
 
@@ -1919,8 +1926,7 @@ public class MainService extends Service {
             try {
                 String code = jsonrsp.getString(RtcConst.kcode);
                 String reason = jsonrsp.getString(RtcConst.kreason);
-                Log.v("MainService", "Response getCapabilityToken code:" + code + " reason:" +
-                        reason);
+                Log.v("MainService", "Response getCapabilityToken code:" + code + " reason:" + reason);
                 if (code.equals("0")) {
                     token = jsonrsp.getString(RtcConst.kcapabilityToken);
                     Log.i(TAG, "获取token成功 token=" + token);
@@ -2073,9 +2079,19 @@ public class MainService extends Service {
             //开门操作
             Log.e(TAG, "进行开门操作 开门开门");
             openLock();
-            //上传日志
+
             List<LogDoor> list = new ArrayList<>();
+            //拼接图片地址
+            if (StringUtils.isNoEmpty(logDoor.getKaimenjietu())) {
+                logDoor.setKaimenshijian(logDoor.getKaimenjietu());
+            } else {
+                if (StringUtils.isNoEmpty(imageUrl)) {
+                    logDoor.setKaimenshijian(imageUrl);
+                }
+            }
+            Log.e(TAG, "图片imageUrl" + logDoor.getKaimenjietu());
             list.add(logDoor);
+            //上传日志
             createAccessLog(list);
         } else if (content.startsWith("refuse call")) { //拒绝接听
 //            if (!rejectUserList.contains(from)) {
@@ -2144,9 +2160,8 @@ public class MainService extends Service {
         String json = JsonUtil.parseBeanToJson(logListBean);
         Log.e(TAG, "开门日志上传 参数" + json);
 
-        OkHttpUtils.postString().url(url).content(json).mediaType(MediaType.parse
-                ("application/json;" + "" + "" + " " + "charset=utf-8")).addHeader
-                ("Authorization", httpServerToken).tag(this).build().execute(new StringCallback() {
+        OkHttpUtils.postString().url(url).content(json).mediaType(MediaType.parse("application/json;" + "" + "" + " "
+                + "charset=utf-8")).addHeader("Authorization", httpServerToken).tag(this).build().execute(new StringCallback() {
             @Override
             public void onError(Call call, Exception e, int id) {
                 Log.e(TAG, "onError rtc上传日志接口createAccessLog oner " + e.toString());
@@ -2190,9 +2205,8 @@ public class MainService extends Service {
         logListBean.setXdoorOneOpenDtos(data);
         String json = JsonUtil.parseBeanToJson(logListBean);
         Log.e(TAG, "开门离线日志上传 参数" + json);
-        OkHttpUtils.postString().url(url).content(json).mediaType(MediaType.parse
-                ("application/json;" + "" + "" + " " + "charset=utf-8")).addHeader
-                ("Authorization", httpServerToken).tag(this).build().execute(new StringCallback() {
+        OkHttpUtils.postString().url(url).content(json).mediaType(MediaType.parse("application/json;" + "" + "" + " "
+                + "charset=utf-8")).addHeader("Authorization", httpServerToken).tag(this).build().execute(new StringCallback() {
             @Override
             public void onError(Call call, Exception e, int id) {
                 Log.e(TAG, "onError rtc上传日志接口createAccessLog oner " + e.toString());
@@ -2358,8 +2372,7 @@ public class MainService extends Service {
                     }
                     if (!username.equals(acceptMember)) {
                         Log.v("MainService", "--->取消" + username);
-                        String userUrl = RtcRules.UserToRemoteUri_new(username, RtcConst
-                                .UEType_Any);
+                        String userUrl = RtcRules.UserToRemoteUri_new(username, RtcConst.UEType_Any);
                         Log.e(TAG, "发送取消呼叫的消息");
                         Log.e("device", "userUrl" + userUrl + "command" + command.toString());
                         device.sendIm(userUrl, "cmd/json", command.toString());
@@ -2438,9 +2451,8 @@ public class MainService extends Service {
             data.put("mac", mac);
             data.put("hujiaohao", this.unitNo);
 
-            OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse
-                    ("application/json; " + "charset=utf-8")).addHeader("Authorization",
-                    httpServerToken).tag(this).build().execute(new StringCallback() {
+            OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse("application/json; "
+                    + "charset=utf-8")).addHeader("Authorization", httpServerToken).tag(this).build().execute(new StringCallback() {
                 @Override
                 public void onError(Call call, Exception e, int id) {
                     Log.e(TAG, "服务器异常或没有网络 " + e.toString());
@@ -2696,8 +2708,7 @@ public class MainService extends Service {
     private void initFaceEngine() {
         //在这里初始化人脸检测和识别相关类，之后抽取方法
         //人脸检测初始化引擎，设置检测角度、范围，数量。创建对象后，必须先于其他成员函数调用
-        err_afd = engine_afd.AFD_FSDK_InitialFaceEngine(arc_appid, fd_key, AFD_FSDKEngine
-                .AFD_OPF_0_HIGHER_EXT, 16, 5);
+        err_afd = engine_afd.AFD_FSDK_InitialFaceEngine(arc_appid, fd_key, AFD_FSDKEngine.AFD_OPF_0_HIGHER_EXT, 16, 5);
 
         //人脸识别初始化引擎，设置检测角度、范围，数量。创建对象后，必须先于其他成员函数调用
         err_afr = engine_afr.AFR_FSDK_InitialEngine(arc_appid, fr_key);
@@ -2803,21 +2814,19 @@ public class MainService extends Service {
 
         //这个函数功能为检测输入的图像中存在的人脸,data 输入的图像数据,width 图像宽度,height 图像高度,format 图像格式,List<AFD_FSDKFace>
         // list 检测到的人脸会放到到该列表里
-        err_afd = engine_afd.AFD_FSDK_StillImageFaceDetection(data, mBitmap.getWidth(), mBitmap
-                .getHeight(), AFD_FSDKEngine.CP_PAF_NV21, result_afd);
-        Log.d(TAG, "AFD_FSDK_StillImageFaceDetection =" + err_afd.getCode() + "<" + result_afd
-                .size());
+        err_afd = engine_afd.AFD_FSDK_StillImageFaceDetection(data, mBitmap.getWidth(), mBitmap.getHeight(),
+                AFD_FSDKEngine.CP_PAF_NV21, result_afd);
+        Log.d(TAG, "AFD_FSDK_StillImageFaceDetection =" + err_afd.getCode() + "<" + result_afd.size());
 
         if (!result_afd.isEmpty() && result_afd.size() != 0) {//人脸数据结果不为空
 
             //检测输入图像中的人脸特征信息，输出结果保存在 AFR_FSDKFace feature
-            err_afr = engine_afr.AFR_FSDK_ExtractFRFeature(data, mBitmap.getWidth(), mBitmap
-                    .getHeight(), AFR_FSDKEngine.CP_PAF_NV21, new Rect(result_afd.get(0).getRect
-                    ()), result_afd.get(0).getDegree(), result_afr);
-            Log.d("com.arcsoft", "Face=" + result_afr.getFeatureData()[0] + "," + result_afr
-                    .getFeatureData()[1] + "," + "" + "" + "" + "" + "" + "" + "" + "" + "" + ""
-                    + "" + "" + "" + "" + "" + "result_afr" + result_afr.toString() + "  " + "" +
-                    result_afr.getFeatureData()[2] + "," + err_afr.getCode());
+            err_afr = engine_afr.AFR_FSDK_ExtractFRFeature(data, mBitmap.getWidth(), mBitmap.getHeight(),
+                    AFR_FSDKEngine.CP_PAF_NV21, new Rect(result_afd.get(0).getRect()), result_afd.get(0).getDegree(),
+                    result_afr);
+            Log.d("com.arcsoft", "Face=" + result_afr.getFeatureData()[0] + "," + result_afr.getFeatureData()[1] + "," +
+                    "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "result_afr" +
+                    result_afr.toString() + "  " + "" + result_afr.getFeatureData()[2] + "," + err_afr.getCode());
             if (err_afr.getCode() == err_afr.MOK) {//人脸特征检测成功
                 mAFR_FSDKFace = result_afr.clone();
                 // TODO: 2018/5/15 保存mAFR_FSDKFace人脸信息，操作数据库

@@ -65,6 +65,8 @@ public class Constant {
     public static final int MSG_LIXIAN_PASSWORD_CHECK = 20009;//获取离线验证密码
     public static final int MSG_LIXIAN_PASSWORD_CHECK_AFTER = 200090;//获取离线验证密码
     public static final int MSG_PASSWORD_CHECK = 10003;//验证密码后
+    public static final int MSG_TONGJI_VEDIO = 200091;//上传统计视频播放消息
+    public static final int MSG_TONGJI_PIC = 200092;//上传统计广告图片播放消息
     /********************天翼RTC相关******************/
 
     /********************卡相关*******************/

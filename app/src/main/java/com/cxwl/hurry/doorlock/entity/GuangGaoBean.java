@@ -15,14 +15,20 @@ public class GuangGaoBean {
      * celve : 1
      * leixing : 2
      */
-
+    private int id;
     private String biaoti;
     private String neirong;
     private String kaishi_shijian;
     private String shixiao_shijian;
     private String celve;
     private String leixing;
+    public int getId() {
+        return id;
+    }
 
+    public void setId(int id) {
+        this.id = id;
+    }
     public String getBiaoti() {
         return biaoti;
     }
@@ -73,8 +79,8 @@ public class GuangGaoBean {
 
     @Override
     public String toString() {
-        return "GuangGaoBean{" + "biaoti='" + biaoti + '\'' + ", neirong='" + neirong + '\'' + ", kaishi_shijian='" +
-                kaishi_shijian + '\'' + ", shixiao_shijian='" + shixiao_shijian + '\'' + ", celve='" + celve + '\'' +
-                ", leixing='" + leixing + '\'' + '}';
+        return "GuangGaoBean{" + "id=" + id + ", biaoti='" + biaoti + '\'' + ", neirong='" + neirong + '\'' + ", " +
+                "kaishi_shijian='" + kaishi_shijian + '\'' + ", shixiao_shijian='" + shixiao_shijian + '\'' + ", " +
+                "celve='" + celve + '\'' + ", leixing='" + leixing + '\'' + '}';
     }
 }

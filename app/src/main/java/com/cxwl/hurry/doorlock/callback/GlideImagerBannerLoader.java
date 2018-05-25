@@ -5,6 +5,7 @@ import android.widget.ImageView;
 
 import com.bumptech.glide.Glide;
 import com.cxwl.hurry.doorlock.entity.GuangGaoBean;
+import com.cxwl.hurry.doorlock.http.API;
 import com.youth.banner.loader.ImageLoader;
 
 /**
@@ -25,8 +26,7 @@ public class GlideImagerBannerLoader extends ImageLoader {
         GuangGaoBean guangGaoBean = (GuangGaoBean) path;
         imageView.setScaleType(ImageView.ScaleType.FIT_XY);
         //Glide 加载图片简单用法
-        Glide.with(context).load(guangGaoBean.getNeirong()).into(imageView);
-
+        Glide.with(context).load(API.PIC+guangGaoBean.getNeirong()).into(imageView);
 //        //Picasso 加载图片简单用法
 //        Picasso.with(context).load(path).into(imageView);
 //

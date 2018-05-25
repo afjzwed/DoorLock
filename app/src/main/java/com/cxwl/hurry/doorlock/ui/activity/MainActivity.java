@@ -84,6 +84,7 @@ import com.cxwl.hurry.doorlock.utils.HttpApi;
 import com.cxwl.hurry.doorlock.utils.HttpUtils;
 import com.cxwl.hurry.doorlock.utils.Intenet;
 import com.cxwl.hurry.doorlock.utils.JsonUtil;
+import com.cxwl.hurry.doorlock.utils.MacUtils;
 import com.cxwl.hurry.doorlock.utils.NetWorkUtils;
 import com.cxwl.hurry.doorlock.utils.NfcReader;
 import com.google.gson.reflect.TypeToken;
@@ -150,6 +151,8 @@ import static com.cxwl.hurry.doorlock.config.Constant.MSG_RTC_DISCONNECT;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_RTC_NEWCALL;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_RTC_ONVIDEO;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_RTC_REGISTER;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_TONGJI_PIC;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_TONGJI_VEDIO;
 import static com.cxwl.hurry.doorlock.config.Constant.ONVIDEO_MODE;
 import static com.cxwl.hurry.doorlock.config.Constant.PASSWORD_CHECKING_MODE;
 import static com.cxwl.hurry.doorlock.config.Constant.PASSWORD_MODE;
@@ -397,7 +400,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         adverTongJiCallBack = new AdverTongJiCallBack() {
             @Override
             public void sendTj(List<AdTongJiBean> list) {
-                Log.e("adv", list.toString());
+                sendMainMessager(MSG_TONGJI_VEDIO, list);
             }
         };
 //        advertiseHandler.initData(rows, dialMessenger, (currentStatus == ONVIDEO_MODE),
@@ -681,8 +684,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      *
      * @param obj
      */
+    private List<AdTongJiBean> mTongJiBeanList;
+    private AdTongJiBean mAdTongJiBean;
     public void onAdvertiseRefreshPic(Object obj) {
-        List<GuangGaoBean> obj1 = (List<GuangGaoBean>) obj;
+        final List<GuangGaoBean> obj1 = (List<GuangGaoBean>) obj;
         Log.d(TAG, "banner加载图片");
         //白天banner
         banner.setImageLoader(new GlideImagerBannerLoader());
@@ -699,7 +704,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             @Override
             public void onPageSelected(int i) {
                 Log.i("banner", "onPageSelected" + i);
-                //// TODO: 2018/5/22 这里记录广告播放次数 
+                //// TODO: 2018/5/22 这里记录广告播放次数
+                mTongJiBeanList = new ArrayList<>();
+                mAdTongJiBean = new AdTongJiBean();
+//                mAdTongJiBean.setStart_time("");
+//                mAdTongJiBean.setEnd_time("");
+                mAdTongJiBean.setAdd_id(obj1.get(i).getId());
+                mAdTongJiBean.setMac(MacUtils.getMac());
+                mTongJiBeanList.add(mAdTongJiBean);
+                sendMainMessager(MSG_TONGJI_PIC, mTongJiBeanList);
             }
 
             @Override
