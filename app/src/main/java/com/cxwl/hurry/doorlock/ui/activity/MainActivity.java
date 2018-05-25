@@ -655,7 +655,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         };
         mainMessage = new Messenger(handler);
-
     }
 
     protected void onAdvertiseImageChange(Object obj) {
@@ -921,7 +920,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             e.printStackTrace();
         }
     }
-
 
     /**
      * 使用定时器,每隔5秒获得一次信号强度值
@@ -1741,7 +1739,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 setDialValue("呼叫" + thisValue + "，取消请按删除键");
                 message.what = MainService.MSG_START_DIAL;
                 if (DeviceConfig.DEVICE_TYPE.equals("C")) {
-                    parameters[0] = thisValue.substring(2);
+                    parameters[0] = thisValue;
                 } else {
                     parameters[0] = thisValue;
                 }
@@ -2296,8 +2294,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //        LogDoor.e(TAG, "相机" + "setupCamera");
 
 
+        mCamera = Camera.open();
         try {//这里其实不用捕捉错误
-            mCamera = Camera.open();
+
 
             Camera.Parameters parameters = mCamera.getParameters();
 //            parameters.setPreviewSize(800, 600);//设置尺寸

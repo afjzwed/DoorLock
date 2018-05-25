@@ -9,6 +9,7 @@ import com.arcsoft.facerecognition.AFR_FSDKError;
 import com.arcsoft.facerecognition.AFR_FSDKFace;
 import com.arcsoft.facerecognition.AFR_FSDKVersion;
 import com.cxwl.hurry.doorlock.utils.BitmapUtils;
+import com.google.gson.Gson;
 import com.guo.android_extend.java.ExtInputStream;
 import com.guo.android_extend.java.ExtOutputStream;
 
@@ -196,6 +197,10 @@ public class FaceDB {
     }
 
     public boolean addFace(String name, AFR_FSDKFace face) {
+        // TODO: 2018/5/25 后期用于物业存AFR_FSDKFace人脸信息数据
+//        String s = new Gson().toJson(face);
+//        AFR_FSDKFace afr_fsdkFace = new Gson().fromJson(s, AFR_FSDKFace.class);
+
         boolean bool = false;
         try {
             //check if already registered.
