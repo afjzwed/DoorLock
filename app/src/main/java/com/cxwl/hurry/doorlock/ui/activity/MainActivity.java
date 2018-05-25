@@ -1515,14 +1515,20 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 Camera.Parameters parameters = camera.getParameters();
                 parameters.setPreviewSize(320, 240);
                 camera.setParameters(parameters);
-                camera.setPreviewDisplay(autoCameraHolder);
+             //   camera.setPreviewDisplay(autoCameraHolder);
                 camera.startPreview();
                 camera.autoFocus(null);
                 Log.v("MainActivity", "开始拍照");
                 camera.takePicture(null, null, new Camera.PictureCallback() {
                     @Override
-                    public void onPictureTaken(byte[] data, Camera camera) {
+                    public void onPictureTaken(byte[] data, Camera camera1) {
                         try {
+                            camera.setPreviewCallback(null);
+                            camera.stopPreview();
+                            camera.release();
+                            camera=null;
+                            mCamerarelease = true;
+                            Log.v("MainActivity", "释放照相机资源");
                             Log.v("MainActivity", "拍照成功");
                             Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
                             final File file = new File(Environment.getExternalStorageDirectory(),
@@ -1584,13 +1590,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             }
                         } catch (Exception e) {
                             e.printStackTrace();
-                        } finally {
-                            camera.setPreviewCallback(null);
-                            camera.stopPreview();
-                            camera.release();
-                            camera = null;
-                            mCamerarelease = true;
-                            Log.v("MainActivity", "释放照相机资源");
                         }
                     }
                 });
