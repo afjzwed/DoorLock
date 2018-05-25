@@ -1473,9 +1473,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             lastImageUuid = uuid;
             setImageUuidAvaibale(uuid);
             //创建地址
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            String date = sdf.format(new Date(System.currentTimeMillis()));
-            curUrl = API.PIC+"door/img/" + "android_" + date + ".jpg";
+            curUrl ="door/img/" + System.currentTimeMillis()+ ".jpg";
             callback.beforeTakePickture(thisValue, curUrl, isCall, uuid);
             Log.v("MainActivity", "开始启动拍照");
             new Thread() {
