@@ -1501,7 +1501,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         } catch (Exception e) {
         }
-        Log.v(TAG, "打开相机");
+        Log.v(TAG, "打开照相机");
         if (camera == null) {
             try {
                 camera = Camera.open(0);
@@ -2545,7 +2545,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         }
                     }
                 }
-
 
                 //Log.v(FACE_TAG, "fit Score:" + max + ", NAME:" + name);
                 if (max > 0.618f) {//匹配度的值高于设定值,发出消息,开门

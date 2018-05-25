@@ -1106,7 +1106,8 @@ public class MainService extends Service {
      */
     private int adInfoStatus = 0;//广告信息状态(默认为0) 0:不一致（等待下载数据）1:不一致（正在下载数据）
 
-    private void getGuangGaoVideo(float v) {
+    private void getGuangGaoVideo(final float v) {
+        Log.e(TAG, "视频广告 adInfoStatus" + adInfoStatus);
         if (adInfoStatus == 0) {
             adInfoStatus = 1;
             String url = API.CALLALL_ADS;
@@ -1121,12 +1122,12 @@ public class MainService extends Service {
 
                     @Override
                     public void onError(Call call, Exception e, int id) {
-                        Log.e(TAG, "onError 获取广告接口 getGuangGao  Exception=" + e.toString());
+                        Log.e(TAG, "onError 获取视频广告接口 Exception=" + e.toString());
                     }
 
                     @Override
                     public void onResponse(String response, int id) {
-                        Log.e(TAG, "onResponse 获取广告接口 getGuangGao  response=" + response);
+                        Log.e(TAG, "onResponse 获取视频广告接口 response=" + response);
                         if (null != response) {
                             String code = JsonUtil.getFieldValue(response, "code");
                             if ("0".equals(code)) {
@@ -1149,18 +1150,23 @@ public class MainService extends Service {
                                                 adjustAdvertiseFiles();
                                                 restartAdvertise(guangGaoBeen);
                                                 removeAdvertiseFiles();
+                                                //同步通知
+                                                syncCallBack("3",v);
+                                                SPUtil.put(MainService.this, Constant
+                                                        .SP_VISION_GUANGGAO_VIDEO, v);//保存最新广告视频版本
+                                                adInfoStatus = 0;//重置广告视频下载状态
                                             } catch (Exception e) {
                                                 e.printStackTrace();
                                             }
                                         }
                                     }).start();
-                                } catch (JSONException e) {
-                                    e.printStackTrace();
                                 } catch (Exception e) {
                                     e.printStackTrace();
+                                    adInfoStatus = 0;
+                                    Log.e(TAG, "视频广告下载出错"+adInfoStatus);
                                 }
-
                             } else {
+                                adInfoStatus = 0;//等待下载数据
                             }
                         } else {
                             //服务器异常或没有网络
@@ -1332,8 +1338,8 @@ public class MainService extends Service {
                             sendMessageToMainAcitivity(MSG_GET_NOTICE, tonggao);
                             //保存本次更新版本
                             SPUtil.put(MainService.this, Constant.SP_VISION_TONGGAO, version);
-                            // TODO: 2018/5/17 调用更新通知接口
-
+                            //调用更新通知接口
+                            syncCallBack("4",version);
                             noticesStatus = 0;//修改状态，等待下次（新）数据
                         } else {
                             noticesStatus = 0;//等待下载数据
