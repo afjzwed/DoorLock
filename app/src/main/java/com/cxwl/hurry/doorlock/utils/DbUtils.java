@@ -134,7 +134,6 @@ public class DbUtils {
      */
     public void deleteAllLian() {
         mLianDao.deleteAll();
-
     }
 
     /**

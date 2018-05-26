@@ -87,6 +87,7 @@ import com.cxwl.hurry.doorlock.utils.JsonUtil;
 import com.cxwl.hurry.doorlock.utils.MacUtils;
 import com.cxwl.hurry.doorlock.utils.NetWorkUtils;
 import com.cxwl.hurry.doorlock.utils.NfcReader;
+import com.cxwl.hurry.doorlock.utils.SPUtil;
 import com.google.gson.reflect.TypeToken;
 import com.guo.android_extend.java.AbsLoop;
 import com.guo.android_extend.widget.CameraFrameData;
@@ -156,6 +157,7 @@ import static com.cxwl.hurry.doorlock.config.Constant.MSG_TONGJI_VEDIO;
 import static com.cxwl.hurry.doorlock.config.Constant.ONVIDEO_MODE;
 import static com.cxwl.hurry.doorlock.config.Constant.PASSWORD_CHECKING_MODE;
 import static com.cxwl.hurry.doorlock.config.Constant.PASSWORD_MODE;
+import static com.cxwl.hurry.doorlock.config.Constant.SP_XINTIAO_TIME;
 import static com.cxwl.hurry.doorlock.config.Constant.arc_appid;
 import static com.cxwl.hurry.doorlock.config.Constant.fr_key;
 import static com.cxwl.hurry.doorlock.config.Constant.ft_key;
@@ -245,9 +247,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private boolean identification = false;//人脸识别可以开始对比的标识
     private FRAbsLoop mFRAbsLoop = null;//人脸对比线程
 
-    Timer timer = new Timer();
+    private Thread noticeThread = null;//通告更新线程
+    private boolean isTongGaoThreadStart = false;//通告更新线程是否开启的标志
+    private ArrayList<NoticeBean> noticeBeanList = new ArrayList<>();//通告集合
+    private NoticeBean currentNoticeBean = null;//当前显示通告
+    private int i = 0;//通告更新计数
 
+    Timer timer = new Timer();
     private boolean mCamerarelease = true; //判断照相机是否释放
+
     private Handler cameraHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
@@ -308,7 +316,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         initFaceDetectAndIDCard();
 //测试自动关广告
         //  textColseAd();
+
+
+        isTongGaoThreadStart = false;//每次初始化都重启一次通告更新线程
     }
+
 
     //测试自动关广告
     private void textColseAd() {
@@ -331,8 +343,32 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }).start();
     }
 
-/*************************************************初始化一些基本东西start
- * ********************************************/
+    /*************************************************初始化一些基本东西start
+     * ********************************************/
+
+    private void startTonggaoThread() {
+        if (null != noticeThread) {
+            noticeThread.interrupt();
+            noticeThread = null;
+        }
+        Log.e(TAG, "通告线程开始"+isTongGaoThreadStart);
+        noticeThread = new Thread() {
+            @Override
+            public void run() {
+                try {
+                    setTongGaoInfo();
+                    while (!isInterrupted()) {//检测线程是否已经中断
+                        sleep(1000 * 60);//间隔时间
+                        setTongGaoInfo();
+                    }
+                } catch (InterruptedException e) {
+
+                }
+            }
+        };
+        noticeThread.start();
+    }
+
     /**
      * 开启界面时间(本地)更新线程 之后放到MainService中
      */
@@ -405,7 +441,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         };
 //        advertiseHandler.initData(rows, dialMessenger, (currentStatus == ONVIDEO_MODE),
 //                adverErrorCallBack);
-        // TODO: 2018/4/27 随便找个位置增加通告接口，之后要改
 
     }
 
@@ -631,14 +666,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         break;
                     case MSG_GET_NOTICE: //获取通告成功
                         String value = (String) msg.obj;
-                        ArrayList<NoticeBean> noticeBeanList = (ArrayList<NoticeBean>) JsonUtil
-                                .parseJsonToList(value, new TypeToken<List<NoticeBean>>() {
+                        noticeBeanList = (ArrayList<NoticeBean>) JsonUtil.parseJsonToList(value,
+                                new TypeToken<List<NoticeBean>>() {
                         }.getType());
 
-                        NoticeBean noticeBean = noticeBeanList.get(0);
-                        Log.e(TAG, "设置通告" + noticeBeanList.toString());
-
-                        setTongGaoInfo(noticeBean);
+                        if (!isTongGaoThreadStart) {//线程未开启
+                            isTongGaoThreadStart =!isTongGaoThreadStart;
+                            startTonggaoThread();//开启线程
+                        }
                         break;
                     case MSG_ADVERTISE_REFRESH://刷新广告
                         Log.i(TAG, "刷新广告");
@@ -690,12 +725,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private String endTime;
     public void onAdvertiseRefreshPic(Object obj) {
 
-        final List<GuangGaoBean> obj1 = (List<GuangGaoBean>) obj;
-        if (obj1.size()==1){
+        final ArrayList<GuangGaoBean> obj1 = (ArrayList<GuangGaoBean>) obj;
+        if (obj1.size() == 1) {
             //表示只有一张图片 需要轮播 在添加一张一样的开始轮播
             obj1.add(obj1.get(0));
         }
-        Log.d(TAG, "banner加载图片 size"+obj1.size());
+        Log.d(TAG, "banner加载图片 size" + obj1.size());
         //白天banner
         banner.setImageLoader(new GlideImagerBannerLoader());
         banner.setBannerStyle(BannerConfig.NOT_INDICATOR);
@@ -723,7 +758,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 mTongJiBeanList.add(mAdTongJiBean);
                 sendMainMessager(MSG_TONGJI_PIC, mTongJiBeanList);
                 //设置下一张图片开始播放时间
-                startTime=endTime;
+                startTime = endTime;
             }
 
             @Override
@@ -1102,7 +1137,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             } else {//单元
                                 if (blockNo.length() == DeviceConfig.UNIT_NO_LENGTH) {
                                     startDialing(blockNo);
-                                } else if (blockNo.length() == DeviceConfig.MOBILE_NO_LENGTH){//手机号
+                                } else if (blockNo.length() == DeviceConfig.MOBILE_NO_LENGTH) {//手机号
                                     if (true) {//正则判断
                                         startDialing(blockNo);
                                     }
@@ -1497,7 +1532,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             lastImageUuid = uuid;
             setImageUuidAvaibale(uuid);
             //创建地址
-            curUrl ="door/img/" + System.currentTimeMillis()+ ".jpg";
+            curUrl = "door/img/" + System.currentTimeMillis() + ".jpg";
             callback.beforeTakePickture(thisValue, curUrl, isCall, uuid);
             Log.v("MainActivity", "开始启动拍照");
             new Thread() {
@@ -1534,7 +1569,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 camera = Camera.open(0);
                 Log.e(TAG, "打开照相机 3");
             } catch (Exception e) {
-                Log.e(TAG, "打开照相机 4"+e.toString());
+                Log.e(TAG, "打开照相机 4" + e.toString());
             }
         }
         if (camera != null) {
@@ -1542,7 +1577,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 Camera.Parameters parameters = camera.getParameters();
                 parameters.setPreviewSize(320, 240);
                 camera.setParameters(parameters);
-               camera.setPreviewDisplay(autoCameraHolder);
+                camera.setPreviewDisplay(autoCameraHolder);
                 camera.startPreview();
                 camera.autoFocus(null);
                 Log.v("MainActivity", "开始拍照");
@@ -1553,7 +1588,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             camera.setPreviewCallback(null);
                             camera.stopPreview();
                             camera.release();
-                            camera=null;
+                            camera = null;
                             mCamerarelease = true;
                             Log.v("MainActivity", "释放照相机资源");
                             Log.v("MainActivity", "拍照成功");
@@ -1575,25 +1610,29 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                         new Thread() {
                                             @Override
                                             public void run() {
-                                                String token = JsonUtil.getFieldValue(response, "data");
-                                                Log.i(TAG, "获取七牛token成功 开始上传照片  token"+token);
+                                                String token = JsonUtil.getFieldValue(response,
+                                                        "data");
+                                                Log.i(TAG, "获取七牛token成功 开始上传照片  token" + token);
                                                 Log.e(TAG, "file七牛储存地址：" + curUrl);
-                                                Log.e(TAG, "file本地地址：" + file.getPath() + "file大小" + file.length());
+                                                Log.e(TAG, "file本地地址：" + file.getPath() +
+                                                        "file大小" + file.length());
 
-                                                uploadManager.put(file.getPath(), curUrl, token, new UpCompletionHandler
-                                                        () {
+                                                uploadManager.put(file.getPath(), curUrl, token,
+                                                        new UpCompletionHandler() {
                                                     @Override
-                                                    public void complete(String key, ResponseInfo info, JSONObject
-                                                            response) {
+                                                    public void complete(String key, ResponseInfo
+                                                            info, JSONObject response) {
                                                         if (info.isOK()) {
                                                             Log.e(TAG, "七牛上传图片成功");
 
                                                         } else {
                                                             Log.e(TAG, "七牛上传图片失败");
                                                         }
-                                                        if (checkTakePictureAvailable(uuid) && info.isOK()) {
+                                                        if (checkTakePictureAvailable(uuid) &&
+                                                                info.isOK()) {
                                                             Log.i(TAG, "开始发送图片");
-                                                            callback.afterTakePickture(thisValue, curUrl, isCall, uuid);
+                                                            callback.afterTakePickture(thisValue,
+                                                                    curUrl, isCall, uuid);
                                                         } else {
                                                             Log.v("MainActivity", "上传照片成功,但已取消");
                                                         }
@@ -1735,7 +1774,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      * @param blockNo
      */
     private void startDialing(String blockNo) {
-        if (blockNo.equals("9999")||blockNo.equals("99999999")) {
+        if (blockNo.equals("9999") || blockNo.equals("99999999")) {
             if (faceHandler != null) {
                 //人脸识别录入
                 faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_PAUSE, 100);
@@ -1930,12 +1969,24 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         });
     }
 
-    private void setTongGaoInfo(final NoticeBean value) {
+    private void setTongGaoInfo() {
+        if (null != noticeBeanList && noticeBeanList.size() > 0) {//通告列表有数据
+            currentNoticeBean = noticeBeanList.get(i);
+            i++;
+            if (i == noticeBeanList.size()) {//循环一遍以后，重置游标
+                i = 0;
+            }
+        } else {//通告列表无数据
+            currentNoticeBean = new NoticeBean();
+            currentNoticeBean.setBiaoti("暂无通知");
+            currentNoticeBean.setNeirong("暂无通知");
+        }
+        Log.e(TAG, "设置通告 currentNoticeBean" + currentNoticeBean.toString());
         handler.post(new Runnable() {
             @Override
             public void run() {
-                setTextView(R.id.gonggao, value.getNeirong());
-                setTextView(R.id.gonggao_title, value.getBiaoti());
+                setTextView(R.id.gonggao, currentNoticeBean.getNeirong());
+                setTextView(R.id.gonggao_title, currentNoticeBean.getBiaoti());
             }
         });
     }
@@ -1963,7 +2014,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     @Override
     public void onAccountReceived(String acc) {
-      String account =  reverseNum(acc);
+        String account = reverseNum(acc);
 
         //这里接收到刷卡后获得的卡ID
         cardId = account;
@@ -1987,9 +2038,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     /**
      * 反转卡号（高低位颠倒）
+     *
      * @param acc
      */
-    private String  reverseNum(String acc) {
+    private String reverseNum(String acc) {
         String s = acc.substring(6, 8) + acc.substring(4, 6) + acc.substring(2, 4) + acc
                 .substring(0, 2);
         return s.toLowerCase();
@@ -2240,7 +2292,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         }
                         break;
                     case MSG_FACE_DETECT_PAUSE://人脸识别暂停
-                        Log.e(TAG, "人脸" + "识别暂停"+"开始照相");
+                        Log.e(TAG, "人脸" + "识别暂停" + "开始照相");
                         identification = false;
                         if (mFRAbsLoop != null) {
                             mFRAbsLoop.pauseThread();

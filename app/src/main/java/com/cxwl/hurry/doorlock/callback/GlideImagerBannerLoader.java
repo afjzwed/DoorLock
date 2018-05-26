@@ -5,7 +5,6 @@ import android.widget.ImageView;
 
 import com.bumptech.glide.Glide;
 import com.cxwl.hurry.doorlock.entity.GuangGaoBean;
-import com.cxwl.hurry.doorlock.http.API;
 import com.youth.banner.loader.ImageLoader;
 
 /**
