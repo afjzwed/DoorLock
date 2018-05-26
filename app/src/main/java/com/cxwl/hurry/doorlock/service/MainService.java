@@ -31,7 +31,7 @@ import com.cxwl.hurry.doorlock.config.Constant;
 import com.cxwl.hurry.doorlock.config.DeviceConfig;
 import com.cxwl.hurry.doorlock.db.Ka;
 import com.cxwl.hurry.doorlock.db.LogDoor;
-import com.cxwl.hurry.doorlock.entity.AdTongJiBean;
+import com.cxwl.hurry.doorlock.db.AdTongJiBean;
 import com.cxwl.hurry.doorlock.entity.ConnectReportBean;
 import com.cxwl.hurry.doorlock.entity.DoorBean;
 import com.cxwl.hurry.doorlock.entity.FaceUrlBean;
@@ -253,14 +253,8 @@ public class MainService extends Service {
      * 统计广告视频信息接口
      */
     private void tongjiVedio(Object obj) {
-        Log.e(TAG, "开始上传统计广告");
-        List<AdTongJiBean> list = (List<AdTongJiBean>) obj;
-//        AdTongJiBean ad = new AdTongJiBean();
-//        ad.setAdd_id(20);
-//        ad.setMac("44:2c:05:e6:9c:c5");
-//        ad.setEnd_time("12324");
-//        ad.setStart_time("454");
-//        list.add(ad);
+        Log.e(TAG, "开始上传统计视频信息");
+        final List<AdTongJiBean> list = (List<AdTongJiBean>) obj;
         String json = JsonUtil.parseListToJson(list);
         Log.e(TAG, "广告视频统计请求 json " + json);
         OkHttpUtils.postString().url(API.ADV_TONGJI).content(json).mediaType(MediaType.parse("application/json; " +
@@ -268,27 +262,34 @@ public class MainService extends Service {
             @Override
             public void onError(Call call, Exception e, int id) {
                 Log.e(TAG, "er");
+                Log.i(TAG, "onError统计广告视频信息统计接口 上传统计信息失败  保存信息到数据库e");
+                DbUtils.getInstans().addAllTongji(list);
             }
 
             @Override
             public void onResponse(String response, int id) {
                 Log.e(TAG, "onResponse" + response);
+                if ("0".equals(JsonUtil.getFieldValue(response, "code"))) {
+                    Log.i(TAG, "onResponse统计广告视频信息统计接口 上传统计信息成功");
+                    List<AdTongJiBean> adTongJiBeen = DbUtils.getInstans().quaryTongji();
+                    if (adTongJiBeen.size() > 0) {
+                        Log.i(TAG, "本地数据库中--存在--视频图片的统计信息 开始上传离线");
+                        lixianTongji(adTongJiBeen);
+                    }
+                } else {
+                    Log.i(TAG, "onResponse统计广告视频信息统计接口 上传统计信息失败  保存信息到数据库");
+                    DbUtils.getInstans().addAllTongji(list);
+                }
             }
         });
     }
 
     /**
-     * 统计广告视频信息接口
+     * 统计广告图片信息统计接口
      */
     private void tongjiPic(Object obj) {
 
-        List<AdTongJiBean> list = (List<AdTongJiBean>) obj;
-//        AdTongJiBean ad = new AdTongJiBean();
-//        ad.setAdd_id(20);
-//        ad.setMac("44:2c:05:e6:9c:c5");
-//        ad.setEnd_time("12324");
-//        ad.setStart_time("454");
-//        list.add(ad);
+        final List<AdTongJiBean> list = (List<AdTongJiBean>) obj;
         String json = JsonUtil.parseListToJson(list);
         Log.e(TAG, "广告图片统计请求 json " + json);
         OkHttpUtils.postString().url(API.ADV_TONGJI).content(json).mediaType(MediaType.parse("application/json; " +
@@ -296,15 +297,57 @@ public class MainService extends Service {
             @Override
             public void onError(Call call, Exception e, int id) {
                 Log.e(TAG, "er");
+                Log.i(TAG, "onError统计广告图片信息统计接口 上传统计信息失败  保存信息到数据库e");
+                DbUtils.getInstans().addAllTongji(list);
             }
 
             @Override
             public void onResponse(String response, int id) {
                 Log.e(TAG, "onResponse" + response);
+                if ("0".equals(JsonUtil.getFieldValue(response, "code"))) {
+                    Log.i(TAG, "onResponse统计广告图片信息统计接口 上传统计信息成功 检查是否存在离线信息");
+                    List<AdTongJiBean> adTongJiBeen = DbUtils.getInstans().quaryTongji();
+                    if (adTongJiBeen.size() > 0) {
+                        Log.i(TAG, "本地数据库中--存在--视频图片的统计信息 开始上传离线");
+                        lixianTongji(adTongJiBeen);
+                    }
+                } else {
+                    Log.i(TAG, "onResponse统计广告图片信息统计接口 上传统计信息失败  保存信息到数据库");
+                    DbUtils.getInstans().addAllTongji(list);
+                }
             }
         });
     }
 
+    /**
+     * 离线统计信息上传
+     * @param list
+     */
+    private void lixianTongji(List<AdTongJiBean> list) {
+        String json = JsonUtil.parseListToJson(list);
+        Log.e(TAG, "上传离线视频图片统计请求 json " + json);
+        OkHttpUtils.postString().url(API.ADV_TONGJI).content(json).mediaType(MediaType.parse("application/json; " +
+                "charset=utf-8")).tag(this).build().execute(new StringCallback() {
+            @Override
+            public void onError(Call call, Exception e, int id) {
+                Log.e(TAG, "er");
+                Log.e(TAG, "onError统计广告图片信息统计接口 上传离线统计信息失败 ");
+            }
+
+            @Override
+            public void onResponse(String response, int id) {
+                Log.e(TAG, "onResponse" + response);
+                if ("0".equals(JsonUtil.getFieldValue(response, "code"))) {
+                    Log.i(TAG, "onResponse上传离线视频广告统计信息成功 删除保存本地的信息");
+                    DbUtils.getInstans().deleteAllTongji();
+
+                } else {
+                    Log.i(TAG, "onResponse统计广告图片信息统计接口 上传统计信息失败  保存信息到数据库");
+                }
+            }
+        });
+
+    }
 
     /**
      * 初始化handle

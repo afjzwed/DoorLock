@@ -3,6 +3,8 @@ package com.cxwl.hurry.doorlock.utils;
 import android.nfc.Tag;
 import android.util.Log;
 
+import com.cxwl.hurry.doorlock.db.AdTongJiBean;
+import com.cxwl.hurry.doorlock.db.AdTongJiBeanDao;
 import com.cxwl.hurry.doorlock.db.KaDao;
 import com.cxwl.hurry.doorlock.db.LogDoor;
 
@@ -26,12 +28,14 @@ public class DbUtils {
     private LianDao mLianDao;
     private LogDoorDao mLogDao;
     private final static String TAG = "DB";
+    private AdTongJiBeanDao mAdTongJiBeanDao;
 
     private DbUtils(DaoSession daoSession) {
         this.mDaoSession = daoSession;
         mKaDao = this.mDaoSession.getKaDao();
         mLianDao = this.mDaoSession.getLianDao();
         mLogDao = this.mDaoSession.getLogDoorDao();
+        mAdTongJiBeanDao = this.mDaoSession.getAdTongJiBeanDao();
     }
 
     private static DbUtils mDbUtils;
@@ -164,7 +168,8 @@ public class DbUtils {
      */
     public List<LogDoor> quaryLog() {
         List<LogDoor> doors = mLogDao.queryBuilder().list();
-        Log.i(TAG, "查询所有离线日志");
+        if (doors != null) {
+            Log.i(TAG, "查询所有离线日志 有"+doors.size()+"条");}
         return doors;
     }
 
@@ -174,5 +179,37 @@ public class DbUtils {
     public void deleteAllLog() {
         mLogDao.deleteAll();
         Log.i(TAG, "删除数据库中日志");
+    }
+
+
+    /**
+     * 增加所有统计信息
+     */
+    public void addAllTongji(List<AdTongJiBean> logDoor) {
+        for (int i = 0; i < logDoor.size(); i++) {
+            mAdTongJiBeanDao.insert(logDoor.get(i));
+        }
+        Log.i(TAG, "离线统计信息保存到数据库成功");
+    }
+
+    /**
+     * 检查是否存在离线统计
+     *
+     * @return
+     */
+    public List<AdTongJiBean> quaryTongji() {
+        List<AdTongJiBean> doors = mAdTongJiBeanDao.queryBuilder().list();
+        if (doors != null) {
+            Log.i(TAG, "查询所有离线统计信息 有"+doors.size()+"条");
+        }
+        return doors;
+    }
+
+    /**
+     * 删除所有统计信息
+     */
+    public void deleteAllTongji() {
+        mAdTongJiBeanDao.deleteAll();
+        Log.i(TAG, "删除数据库中统计信息");
     }
 }

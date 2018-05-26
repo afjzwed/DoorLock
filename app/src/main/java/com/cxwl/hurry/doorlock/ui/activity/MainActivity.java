@@ -66,7 +66,7 @@ import com.cxwl.hurry.doorlock.callback.AdverErrorCallBack;
 import com.cxwl.hurry.doorlock.callback.AdverTongJiCallBack;
 import com.cxwl.hurry.doorlock.callback.GlideImagerBannerLoader;
 import com.cxwl.hurry.doorlock.config.DeviceConfig;
-import com.cxwl.hurry.doorlock.entity.AdTongJiBean;
+import com.cxwl.hurry.doorlock.db.AdTongJiBean;
 import com.cxwl.hurry.doorlock.entity.GuangGaoBean;
 import com.cxwl.hurry.doorlock.entity.NoticeBean;
 import com.cxwl.hurry.doorlock.entity.XdoorBean;
