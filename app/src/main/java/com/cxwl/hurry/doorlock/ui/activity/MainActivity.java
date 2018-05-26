@@ -1163,7 +1163,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     }
                 } else if (key >= 0) {//数字键
                     if (currentStatus == CALL_MODE) {
-                        callInput(key);
+                        unitNoInput(key);
+//                        callInput(key);
                     } else {
                         passwordInput(key);//密码开门
                     }
@@ -1648,7 +1649,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                                                 }
                                                             }
                                                         }, null);
-
                                             }
                                         }.start();
                                     }
@@ -1671,6 +1671,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     Log.v("MainActivity", "照相出异常清除UUID");
                     clearImageUuidAvaible(uuid);
                 } catch (Exception err) {
+
                 }
             }
         }
@@ -2272,8 +2273,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 Log.v(TAG, "face" + "handleMessage-->" + msg.what + "/" + Thread.currentThread()
                         .getName());
                 switch (msg.what) {
-                    case MSG_FACE_DETECT_CHECK://门开了以后identification设为false
-                        // ，发送此消息MSG_FACE_DETECT_CHECK
+                    case MSG_FACE_DETECT_CHECK://门开了以后identification设为false，发送此消息MSG_FACE_DETECT_CHECK
                         identification = true;
 //                        idOperation =true;
                         break;
