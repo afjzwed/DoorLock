@@ -351,7 +351,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             noticeThread.interrupt();
             noticeThread = null;
         }
-        Log.e(TAG, "通告线程开始"+isTongGaoThreadStart);
+        Log.e(TAG, "通告线程开始" + isTongGaoThreadStart);
         noticeThread = new Thread() {
             @Override
             public void run() {
@@ -668,10 +668,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         String value = (String) msg.obj;
                         noticeBeanList = (ArrayList<NoticeBean>) JsonUtil.parseJsonToList(value,
                                 new TypeToken<List<NoticeBean>>() {
-                        }.getType());
+                                }.getType());
 
                         if (!isTongGaoThreadStart) {//线程未开启
-                            isTongGaoThreadStart =!isTongGaoThreadStart;
+                            isTongGaoThreadStart = !isTongGaoThreadStart;
                             startTonggaoThread();//开启线程
                         }
                         break;
@@ -723,6 +723,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private AdTongJiBean mAdTongJiBean;
     private String startTime;
     private String endTime;
+
     public void onAdvertiseRefreshPic(Object obj) {
 
         final ArrayList<GuangGaoBean> obj1 = (ArrayList<GuangGaoBean>) obj;
@@ -828,7 +829,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
             sendMainMessager(MainService.MAIN_ACTIVITY_INIT, NetWorkUtils.isNetworkAvailable
                     (MainActivity
-                    .this));
+                            .this));
             initNetListen();
         }
 
@@ -1620,33 +1621,33 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                                                 uploadManager.put(file.getPath(), curUrl, token,
                                                         new UpCompletionHandler() {
-                                                    @Override
-                                                    public void complete(String key, ResponseInfo
-                                                            info, JSONObject response) {
-                                                        if (info.isOK()) {
-                                                            Log.e(TAG, "七牛上传图片成功");
+                                                            @Override
+                                                            public void complete(String key, ResponseInfo
+                                                                    info, JSONObject response) {
+                                                                if (info.isOK()) {
+                                                                    Log.e(TAG, "七牛上传图片成功");
 
-                                                        } else {
-                                                            Log.e(TAG, "七牛上传图片失败");
-                                                        }
-                                                        if (checkTakePictureAvailable(uuid) &&
-                                                                info.isOK()) {
-                                                            Log.i(TAG, "开始发送图片");
-                                                            callback.afterTakePickture(thisValue,
-                                                                    curUrl, isCall, uuid);
-                                                        } else {
-                                                            Log.v("MainActivity", "上传照片成功,但已取消");
-                                                        }
-                                                        clearImageUuidAvaible(uuid);
-                                                        Log.v(TAG, "正常清除" + uuid);
-                                                        try {
-                                                            if (file != null) {
-                                                                file.delete();
+                                                                } else {
+                                                                    Log.e(TAG, "七牛上传图片失败");
+                                                                }
+                                                                if (checkTakePictureAvailable(uuid) &&
+                                                                        info.isOK()) {
+                                                                    Log.i(TAG, "开始发送图片");
+                                                                    callback.afterTakePickture(thisValue,
+                                                                            curUrl, isCall, uuid);
+                                                                } else {
+                                                                    Log.v("MainActivity", "上传照片成功,但已取消");
+                                                                }
+                                                                clearImageUuidAvaible(uuid);
+                                                                Log.v(TAG, "正常清除" + uuid);
+                                                                try {
+                                                                    if (file != null) {
+                                                                        file.delete();
+                                                                    }
+                                                                } catch (Exception e) {
+                                                                }
                                                             }
-                                                        } catch (Exception e) {
-                                                        }
-                                                    }
-                                                }, null);
+                                                        }, null);
 
                                             }
                                         }.start();

@@ -25,7 +25,7 @@ public class MainApplication  extends Application {
     public void onCreate() {
         application = this;
 
-        // TODO: 2018/5/14 这个不用了，人脸识别的数据存本地数据库
+        //人脸识别的数据存本地
          ArcsoftManager.getInstance().initArcsoft(this);//虹软人脸识别初始化
 
         super.onCreate();

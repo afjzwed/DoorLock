@@ -29,7 +29,6 @@ public class GlideImagerBannerLoader extends ImageLoader {
          切记不要胡乱强转！
          */
         GuangGaoBean guangGaoBean = (GuangGaoBean) path;
-        Log.e("wh图片", " " + guangGaoBean.toString()+" 内容 "+guangGaoBean.getNeirong());
         imageView.setScaleType(ImageView.ScaleType.FIT_XY);
         //Glide 加载图片简单用法
 //        Glide.with(context).load(guangGaoBean.getNeirong()).into(imageView);

@@ -263,7 +263,7 @@ public class FaceRegisterActivity extends AppCompatActivity implements SurfaceHo
                         .getName());
 //                boolean bool1 = ArcsoftManager.getInstance().mFaceDB.saveBitmap(phoneNumber,
 // faceBitmap);
-                // TODO: 2018/4/21 此处为人脸识别信息存入本地人脸数据库
+                //人脸识别信息存入本地人脸数据库
                 boolean bool2 = ArcsoftManager.getInstance().mFaceDB.addFace(phoneNumber,
                         mAFR_FSDKFace);
                 Log.v("人脸识别", "handleMessage2-->" + true + "/" + bool2);
