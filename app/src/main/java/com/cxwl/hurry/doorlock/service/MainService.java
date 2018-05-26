@@ -2083,10 +2083,10 @@ public class MainService extends Service {
             List<LogDoor> list = new ArrayList<>();
             //拼接图片地址
             if (StringUtils.isNoEmpty(logDoor.getKaimenjietu())) {
-                logDoor.setKaimenshijian(logDoor.getKaimenjietu());
+                logDoor.setKaimenjietu(logDoor.getKaimenjietu());
             } else {
                 if (StringUtils.isNoEmpty(imageUrl)) {
-                    logDoor.setKaimenshijian(imageUrl);
+                    logDoor.setKaimenjietu(imageUrl);
                 }
             }
             Log.e(TAG, "图片imageUrl" + logDoor.getKaimenjietu());
