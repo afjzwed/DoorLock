@@ -22,18 +22,6 @@ public class AdTongJiBean {
     private String end_time;
     @Property(nameInDb = "mac")
     private String mac;
-    @Generated(hash = 964359920)
-    public AdTongJiBean(Long id, int add_id, String start_time, String end_time,
-            String mac) {
-        this.id = id;
-        this.add_id = add_id;
-        this.start_time = start_time;
-        this.end_time = end_time;
-        this.mac = mac;
-    }
-    @Generated(hash = 1025819527)
-    public AdTongJiBean() {
-    }
     public String getMac() {
         return this.mac;
     }
@@ -64,5 +52,22 @@ public class AdTongJiBean {
     public void setId(Long id) {
         this.id = id;
     }
+    @Generated(hash = 964359920)
+    public AdTongJiBean(Long id, int add_id, String start_time, String end_time,
+                        String mac) {
+        this.id = id;
+        this.add_id = add_id;
+        this.start_time = start_time;
+        this.end_time = end_time;
+        this.mac = mac;
+    }
+    @Generated(hash = 1025819527)
+    public AdTongJiBean() {
+    }
 
+    @Override
+    public String toString() {
+        return "AdTongJiBean{" + "id=" + id + ", add_id=" + add_id + ", start_time='" +
+                start_time + '\'' + ", end_time='" + end_time + '\'' + ", mac='" + mac + '\'' + '}';
+    }
 }

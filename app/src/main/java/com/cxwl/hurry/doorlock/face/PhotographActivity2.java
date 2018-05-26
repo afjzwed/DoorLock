@@ -240,7 +240,7 @@ public class PhotographActivity2 extends AppCompatActivity implements Camera.Pic
 //                handler.sendEmptyMessageDelayed(1, 100);
 //            }
             return true;
-        } else if (keyCode == KeyEvent.KEYCODE_DEL) {//按删除键退出
+        } else if (keyCode == DeviceConfig.DEVICE_KEYCODE_STAR) {//按删除键退出
             finishActivity();
             return true;
         }

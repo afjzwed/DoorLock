@@ -260,8 +260,7 @@ public class MainService extends Service {
                 "charset=utf-8")).tag(this).build().execute(new StringCallback() {
             @Override
             public void onError(Call call, Exception e, int id) {
-                Log.e(TAG, "er");
-                Log.i(TAG, "onError统计广告视频信息统计接口 上传统计信息失败  保存信息到数据库e");
+                Log.i(TAG, "onError 上传广告视频统计信息失败  保存信息到数据库 "+e.toString());
                 DbUtils.getInstans().addAllTongji(list);
             }
 
@@ -276,7 +275,7 @@ public class MainService extends Service {
                         lixianTongji(adTongJiBeen);
                     }
                 } else {
-                    Log.i(TAG, "onResponse统计广告视频信息统计接口 上传统计信息失败  保存信息到数据库");
+                    Log.i(TAG, "上传广告视频统计信息失败  保存信息到数据库");
                     DbUtils.getInstans().addAllTongji(list);
                 }
             }
@@ -296,7 +295,7 @@ public class MainService extends Service {
             @Override
             public void onError(Call call, Exception e, int id) {
                 Log.e(TAG, "er");
-                Log.i(TAG, "onError统计广告图片信息统计接口 上传统计信息失败  保存信息到数据库e");
+                Log.i(TAG, "onError 上传广告图片统计信息失败  保存信息到数据库e "+e.toString());
                 DbUtils.getInstans().addAllTongji(list);
             }
 
@@ -304,14 +303,14 @@ public class MainService extends Service {
             public void onResponse(String response, int id) {
                 Log.e(TAG, "onResponse 广告图片" + response);
                 if ("0".equals(JsonUtil.getFieldValue(response, "code"))) {
-                    Log.i(TAG, "onResponse统计广告图片信息统计接口 上传统计信息成功 检查是否存在离线信息");
+                    Log.i(TAG, "onResponse上传广告图片统计信息成功 检查是否存在离线信息");
                     List<AdTongJiBean> adTongJiBeen = DbUtils.getInstans().quaryTongji();
                     if (adTongJiBeen.size() > 0) {
                         Log.i(TAG, "本地数据库中--存在--图片的统计信息 开始上传离线");
                         lixianTongji(adTongJiBeen);
                     }
                 } else {
-                    Log.i(TAG, "onResponse统计广告图片信息统计接口 上传统计信息失败  保存信息到数据库");
+                    Log.i(TAG, "onResponse上传广告图片统计信息失败  保存信息到数据库");
                     DbUtils.getInstans().addAllTongji(list);
                 }
             }
@@ -330,7 +329,7 @@ public class MainService extends Service {
             @Override
             public void onError(Call call, Exception e, int id) {
                 Log.e(TAG, "er");
-                Log.e(TAG, "onError统计广告图片信息统计接口 上传离线统计信息失败 ");
+                Log.e(TAG, "onError统计广告图片信息统计接口 上传离线统计信息失败 "+e.toString());
             }
 
             @Override
@@ -341,7 +340,7 @@ public class MainService extends Service {
                     DbUtils.getInstans().deleteAllTongji();
 
                 } else {
-                    Log.i(TAG, "onResponse统计广告图片信息统计接口 上传统计信息失败  保存信息到数据库");
+                    Log.i(TAG, "onResponse 上传离线统计信息失败  保存信息到数据库");
                 }
             }
         });
@@ -1212,8 +1211,7 @@ public class MainService extends Service {
                                                 adjustAdvertiseFiles();
                                                 restartAdvertise(guangGaoBeen);
                                                 removeAdvertiseFiles();
-                                                //同步通知
-                                                syncCallBack("5",v);
+                                                syncCallBack("5",v);//同步通知
                                                 SPUtil.put(MainService.this, Constant
                                                         .SP_VISION_GUANGGAO_VIDEO, v);//保存最新广告视频版本
                                                 adInfoStatus = 0;//重置广告视频下载状态
@@ -2422,7 +2420,6 @@ public class MainService extends Service {
                         Log.v("MainService", "--->取消" + username);
                         String userUrl = RtcRules.UserToRemoteUri_new(username, RtcConst.UEType_Any);
                         Log.e(TAG, "发送取消呼叫的消息");
-                        Log.e("device", "userUrl" + userUrl + "command" + command.toString());
                         device.sendIm(userUrl, "cmd/json", command.toString());
                     }
                 }
@@ -2455,7 +2452,6 @@ public class MainService extends Service {
                         username = username.replaceAll(":", "");
                     }
                     String userUrl = RtcRules.UserToRemoteUri_new(username, RtcConst.UEType_Any);
-                    Log.e("device", "userUrl" + userUrl + "command" + data.toString());
                     int sendResult = device.sendIm(userUrl, "cmd/json", data.toString());
                     Log.v("MainService", "发送访客图片-->" + username);
                     Log.v("MainService", "sendIm(): " + sendResult);
@@ -2639,7 +2635,6 @@ public class MainService extends Service {
                     String userUrl = RtcRules.UserToRemoteUri_new(username, RtcConst.UEType_Any);
                     HttpApi.i("拨号中->准备拨号userUrl = " + userUrl);
                     HttpApi.i("拨号中->准备拨号data = " + data.toString());
-                    Log.e("device", "userUrl" + userUrl + "command" + data.toString());
                     int sendResult = device.sendIm(userUrl, "cmd/json", data.toString());
                     Log.v("MainService", "sendIm(): " + sendResult);
                     HttpApi.i("拨号中->sendIm()" + sendResult);

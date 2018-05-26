@@ -1557,6 +1557,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private synchronized void doTakePicture(final String thisValue, final String curUrl, final
     boolean isCall, final String uuid, final TakePictureCallback callback) {
         mCamerarelease = false;
+
         try {
             camera = Camera.open();
             Log.e(TAG, "打开照相机 1");
@@ -1577,7 +1578,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 Camera.Parameters parameters = camera.getParameters();
                 parameters.setPreviewSize(320, 240);
                 camera.setParameters(parameters);
-                camera.setPreviewDisplay(autoCameraHolder);
+//                camera.setPreviewDisplay(autoCameraHolder);
                 camera.startPreview();
                 camera.autoFocus(null);
                 Log.v("MainActivity", "开始拍照");

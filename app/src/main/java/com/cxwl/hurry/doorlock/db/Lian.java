@@ -52,4 +52,9 @@ public class Lian {
     @Generated(hash = 1412347224)
     public Lian() {
     }
+
+    @Override
+    public String toString() {
+        return "Lian{" + "id=" + id + ", lian_id='" + lian_id + '\'' + ", lian_info='" + lian_info + '\'' + '}';
+    }
 }

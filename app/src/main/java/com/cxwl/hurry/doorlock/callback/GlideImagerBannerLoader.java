@@ -1,11 +1,17 @@
 package com.cxwl.hurry.doorlock.callback;
 
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.util.Log;
 import android.widget.ImageView;
 
 import com.bumptech.glide.Glide;
 import com.cxwl.hurry.doorlock.entity.GuangGaoBean;
 import com.youth.banner.loader.ImageLoader;
+import com.zhy.http.okhttp.OkHttpUtils;
+import com.zhy.http.okhttp.callback.BitmapCallback;
+
+import okhttp3.Call;
 
 /**
  * @author xlei
@@ -14,7 +20,7 @@ import com.youth.banner.loader.ImageLoader;
 
 public class GlideImagerBannerLoader extends ImageLoader {
     @Override
-    public void displayImage(Context context, Object path, ImageView imageView) {
+    public void displayImage(Context context, Object path, final ImageView imageView) {
         /**
          注意：
          1.图片加载器由自己选择，这里不限制，只是提供几种使用方法
@@ -23,9 +29,26 @@ public class GlideImagerBannerLoader extends ImageLoader {
          切记不要胡乱强转！
          */
         GuangGaoBean guangGaoBean = (GuangGaoBean) path;
+        Log.e("wh图片", " " + guangGaoBean.toString()+" 内容 "+guangGaoBean.getNeirong());
         imageView.setScaleType(ImageView.ScaleType.FIT_XY);
         //Glide 加载图片简单用法
-        Glide.with(context).load(guangGaoBean.getNeirong()).into(imageView);
+//        Glide.with(context).load(guangGaoBean.getNeirong()).into(imageView);
+
+        OkHttpUtils.get().url(guangGaoBean.getNeirong()).tag(context)
+                .build()
+                .connTimeOut(2000).readTimeOut(2000).writeTimeOut(2000)
+                .execute(new BitmapCallback() {
+
+                    @Override
+                    public void onError(Call call, Exception e, int id) {
+                    }
+
+                    @Override
+                    public void onResponse(Bitmap bitmap, int id) {
+                        imageView.setImageBitmap(bitmap);
+                    }
+                });
+
 //        //Picasso 加载图片简单用法
 //        Picasso.with(context).load(path).into(imageView);
 //
