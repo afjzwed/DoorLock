@@ -25,6 +25,7 @@ public class DoorBean {
      * lixian_mima : 123456
      * version : null
      * token : 7a8f37cf-d8eb-4dad-9bfa-e1b3401d37f0
+     *
      */
 
     private int id;
@@ -37,6 +38,7 @@ public class DoorBean {
     private String tonggao;
     private String tonggao_gx;
     private String mac;
+    private int mac_id;
     private int xiangmu_id;
     private XdoorBean xdoor;
     private int xintiao_time;
@@ -44,6 +46,14 @@ public class DoorBean {
     private String lixian_mima;
     private String version;
     private String token;
+
+    public int getMac_id() {
+        return mac_id;
+    }
+
+    public void setMac_id(int mac_id) {
+        this.mac_id = mac_id;
+    }
 
     public int getId() {
         return id;

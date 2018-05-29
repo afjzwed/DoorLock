@@ -223,7 +223,7 @@ public class MainService extends Service {
     private String lastVersionStatus = "L"; //L: last version N: find new version D：downloading
     // P: pending to install I: installing  版本更新状态
     private int downloadingFlag = 0; //0：not downloading 1:downloading 2:stop download  apk下载状态
-
+    private String mac_id; //心跳接口传
     private ActivityManager activityManager;//Activity管理类
     private boolean isPullTime = false;
     private Timer activityTimer = null;
@@ -694,6 +694,7 @@ public class MainService extends Service {
         try {
             JSONObject data = new JSONObject();
             data.put("mac", mac);
+            data.put("mac_id", mac_id);
             OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse("application/json; "
                     + "charset=utf-8")).addHeader("Authorization", httpServerToken).tag(this).build().execute(new StringCallback() {
                 @Override
@@ -731,7 +732,6 @@ public class MainService extends Service {
                                 SPUtil.put(MainService.this, Constant.SP_LIXIAN_MIMA, connectReportBean
                                         .getLixian_mima());
                             }
-
                             Log.i(TAG, "心跳--服务器返回的心跳时间（秒）" + (long) (connectReportBean.getXintiao_time() * 1000));
                             if (0L != ((long) (connectReportBean.getXintiao_time()))) {
                                 SPUtil.put(MainService.this, Constant.SP_XINTIAO_TIME, (long) (connectReportBean
@@ -739,20 +739,18 @@ public class MainService extends Service {
                             } else {
                                 SPUtil.put(MainService.this, Constant.SP_XINTIAO_TIME, (long) (60000));
                             }
-
-                            Log.e(TAG, "心跳--服务器返回的心跳时间（秒）" + (long) SPUtil.get(MainService.this,Constant.SP_XINTIAO_TIME, 60000L));
-
                             if (StringUtils.isNoEmpty(connectReportBean.getKa())) {
-                                float kaVision = (float) SPUtil.get(MainService.this, Constant.SP_VISION_KA, 0f);
-                                Log.i(TAG, "心跳--当前卡版本：" + kaVision + "   服务器卡版本：" + Float.parseFloat(connectReportBean.getKa()));
-                                if (Float.parseFloat(connectReportBean.getKa()) > kaVision) {
+                                long kaVision = (long) SPUtil.get(MainService.this, Constant.SP_VISION_KA, 0L);
+                                Log.i(TAG, "心跳--当前卡版本：" + kaVision + "   服务器卡版本：" + Long.parseLong(connectReportBean
+                                        .getKa()));
+                                if (Long.parseLong(connectReportBean.getKa()) > kaVision) {
                                     Log.i(TAG, "心跳中有卡信息更新");
-                                    getCardInfo(Float.parseFloat(connectReportBean.getKa()));
+                                    getCardInfo(Long.parseLong(connectReportBean.getKa()));
                                 }
                             }
                             if (StringUtils.isNoEmpty(connectReportBean.getLian())) {
-                                float lianVision = (float) SPUtil.get(MainService.this, Constant.SP_VISION_LIAN, 0f);
-                                if (Float.parseFloat(connectReportBean.getLian()) > lianVision) {
+                                long lianVision = (long) SPUtil.get(MainService.this, Constant.SP_VISION_LIAN, 0L);
+                                if (Long.parseLong(connectReportBean.getLian()) > lianVision) {
                                     Log.i(TAG, "心跳中有脸信息更新");
                                     if (faceStatus == 0) {
                                         //判断是否正在下载
@@ -760,32 +758,32 @@ public class MainService extends Service {
                                     }
                                 }
                             }
-                            if (StringUtils.isNoEmpty(connectReportBean.getGuanggaopic())) {
-                                float guanggaoVision = (float) SPUtil.get(MainService.this, Constant
-                                        .SP_VISION_GUANGGAO, 0f);
-                                Log.i(TAG, "心跳--当前广告图片版本：" + guanggaoVision + "   服务器广告图片版本：" +Float.parseFloat(connectReportBean.getGuanggaopic()));
-                                if (Float.parseFloat(connectReportBean.getGuanggaopic()) > guanggaoVision) {
+                            if (StringUtils.isNoEmpty(connectReportBean.getTupian())) {
+                                long guanggaoVision = (long) SPUtil.get(MainService.this, Constant
+                                        .SP_VISION_GUANGGAO, 0L);
+                                Log.i(TAG, "心跳--当前广告图片版本：" + guanggaoVision + "   服务器广告图片版本：" + Long.parseLong
+                                        (connectReportBean.getTupian()));
+                                if (Long.parseLong(connectReportBean.getTupian()) > guanggaoVision) {
                                     Log.i(TAG, "心跳中有广告图片信息更新");
-                                    getGuangGaoPic(Float.parseFloat(connectReportBean.getGuanggaopic()));
+                                    getTupian(Long.parseLong(connectReportBean.getTupian()));
                                 }
                             }
-                            if (StringUtils.isNoEmpty(connectReportBean.getGuanggaovideo())) {
-                                float guanggaoVadioVision = (float) SPUtil.get(MainService.this, Constant
-                                        .SP_VISION_GUANGGAO_VIDEO, 0f);
-                                Log.i(TAG, "心跳--当前广告视频版本：" + guanggaoVadioVision + "   " + "服务器广告视频版本：" + Float
-                                        .parseFloat(connectReportBean.getGuanggaovideo()));
-                                if (Float.parseFloat(connectReportBean.getGuanggaovideo()) >guanggaoVadioVision) {
+                            if (StringUtils.isNoEmpty(connectReportBean.getGuanggao())) {
+                                long guanggaoVadioVision = (long) SPUtil.get(MainService.this, Constant
+                                        .SP_VISION_GUANGGAO_VIDEO, 0L);
+                                Log.i(TAG, "心跳--当前广告视频版本：" + guanggaoVadioVision + "   " + "服务器广告视频版本：" + Long
+                                        .parseLong(connectReportBean.getGuanggao()));
+                                if (Long.parseLong(connectReportBean.getGuanggao()) > guanggaoVadioVision) {
                                     Log.i(TAG, "心跳中有广告视频信息更新");
-                                    getGuangGaoVideo(Float.parseFloat(connectReportBean.getGuanggaovideo()));
+                                    getGuanggao(Long.parseLong(connectReportBean.getGuanggao()));
                                 }
                             }
                             //// TODO: 2018/5/17 拿app版本信息 去掉点
                             if (StringUtils.isNoEmpty(connectReportBean.getVersion())) {
-                                float appVision = (float) SPUtil.get(MainService.this, Constant.SP_VISION_APP, Float
-                                        .parseFloat(getVersionName()));
-                                Log.i(TAG, "心跳--当前app版本：" + appVision + "   服务器app版本：" + Float.parseFloat
+                                String appVision = (String) SPUtil.get(MainService.this, Constant.SP_VISION_APP, getVersionName());
+                                Log.i(TAG, "心跳--当前app版本：" + appVision + "   服务器app版本：" +
                                         (connectReportBean.getVersion()));
-                                if (Float.parseFloat(connectReportBean.getVersion()) > appVision) {
+                                if (Integer.parseInt(connectReportBean.getVersion().replace(".","")) > Integer.parseInt(appVision.replace(".",""))) {
                                     Log.i(TAG, "心跳中有APP信息更新");
                                     if (lastVersionStatus.equals("D")) {//正在下载最新包
                                         //不获取地址
@@ -809,12 +807,12 @@ public class MainService extends Service {
                                 }
                             }
                             if (StringUtils.isNoEmpty(connectReportBean.getTonggao())) {
-                                float tonggaoVision = (float) SPUtil.get(MainService.this, Constant
-                                        .SP_VISION_TONGGAO, 0f);
-                                if (Float.parseFloat(connectReportBean.getTonggao()) >tonggaoVision) {
+                                long tonggaoVision = (long) SPUtil.get(MainService.this, Constant.SP_VISION_TONGGAO,
+                                        0L);
+                                if (Long.parseLong(connectReportBean.getTonggao()) > tonggaoVision) {
                                     Log.i(TAG, "心跳中有通告信息更新");
                                     if (noticesStatus == 0) {//判断是否正在下载
-                                        getTongGaoInfo(Float.parseFloat(connectReportBean.getTonggao()));
+                                        getTongGaoInfo(Long.parseLong(connectReportBean.getTonggao()));
                                     }
                                 }
                             }
@@ -839,7 +837,7 @@ public class MainService extends Service {
 
     private int adpicInfoStatus = 0;
 
-    private void getGuangGaoPic(final float v) {
+    private void getTupian(final long v) {
         if (adpicInfoStatus == 0) {
             adpicInfoStatus = 1;
             String url = API.CALLALL_ADS;
@@ -848,19 +846,19 @@ public class MainService extends Service {
             map.put("mac", mac);
             map.put("leixing", "2");
             String json = JsonUtil.parseMapToJson(map);
-            Log.i(TAG, "getGuangGaoPic请求图片接口 json=" + json);
+            Log.i(TAG, "getTupian请求图片接口 json=" + json);
             OkHttpUtils.postString().url(url).content(json).mediaType(MediaType.parse("application/json; " +
                     "charset=utf-8")).addHeader("Authorization", httpServerToken).tag(this).build().execute(new StringCallback() {
 
                 @Override
                 public void onError(Call call, Exception e, int id) {
-                    Log.e(TAG, "onError 获取广告图片接口 getGuangGaoPic  Exception=" + e.toString());
+                    Log.e(TAG, "onError 获取广告图片接口 getTupian  Exception=" + e.toString());
                     adpicInfoStatus = 0;
                 }
 
                 @Override
                 public void onResponse(String response, int id) {
-                    Log.i(TAG, "onResponse 获取广告图片接口 getGuangGaoPic  response=" + response);
+                    Log.i(TAG, "onResponse 获取广告图片接口 getTupian  response=" + response);
                     if (response == null || "".equals(response)) {
                         adpicInfoStatus = 0;
                         return;
@@ -870,7 +868,7 @@ public class MainService extends Service {
                         String result = JsonUtil.getResult(response);
                         String guanggao = JsonUtil.getFieldValue(result, "guanggao");
                         try {
-                            ArrayList<GuangGaoBean> guangGaoBeen = (ArrayList<GuangGaoBean>) JsonUtil.fromJsonArray(guanggao, GuangGaoBean.class);
+                            List<GuangGaoBean> guangGaoBeen = JsonUtil.fromJsonArray(guanggao, GuangGaoBean.class);
                             Log.i(TAG, "获取广告图片接口 guangGaoBeen " + guangGaoBeen);
                             sendMessageToMainAcitivity(MSG_ADVERTISE_REFRESH_PIC, guangGaoBeen);
                             adpicInfoStatus = 0;
@@ -1164,8 +1162,7 @@ public class MainService extends Service {
      */
     private int adInfoStatus = 0;//广告信息状态(默认为0) 0:不一致（等待下载数据）1:不一致（正在下载数据）
 
-    private void getGuangGaoVideo(final float v) {
-        Log.e(TAG, "视频广告 adInfoStatus" + adInfoStatus);
+    private void getGuanggao(final long v) {
         if (adInfoStatus == 0) {
             adInfoStatus = 1;
             String url = API.CALLALL_ADS;
@@ -1180,12 +1177,12 @@ public class MainService extends Service {
 
                     @Override
                     public void onError(Call call, Exception e, int id) {
-                        Log.e(TAG, "onError 获取视频广告接口 Exception=" + e.toString());
+                        Log.e(TAG, "onError 获取广告接口 getGuangGao  Exception=" + e.toString());
                     }
 
                     @Override
                     public void onResponse(String response, int id) {
-                        Log.e(TAG, "onResponse 获取视频广告接口 response=" + response);
+                        Log.e(TAG, "onResponse 获取广告接口 getGuangGao  response=" + response);
                         if (null != response) {
                             String code = JsonUtil.getFieldValue(response, "code");
                             if ("0".equals(code)) {
@@ -1209,8 +1206,8 @@ public class MainService extends Service {
                                                 restartAdvertise(guangGaoBeen);
                                                 removeAdvertiseFiles();
                                                 syncCallBack("5", v);//同步通知
-                                                SPUtil.put(MainService.this, Constant
-                                                        .SP_VISION_GUANGGAO_VIDEO, v);//保存最新广告视频版本
+                                                SPUtil.put(MainService.this, Constant.SP_VISION_GUANGGAO_VIDEO, v);
+                                                //保存最新广告视频版本
                                                 adInfoStatus = 0;//重置广告视频下载状态
                                             } catch (Exception e) {
                                                 e.printStackTrace();
@@ -1364,7 +1361,7 @@ public class MainService extends Service {
      *
      * @param version
      */
-    private void getTongGaoInfo(final float version) {
+    private void getTongGaoInfo(final long version) {
         noticesStatus = 1;//正在下载，避免重复下载
         try {
             String url = API.CALLALL_NOTICES;
@@ -1419,7 +1416,7 @@ public class MainService extends Service {
     /**
      * 获取门禁卡信息接口
      */
-    private void getCardInfo(final float kaVison) {
+    private void getCardInfo(final long kaVison) {
         if (cardInfoStatus == 0) {
             Log.i(TAG, "getCardInfo正在进行卡信息下载");
             cardInfoStatus = 1;//正在下载
@@ -1485,7 +1482,7 @@ public class MainService extends Service {
      * @param type   1 卡，2 人脸，3 图片广告，4 通告 ，5.视频广告
      * @param vision 版本
      */
-    private void syncCallBack(final String type, float vision) {
+    private void syncCallBack(final String type, long vision) {
         try {
             //开始获取门禁卡信息
             String url = API.SYNC_CALLBACK;
@@ -1532,8 +1529,8 @@ public class MainService extends Service {
         SPUtil.put(MainService.this, Constant.SP_VISION_APP, connectReportBean.getVersion());
         SPUtil.put(MainService.this, Constant.SP_LIXIAN_MIMA, connectReportBean.getLixian_mima());
         SPUtil.put(MainService.this, Constant.SP_VISION_KA, connectReportBean.getKa());
-        SPUtil.put(MainService.this, Constant.SP_VISION_GUANGGAO, connectReportBean.getGuanggaopic());
-        SPUtil.put(MainService.this, Constant.SP_VISION_GUANGGAO_VIDEO, connectReportBean.getGuanggaopic());
+        SPUtil.put(MainService.this, Constant.SP_VISION_GUANGGAO, connectReportBean.getTupian());
+        SPUtil.put(MainService.this, Constant.SP_VISION_GUANGGAO_VIDEO, connectReportBean.getTupian());
         SPUtil.put(MainService.this, Constant.SP_VISION_LIAN, connectReportBean.getLian());
         SPUtil.put(MainService.this, Constant.SP_VISION_TONGGAO, connectReportBean.getTonggao());
     }
@@ -1542,10 +1539,11 @@ public class MainService extends Service {
      * 重置广告，图片，通知版本为0，下次登录时重新加载
      */
     private void saveVisionInfo() {
-
-        SPUtil.put(MainService.this, Constant.SP_VISION_GUANGGAO, 0f);
-        SPUtil.put(MainService.this, Constant.SP_VISION_GUANGGAO_VIDEO, 0f);
-        SPUtil.put(MainService.this, Constant.SP_VISION_TONGGAO, 0f);
+//// TODO: 2018/5/28 清除版本 暂时先把卡版本也清除
+        SPUtil.put(MainService.this, Constant.SP_VISION_KA, 0L);
+        SPUtil.put(MainService.this, Constant.SP_VISION_GUANGGAO, 0L);
+        SPUtil.put(MainService.this, Constant.SP_VISION_GUANGGAO_VIDEO, 0L);
+        SPUtil.put(MainService.this, Constant.SP_VISION_TONGGAO, 0L);
 
 //        Log.e(TAG, "广告，图片，通知版本" + SPUtil.get(MainService.this, Constant.SP_VISION_GUANGGAO, 0f));
     }
@@ -1559,8 +1557,8 @@ public class MainService extends Service {
         SPUtil.put(MainService.this, Constant.SP_VISION_APP, connectReportBean.getVersion());
         SPUtil.put(MainService.this, Constant.SP_LIXIAN_MIMA, connectReportBean.getLixian_mima());
         SPUtil.put(MainService.this, Constant.SP_VISION_KA, connectReportBean.getKa());
-        SPUtil.put(MainService.this, Constant.SP_VISION_GUANGGAO, connectReportBean.getGuanggaopic());
-        SPUtil.put(MainService.this, Constant.SP_VISION_GUANGGAO_VIDEO, connectReportBean.getGuanggaovideo());
+        SPUtil.put(MainService.this, Constant.SP_VISION_GUANGGAO, connectReportBean.getTupian());
+        SPUtil.put(MainService.this, Constant.SP_VISION_GUANGGAO_VIDEO, connectReportBean.getGuanggao());
         SPUtil.put(MainService.this, Constant.SP_VISION_LIAN, connectReportBean.getLian());
         SPUtil.put(MainService.this, Constant.SP_VISION_TONGGAO, connectReportBean.getTonggao());
     }
@@ -1741,6 +1739,7 @@ public class MainService extends Service {
                         String result = JsonUtil.getResult(response);
                         DoorBean doorBean = JsonUtil.parseJsonToBean(result, DoorBean.class);
                         httpServerToken = doorBean.getToken();
+                        mac_id=doorBean.getMac_id()+"";
                         Log.e(TAG, doorBean.toString());
                         //重置广告，图片，通知版本为0，登录时重新加载
                         saveVisionInfo();
@@ -1857,7 +1856,7 @@ public class MainService extends Service {
             DeviceConfig.DEVICE_TYPE = "B";
             blockId = Integer.parseInt(result.getLoudong_id());
             lockId = Integer.parseInt(result.getDanyuan_id());
-            lockName = lockId + "单元";
+            lockName =blockId+"栋"+lockId + "单元";
         }
         communityId = result.getXiangmu_id();
         //目前服务器返回为空

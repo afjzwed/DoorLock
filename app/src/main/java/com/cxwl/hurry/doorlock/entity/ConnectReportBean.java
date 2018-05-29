@@ -36,6 +36,8 @@ public class ConnectReportBean {
     private String lian_gx;
     private String guanggaopic;
     private String guanggaovideo;
+    private String guanggao;
+    private String tupian;
     private String guanggao_gx;
     private String tonggao;
     private String tonggao_gx;
@@ -47,6 +49,22 @@ public class ConnectReportBean {
     private String lixian_mima;
     private String version;
     private Object token;
+
+    public String getGuanggao() {
+        return guanggao;
+    }
+
+    public void setGuanggao(String guanggao) {
+        this.guanggao = guanggao;
+    }
+
+    public String getTupian() {
+        return tupian;
+    }
+
+    public void setTupian(String tupian) {
+        this.tupian = tupian;
+    }
 
     public int getId() {
         return id;
