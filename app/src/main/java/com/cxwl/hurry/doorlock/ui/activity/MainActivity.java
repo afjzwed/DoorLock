@@ -130,6 +130,7 @@ import static com.cxwl.hurry.doorlock.config.Constant.MSG_CALLMEMBER_NO_ONLINE;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_CALLMEMBER_SERVER_ERROR;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_CALLMEMBER_TIMEOUT;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_CANCEL_CALL;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_DELETE_FACE;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_DISCONNECT_VIEDO;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_DETECT_CHECK;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_DETECT_CONTRAST;
@@ -215,6 +216,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private String cardId;//卡ID
     private boolean nfcFlag = false;//录卡页面是否显示(即是否录卡)的标识,默认false
+
     private Receive receive; //本地广播
     private int netWorkFlag = -1;//当前网络是否可用标识 有网为1 无网为0
     private Timer netTimer = new Timer();//检测网络用定时器
@@ -246,6 +248,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private Handler faceHandler;//人脸识别handler
     private boolean identification = false;//人脸识别可以开始对比的标识
     private FRAbsLoop mFRAbsLoop = null;//人脸对比线程
+    private boolean hasFaceInfo = false;//是否有本地脸数据的标识
+    private String phone_face = "";
 
     private Thread noticeThread = null;//通告更新线程
     private boolean isTongGaoThreadStart = false;//通告更新线程是否开启的标志
@@ -549,6 +553,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         banner = (Banner) findViewById(R.id.banner);//用于添加视频通话的根布局
         tv_gonggao_title = (TextView) findViewById(R.id.gonggao_title);
         //getBgBanners();// 网络获得轮播背景图片数据
+        rl_nfc = (RelativeLayout) findViewById(R.id.rl_nfc);//删除脸信息布局(原录卡布局)
+        et_unitno = (EditText) findViewById(R.id.et_unitno);//删除脸信息的手机号(录卡时房屋编号)
 
         rl.setOnClickListener(this);
         iv_setting.setOnClickListener(this);
@@ -685,6 +691,19 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         break;
                     case MSG_ADVERTISE_IMAGE:
                         onAdvertiseImageChange(msg.obj);
+                        break;
+                    case MSG_DELETE_FACE:
+                        boolean delete = (boolean) msg.obj;
+                        rl_nfc.setVisibility(View.GONE);
+                        nfcFlag = false;
+                        isFlag = false;
+                        phone_face = "";
+                        if (delete) {//删除成功
+                            Toast.makeText(MainActivity.this, "删除成功", Toast.LENGTH_SHORT).show();
+                        } else {//没有此人脸信息或删除失败
+                            Toast.makeText(MainActivity.this, "数据库中没有此人脸信息", Toast.LENGTH_SHORT).show();
+                        }
+                        Log.e(TAG, "人脸信息删除" + " delete " + delete);
                         break;
                     default:
                         break;
@@ -943,10 +962,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             cmd = cmd.replace("[_update_time]", time);
                             // TODO: 2018/5/9 这里的校时要用到工控相关hwservice,暂时不注释,之后解决
                             HttpApi.e("走了吗" + cmd.toString());
-                            if (hwservice == null) {
-                                return;
+                            if (hwservice != null) {
+                                hwservice.execRootCommand(cmd);
                             }
-                            hwservice.execRootCommand(cmd);
                             HttpApi.e("时间更新：" + time);
                         } else {
                             HttpApi.e("系统与服务器时间差小，不更新");
@@ -1112,6 +1130,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         Log.i(TAG, "默认按键key=" + keyCode);
         if (nfcFlag) {
             //  inputCardInfo(keyCode);//录入卡片信息
+            deleteFaceInfo(keyCode);//删除人脸信息
         } else {
             int key = convertKeyCode(keyCode);
             Log.i(TAG, "按键key=" + key + "模式currentStatus" + currentStatus);
@@ -1186,6 +1205,76 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     /**********************************************按键相关end***************************/
+
+    /**
+     * 删除人脸信息
+     *
+     * @param keyCode
+     */
+    private void deleteFaceInfo(int keyCode) {
+        String unit = et_unitno.getText().toString().trim();
+        if (keyCode == DeviceConfig.DEVICE_KEYCODE_STAR) {//取消
+            if (isFlag && TextUtils.isEmpty(unit)) {
+                rl_nfc.setVisibility(View.GONE);
+                nfcFlag = false;
+                initDialStatus();
+                isFlag = false;
+                phone_face = "";
+            } else if (isFlag && !TextUtils.isEmpty(unit)) {
+                unit = backKey(unit);
+                setTextValue(R.id.et_unitno, unit);
+            }
+        } else if (keyCode == DeviceConfig.DEVICE_KEYCODE_POUND) {//确认
+            if (TextUtils.isEmpty(unit)) {
+                Toast.makeText(this, "楼栋编号或者房屋编号不能为空", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            if (unit.length() < 11) {
+                Toast.makeText(this, "手机号长度不对", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            if (isFlag && unit.length() == 11 && hasFaceInfo) {
+                deleteFaceInfoThread(unit);
+            }
+        } else {
+            int key = convertKeyCode(keyCode);
+            if (key >= 0) {
+                phone_face = phone_face + key;
+                setTextValue(R.id.et_unitno, phone_face);
+            }
+        }
+    }
+
+    /**
+     * 开启删除人脸信息线程
+     *
+     * @param phone 手机号
+     */
+    private void deleteFaceInfoThread(final String phone) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                boolean delete = ArcsoftManager.getInstance().mFaceDB.delete(phone);//删除
+
+                Message message = Message.obtain();
+                message.what = MSG_DELETE_FACE;
+                message.obj = delete;
+                handler.sendMessage(message);
+
+                Log.e(TAG, "人脸信息删除" + "线程");
+            }
+        }).start();
+    }
+
+    void setTextValue(final int id, String value) {
+        final String thisValue = value;
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                setTextView(id, thisValue);
+            }
+        });
+    }
 
     /*********************************密码房号等输入状态相关start*******************************************/
     private void callInput(int key) {
@@ -1786,6 +1875,25 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         }
 
+        if (blockNo.equals(("8888")) || blockNo.equals("88888888")) {
+            if (faceHandler != null) {
+                // TODO: 2018/5/28 不暂停人脸识别
+//                faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_PAUSE, 100);
+//                faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_INPUT, 100);
+                rl_nfc.setVisibility(View.VISIBLE);
+                tv_message.setText("");
+                nfcFlag = true;
+                cardId = null;
+                isFlag = true;
+
+                //录卡楼栋号输入栏强制获取焦点
+                getFocus(et_unitno);
+
+                et_unitno.setText("");
+                return;
+            }
+        }
+
         //呼叫前，确认摄像头不被占用 虹软
         if (faceHandler != null) {
             faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_PAUSE, 0);
@@ -2032,10 +2140,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 e.printStackTrace();
             }
         } else {//正在录卡状态（卡信息用于录入）
-            Message message = Message.obtain();
-            message.what = MSG_INPUT_CARDINFO;
-            message.obj = account;
-            handler.sendMessage(message);
+//            Message message = Message.obtain();
+//            message.what = MSG_INPUT_CARDINFO;
+//            message.obj = account;
+//            handler.sendMessage(message);
         }
     }
 
@@ -2343,9 +2451,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //                        mProgressDialog.cancel();
                         if (ArcsoftManager.getInstance().mFaceDB.mRegister.isEmpty()) {
                             Log.v("人脸识别", "initFaceDetect-->" + 333);
+                            hasFaceInfo = false;
                             Utils.DisplayToast(MainActivity.this, "没有注册人脸，请先注册");
                             return;
                         }
+                        hasFaceInfo = true;//有注册人脸
                         identification = true;
                         Utils.DisplayToast(MainActivity.this, "人脸数据加载完成");
                     }

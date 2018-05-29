@@ -35,8 +35,8 @@
             <!--录卡布局隐藏-->
             <RelativeLayout
                 android:id="@+id/rl_nfc"
-                android:layout_width="640dp"
-                android:layout_height="400dp"
+                android:layout_width="320dp"
+                android:layout_height="200dp"
                 android:layout_gravity="center"
                 android:background="#ffffff"
                 android:visibility="gone">
@@ -47,7 +47,7 @@
                     android:layout_height="wrap_content"
                     android:layout_centerHorizontal="true"
                     android:layout_marginTop="10dp"
-                    android:text="录卡"
+                    android:text="删除人脸"
                     android:textColor="#333333"
                     android:textSize="20sp"/>
 
@@ -58,9 +58,10 @@
                     android:layout_below="@id/tv_title"
                     android:layout_centerHorizontal="true"
                     android:layout_marginTop="10dp"
+                    android:visibility="gone"
                     android:background="@android:drawable/edit_text"
                     android:gravity="center"
-                    android:hint="请输入楼栋编号"/>
+                android:hint="请输入楼栋编号"/>
 
                 <EditText
                     android:id="@+id/et_unitno"
@@ -71,7 +72,8 @@
                     android:layout_marginTop="10dp"
                     android:background="@android:drawable/edit_text"
                     android:gravity="center"
-                    android:hint="请输入房屋编号"/>
+                    android:maxLength="11"
+                    android:hint="请输入手机号码"/>
 
                 <TextView
                     android:id="@+id/tv_message"
@@ -81,6 +83,7 @@
                     android:layout_centerInParent="true"
                     android:layout_centerVertical="true"
                     android:textColor="#333333"
+                    android:text=""
                     android:textSize="20sp"/>
             </RelativeLayout>
 
