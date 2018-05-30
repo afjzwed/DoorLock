@@ -25,7 +25,8 @@ public class DeviceConfig {
 
     public static String RFID_PORT = "/dev/ttyS1";//卡阅读器使用
 
-
+    public static int OPENDOOR_TIME = 1000 * 5;//开门持续时间
+    public static int OPENDOOR_STATE = 0;//开门状态 0为关闭门锁 1为打开门锁 默认关闭
     public static int CANCEL_CALL_WAIT_TIME = 1000 * 30;//自动取消呼叫等待时间
     public static int CONNECT_REPORT_WAIT_TIME = 1000 * 60;//心跳间隔时间
     public static int PASSWORD_WAIT_TIME=1000*20;//密码验证线程等待时间

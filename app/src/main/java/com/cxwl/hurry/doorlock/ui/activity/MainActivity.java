@@ -1233,7 +1233,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 Toast.makeText(this, "手机号长度不对", Toast.LENGTH_SHORT).show();
                 return;
             }
-            if (isFlag && unit.length() == 11 && hasFaceInfo) {
+            if (isFlag && unit.length() == 11) {
                 deleteFaceInfoThread(unit);
             }
         } else {
@@ -1882,17 +1882,19 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 // TODO: 2018/5/28 不暂停人脸识别
 //                faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_PAUSE, 100);
 //                faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_INPUT, 100);
-                rl_nfc.setVisibility(View.VISIBLE);
-                tv_message.setText("");
-                nfcFlag = true;
-                cardId = null;
-                isFlag = true;
-
-                //录卡楼栋号输入栏强制获取焦点
-                getFocus(et_unitno);
-
-                et_unitno.setText("");
-                return;
+                if (ArcsoftManager.getInstance().mFaceDB.mRegister.isEmpty()) {
+                    Utils.DisplayToast(MainActivity.this, "没有注册人脸，请先注册");
+                } else {
+                    rl_nfc.setVisibility(View.VISIBLE);
+                    tv_message.setText("");
+                    nfcFlag = true;
+                    isFlag = true;
+                    cardId = null;
+                    //录卡楼栋号输入栏强制获取焦点
+                    getFocus(et_unitno);
+                    et_unitno.setText("");
+                    return;
+                }
             }
         }
 
@@ -2817,6 +2819,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             netTimer.cancel();
             netTimer = null;
         }
+
+        mSurfaceView.setVisibility(View.GONE);
+        mGLSurfaceView.setVisibility(View.GONE);
+        identification = false;
+        if (mFRAbsLoop != null) {
+            mFRAbsLoop.shutdown();
+        }
+
+        AFT_FSDKError err = engine.AFT_FSDK_UninitialFaceEngine();
 
         if (faceHandler != null) {
             faceHandler.removeCallbacksAndMessages(null);
