@@ -676,7 +676,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         noticeBeanList = (ArrayList<NoticeBean>) JsonUtil.parseJsonToList(value,
                                 new TypeToken<List<NoticeBean>>() {
                                 }.getType());
-                        tongGaoIndex=0;
+                        tongGaoIndex = 0;
                         if (!isTongGaoThreadStart) {//线程未开启
                             isTongGaoThreadStart = !isTongGaoThreadStart;
                             startTonggaoThread();//开启线程
@@ -2737,19 +2737,19 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         if (max < score.getScore()) {
                             max = score.getScore();//匹配度赋值
                             name = fr.mName;
-                            if (max > 0.618f) {//匹配度的值高于设定值,退出循环
+                            if (max > 0.732f) {//匹配度的值高于设定值,退出循环
                                 break;
                             }
                         }
                     }
                 }
 
-                //Log.v(FACE_TAG, "fit Score:" + max + ", NAME:" + name);
-                if (max > 0.618f) {//匹配度的值高于设定值,发出消息,开门
+                Log.v("人脸识别", "fit Score:" + max + ", NAME:" + name);
+                if (max > 0.732f) {//匹配度的值高于设定值,发出消息,开门
                     //fr success.
-                    final float max_score = max;
+                    //final float max_score = max;
                     //Log.v(FACE_TAG, "置信度：" + (float) ((int) (max_score * 1000)) / 1000.0);
-                    sendMainMessager(MSG_FACE_OPENLOCK, null);
+                    sendMainMessager(MSG_FACE_OPENLOCK, name);
                 }
                 mImageNV21 = null;
             }
