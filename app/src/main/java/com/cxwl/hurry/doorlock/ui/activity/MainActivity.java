@@ -2822,7 +2822,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             faceHandler.removeCallbacksAndMessages(null);
         }
 
+
+        OkHttpUtils.getInstance().cancelTag(MainService.class);//取消网络请求
+
         // TODO: 2018/5/15 还有资源未释放，之后再查
+
 
         super.onDestroy();
     }

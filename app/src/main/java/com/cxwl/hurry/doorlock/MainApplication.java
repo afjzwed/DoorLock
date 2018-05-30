@@ -5,6 +5,7 @@ import android.app.Application;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.util.Log;
 
 import com.cxwl.hurry.doorlock.db.DaoMaster;
 import com.cxwl.hurry.doorlock.db.DaoSession;
@@ -60,7 +61,7 @@ public class MainApplication  extends Application implements Thread.UncaughtExce
     @Override
     public void uncaughtException(Thread thread, Throwable ex) {
         // System.exit(0);
-
+        Log.e("MyApplication", "uncaughtException "+ex.toString());
         Intent intent = getBaseContext().getPackageManager()
                 .getLaunchIntentForPackage(getBaseContext().getPackageName());
 
