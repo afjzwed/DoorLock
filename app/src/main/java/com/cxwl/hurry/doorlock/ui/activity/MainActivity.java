@@ -168,6 +168,7 @@ import static com.cxwl.hurry.doorlock.utils.NetWorkUtils.NETWOKR_TYPE_ETHERNET;
 import static com.cxwl.hurry.doorlock.utils.NetWorkUtils.NETWOKR_TYPE_MOBILE;
 import static com.cxwl.hurry.doorlock.utils.NetWorkUtils.NETWORK_TYPE_NONE;
 import static com.cxwl.hurry.doorlock.utils.NetWorkUtils.NETWORK_TYPE_WIFI;
+import static com.cxwl.hurry.doorlock.utils.NetWorkUtils.isNetworkAvailable;
 import static com.cxwl.hurry.doorlock.utils.NfcReader.ACTION_NFC_CARDINFO;
 
 /**
@@ -962,7 +963,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             cmd = cmd.replace("[_update_time]", time);
                             // TODO: 2018/5/9 这里的校时要用到工控相关hwservice,暂时不注释,之后解决
                             HttpApi.e("走了吗" + cmd.toString());
-                            if (hwservice != null) {
+                            if (hwservice != null&&isNetworkAvailable(MainActivity.this)) {
                                 hwservice.execRootCommand(cmd);
                             }
                             HttpApi.e("时间更新：" + time);

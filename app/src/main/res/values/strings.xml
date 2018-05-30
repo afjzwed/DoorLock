@@ -1,55 +1,12 @@
 <resources>
     <string name="app_name">DoorLock</string>
 
-    <string name="button_gpiooutput_io1_on">打开补光灯(0)</string>
-    <string name="button_gpiooutput_lock_on">打开LOCK电压(1)</string>
-    <string name="button_gpiooutput_relay_on">打开继电器(2)</string>
-    <string name="button_gpiooutput_lightboard_on">打开双目摄像头补光灯(3)</string>
-    <string name="button_gpiooutput_io1_off">关闭补光灯(0)</string>
-    <string name="button_gpiooutput_lock_off">关闭LOCK电压(1)</string>
-    <string name="button_gpiooutput_relay_off">关闭继电器(2)</string>
-    <string name="button_gpiooutput_lightboard_off">关闭双目摄像头补光灯(3)</string>
-    <string name="button_gpioinput_io2_on">打开检测外部光线/人体感应(7)</string>
-    <string name="button_gpioinput_io3_on">打开检测拆机报警信号(5)</string>
-    <string name="button_gpioinput_io4_on">打开检测出门开关信号(6)</string>
-    <string name="button_gpioinput_io5_on">打开检测电磁锁状态信号(4)</string>
-    <string name="button_gpioinput_io2_off">关闭检测外部光线/人体感应(7)</string>
-    <string name="button_gpioinput_io3_off">关闭检测拆机报警信号信号(5)</string>
-    <string name="button_gpioinput_io4_off">关闭检测出门开关信号(6)</string>
-    <string name="button_gpioinput_io5_off">关闭检测电磁锁状态信号(4)</string>
-    <string name="button_gpio1_status">GPIO1检测状态</string>
-    <string name="button_gpio3_status">GPIO3检测状态</string>
-
-    <string name="textview_gpiooutput">GPIO输出测试:</string>
-    <string name="textview_gpioinput">GPIO输入测试:</string>
-    <string name="textview_msg_title">日志输出:</string>
-    <string name="tip_day">白天</string>
-    <string name="tip_night">黑夜</string>
-    <string name="tip_open">状态为打开电磁所</string>
-    <string name="tip_close">状态为关闭电磁锁</string>
-    <string name="tip_detect">检测到RFID开琐信号</string>
-    <string name="tip_nodetect">未检测到RFID开琐信号</string>
-    <string name="tip_alarm">报警状态</string>
-    <string name="tip_nomal">正常状态</string>
-    <string name="textview_keyoutput">按键响应:</string>
-    <string name="textview_rfidoutput">RFID输出:</string>
-    <string name="textview_cd4051output">ADC GPIO输入:</string>
-    <string name="tip_high">高电平:</string>
-    <string name="tip_low">低电平:</string>
 
 
-    <string name="app_init">正在初始化可视对讲设备...</string>
-    <string name="action_settings">设置</string>
-    <string name="hello_world">喂,锁相门禁!</string>
-    <string name="close_video">关闭</string>
-    <string name="switch_camera">切换摄像头</string>
-    <string name="camera_image">摄像头图像</string>
-    <string name="reject_video">拒绝</string>
-    <string name="accept_video">接受</string>
-    <string name="unbind">解除绑定</string>
-    <string name="q_unbind_all">您确定要解绑所有用户吗？</string>
-    <string name="cancel">取消</string>
+
+
+
+
 
     <string name="net_unavailable">检查网络设置</string>
-    <string name="accessibility_service_description">智能安装服务，无需用户的任何操作就可以自动安装程序。</string>
 </resources>
