@@ -1,10 +1,19 @@
 package com.cxwl.hurry.doorlock.utils;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.media.ExifInterface;
+import android.os.Environment;
 import android.util.Log;
+
+import com.cxwl.hurry.doorlock.config.DeviceConfig;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.UUID;
 
 /**
  * Created by William on 2018/5/15.
@@ -68,5 +77,53 @@ public class BitmapUtils {
         // 得到新的图片
         Bitmap newbm = Bitmap.createBitmap(bm, 0, 0, width, height, matrix, true);
         return newbm;
+    }
+
+    /**
+     * 随机生产文件名
+     *
+     * @return
+     */
+    private static String generateFileName() {
+        return UUID.randomUUID().toString();
+    }
+
+
+    private static final String SD_PATH = "/sdcard/dskqxt/pic/";
+    private static final String IN_PATH = "/dskqxt/pic/";
+
+    /**
+     * 保存bitmap到本地
+     *
+     * @param context
+     * @param mBitmap
+     * @return
+     */
+    public static File saveBitmap(Context context, Bitmap mBitmap) {
+        String savePath;
+        File filePic;
+       /* if (Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
+            savePath = SD_PATH;
+        } else {
+            savePath = context.getApplicationContext().getFilesDir().getAbsolutePath()+ IN_PATH;
+        }*/
+        savePath = Environment.getExternalStorageDirectory() + "" + File.separator + DeviceConfig.LOCAL_FACE_PATH +
+                File.separator;
+        try {
+            filePic = new File(savePath + generateFileName() + ".jpg");
+            if (!filePic.exists()) {
+                filePic.getParentFile().mkdirs();
+                filePic.createNewFile();
+            }
+            FileOutputStream fos = new FileOutputStream(filePic);
+            mBitmap.compress(Bitmap.CompressFormat.JPEG, 100, fos);
+            fos.flush();
+            fos.close();
+        } catch (Exception e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+            return null;
+        }
+        return filePic;
     }
 }

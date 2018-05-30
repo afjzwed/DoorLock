@@ -17,6 +17,7 @@ import android.os.Message;
 import android.os.Messenger;
 import android.os.RemoteException;
 import android.support.annotation.Nullable;
+import android.text.TextUtils;
 import android.util.Log;
 
 import com.arcsoft.facedetection.AFD_FSDKEngine;
@@ -198,6 +199,7 @@ public class MainService extends Service {
     public static int lockId = 0;//锁ID
     public String imageUrl = null;//对应呼叫访客图片地址
     public String imageUuid = null;//图片对应的uuid
+    public String faceImageUrl = null;//人脸开门的图片地址
 
     private Thread timeoutCheckThread = null;//自动取消呼叫的定时器
     private Thread connectReportThread = null;//心跳包线程
@@ -462,10 +464,24 @@ public class MainService extends Service {
                     }
                     case MSG_FACE_OPENLOCK: {
                         openLock();
+                        String[] parame = (String[]) msg.obj;
+                        String phoneNum = parame[0];//手机号码
+                        String picUrl = parame[1];//图片URL
+
                         LogDoor data = new LogDoor();
                         data.setMac(mac);
                         data.setKaimenfangshi("3");
-                        data.setKaimenjietu("");
+                        if (TextUtils.isEmpty(phoneNum)) {
+                            data.setPhone("");
+                        } else {
+                            data.setPhone(phoneNum);
+                        }
+                        if (TextUtils.isEmpty(picUrl)) {
+                            data.setKaimenjietu("");
+                        } else {
+                            data.setKaimenjietu(picUrl);
+                        }
+                        data.setKa_id("");
                         data.setKaimenshijian(System.currentTimeMillis() + "");
                         data.setUuid("");
                         List<LogDoor> list = new ArrayList<>();
@@ -2887,12 +2903,12 @@ public class MainService extends Service {
 
             //检测输入图像中的人脸特征信息，输出结果保存在 AFR_FSDKFace feature
             err_afr = engine_afr.AFR_FSDK_ExtractFRFeature(data, mBitmap.getWidth(), mBitmap.getHeight(),
-                    AFR_FSDKEngine.CP_PAF_NV21, new Rect(result_afd.get(0).getRect()), result_afd.get(0).getDegree(),
-                    result_afr);
-            Log.d("com.arcsoft", "Face=" + result_afr.getFeatureData()[0] + "," + result_afr.getFeatureData()[1] + "," +
-                    "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" +
-                    "result_afr" + result_afr.toString() + "  " + "" + result_afr.getFeatureData()[2] + "," + err_afr
-                    .getCode());
+                    AFR_FSDKEngine.CP_PAF_NV21, new Rect(result_afd.get(0).getRect
+                            ()), result_afd.get(0).getDegree(), result_afr);
+            Log.d("com.arcsoft", "Face=" + result_afr.getFeatureData()[0] + "," + result_afr
+                    .getFeatureData()[1] + "," + "" + "" + "" + "" + "" + "" + "" + "" + "" + ""
+                    + "" + "" + "" + "" + "" + "" + "result_afr" + result_afr.toString() + "  " +
+                    "" + result_afr.getFeatureData()[2] + "," + err_afr.getCode());
             if (err_afr.getCode() == err_afr.MOK) {//人脸特征检测成功
                 mAFR_FSDKFace = result_afr.clone();
                 // TODO: 2018/5/15 保存mAFR_FSDKFace人脸信息，操作数据库
