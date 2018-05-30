@@ -255,7 +255,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private boolean isTongGaoThreadStart = false;//通告更新线程是否开启的标志
     private ArrayList<NoticeBean> noticeBeanList = new ArrayList<>();//通告集合
     private NoticeBean currentNoticeBean = null;//当前显示通告
-    private int i = 0;//通告更新计数
+    private int tongGaoIndex = 0;//通告更新计数
 
     Timer timer = new Timer();
     private boolean mCamerarelease = true; //判断照相机是否释放
@@ -675,7 +675,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         noticeBeanList = (ArrayList<NoticeBean>) JsonUtil.parseJsonToList(value,
                                 new TypeToken<List<NoticeBean>>() {
                                 }.getType());
-
+                        tongGaoIndex=0;
                         if (!isTongGaoThreadStart) {//线程未开启
                             isTongGaoThreadStart = !isTongGaoThreadStart;
                             startTonggaoThread();//开启线程
@@ -1558,7 +1558,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private void buildVideo() {
         if (MainService.callConnection != null) {
-            if (remoteView == null) return;
+            if (remoteView == null) {
+                return;
+            }
             MainService.callConnection.buildVideo(remoteView);//此处接听过快的会导致崩溃
         }
     }
@@ -2082,10 +2084,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private void setTongGaoInfo() {
         if (null != noticeBeanList && noticeBeanList.size() > 0) {//通告列表有数据
-            currentNoticeBean = noticeBeanList.get(i);
-            i++;
-            if (i == noticeBeanList.size()) {//循环一遍以后，重置游标
-                i = 0;
+            currentNoticeBean = noticeBeanList.get(tongGaoIndex);
+            tongGaoIndex++;
+            if (tongGaoIndex == noticeBeanList.size()) {//循环一遍以后，重置游标
+                tongGaoIndex = 0;
             }
         } else {//通告列表无数据
             currentNoticeBean = new NoticeBean();
