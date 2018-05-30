@@ -780,10 +780,12 @@ public class MainService extends Service {
                             }
                             //// TODO: 2018/5/17 拿app版本信息 去掉点
                             if (StringUtils.isNoEmpty(connectReportBean.getVersion())) {
-                                String appVision = (String) SPUtil.get(MainService.this, Constant.SP_VISION_APP, getVersionName());
-                                Log.i(TAG, "心跳--当前app版本：" + appVision + "   服务器app版本：" +
-                                        (connectReportBean.getVersion()));
-                                if (Integer.parseInt(connectReportBean.getVersion().replace(".","")) > Integer.parseInt(appVision.replace(".",""))) {
+                                String appVision = (String) SPUtil.get(MainService.this, Constant.SP_VISION_APP,
+                                        getVersionName());
+                                Log.i(TAG, "心跳--当前app版本：" + appVision + "   服务器app版本：" + (connectReportBean
+                                        .getVersion()));
+                                if (Integer.parseInt(connectReportBean.getVersion().replace(".", "")) > Integer
+                                        .parseInt(appVision.replace(".", ""))) {
                                     Log.i(TAG, "心跳中有APP信息更新");
                                     if (lastVersionStatus.equals("D")) {//正在下载最新包
                                         //不获取地址
@@ -873,8 +875,7 @@ public class MainService extends Service {
                             sendMessageToMainAcitivity(MSG_ADVERTISE_REFRESH_PIC, guangGaoBeen);
                             adpicInfoStatus = 0;
                             syncCallBack("3", v);
-                            //保存版本信息
-                            SPUtil.put(MainService.this, SP_VISION_GUANGGAO, v);
+
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
@@ -938,8 +939,10 @@ public class MainService extends Service {
             Map<String, String> map = new HashMap<>();
             map.put("mac", mac);
             map.put("version", getVersionName());
+            map.put("mac_id", mac_id);
             OkHttpUtils.postString().url(url).content(JsonUtil.parseMapToJson(map)).mediaType(MediaType.parse
-                    ("application/json; " + "charset=utf-8")).addHeader("Authorization", httpServerToken).tag(this).build().execute(new StringCallback() {
+                    ("application/json; " + "charset=utf-8")).addHeader("Authorization", httpServerToken).tag(this)
+                    .build().execute(new StringCallback() {
                 @Override
                 public void onError(Call call, Exception e, int id) {
                     Log.i(TAG, "onError 获取app下载地址" + e.toString());
@@ -949,16 +952,20 @@ public class MainService extends Service {
                 @Override
                 public void onResponse(String response, int id) {
                     Log.i(TAG, "onResponse 获取app下载地址" + response);
+                    if ("0".equals(JsonUtil.getFieldValue(response, "code"))) {
+                        String result = JsonUtil.getResult(response);
+                        final String address = JsonUtil.getFieldValue(result, "version");
+                        final String fileName = "door";
+                        new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                downloadApp(address, fileName);
+                            }
+                        }).start();
+                    } else {
+                        lastVersionStatus = "L";//等待下次心跳重新获取URL
 
-                    String result = JsonUtil.getResult(response);
-                    final String address = JsonUtil.getFieldValue(result, "dizhi");
-                    final String fileName = "menjin";
-                    new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                            downloadApp(address, fileName);
-                        }
-                    }).start();
+                    }
 
                 }
             });
@@ -1115,8 +1122,8 @@ public class MainService extends Service {
             data.put("mac", mac);
             Log.e(TAG, "人脸URL mac " + mac + " url " + url);
 
-            OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse("application/json; " + "charset=utf-8")).addHeader("Authorization",
-                    httpServerToken).tag(this).build().execute(new StringCallback() {
+            OkHttpUtils.postString().url(url).content(data.toString()).mediaType(MediaType.parse("application/json; "
+                    + "charset=utf-8")).addHeader("Authorization", httpServerToken).tag(this).build().execute(new StringCallback() {
                 @Override
                 public void onError(Call call, Exception e, int id) {
                     Log.e(TAG, "人脸URL 服务器异常或没有网络 " + e.toString());
@@ -1205,9 +1212,8 @@ public class MainService extends Service {
                                                 adjustAdvertiseFiles();
                                                 restartAdvertise(guangGaoBeen);
                                                 removeAdvertiseFiles();
-                                                syncCallBack("5", v);//同步通知
-                                                SPUtil.put(MainService.this, Constant.SP_VISION_GUANGGAO_VIDEO, v);
-                                                //保存最新广告视频版本
+                                                syncCallBack("5", v);//同步视频
+
                                                 adInfoStatus = 0;//重置广告视频下载状态
                                             } catch (Exception e) {
                                                 e.printStackTrace();
@@ -1389,8 +1395,7 @@ public class MainService extends Service {
                             Log.e(TAG, "设置通告notice" + tonggao);
                             //通知主线程，显示通知
                             sendMessageToMainAcitivity(MSG_GET_NOTICE, tonggao);
-                            //保存本次更新版本
-                            SPUtil.put(MainService.this, Constant.SP_VISION_TONGGAO, version);
+
                             //调用更新通知接口
                             syncCallBack("4", version);
                             noticesStatus = 0;//修改状态，等待下次（新）数据
@@ -1447,8 +1452,7 @@ public class MainService extends Service {
                                     DbUtils.getInstans().addAllKa(kas);
                                     //查询卡信息成功
                                     //DbUtils.getInstans().quaryAllKa();
-                                    //保存卡信息的版本
-                                    SPUtil.put(MainService.this, SP_VISION_KA, kaVison);
+
                                     syncCallBack("1", kaVison);
                                     cardInfoStatus = 0;//修改状态，等待下次（新）数据
                                 } catch (Exception e) {
@@ -1482,7 +1486,7 @@ public class MainService extends Service {
      * @param type   1 卡，2 人脸，3 图片广告，4 通告 ，5.视频广告
      * @param vision 版本
      */
-    private void syncCallBack(final String type, long vision) {
+    private void syncCallBack(final String type, final long vision) {
         try {
             //开始获取门禁卡信息
             String url = API.SYNC_CALLBACK;
@@ -1504,13 +1508,34 @@ public class MainService extends Service {
                     if (null != response) {
                         String code = JsonUtil.getFieldValue(response, "code");
                         if ("0".equals(code)) {
-
+                            switch (type) {
+                                case "1":
+                                    //保存卡信息的版本
+                                    SPUtil.put(MainService.this, SP_VISION_KA, vision);
+                                    break;
+                                case "2":
+                                    break;
+                                case "3":
+                                    //保存图片广告信息的版本
+                                    SPUtil.put(MainService.this, SP_VISION_GUANGGAO, vision);
+                                    break;
+                                case "4":
+                                    // 保存通告告信息的版本
+                                    SPUtil.put(MainService.this, Constant.SP_VISION_TONGGAO, vision);
+                                    break;
+                                case "5":
+                                    //保存最新广告视频版本
+                                    SPUtil.put(MainService.this, Constant.SP_VISION_GUANGGAO_VIDEO, vision);
+                                    break;
+                                default:
+                                    break;
+                            }
                         } else {
-
+                            Log.e(TAG, "同步信息失败+ type "+type);
                         }
                     } else {
                         //服务器异常或没有网络
-
+                        Log.e(TAG, "同步信息失败+ type "+type);
                     }
                 }
             });
@@ -1739,7 +1764,7 @@ public class MainService extends Service {
                         String result = JsonUtil.getResult(response);
                         DoorBean doorBean = JsonUtil.parseJsonToBean(result, DoorBean.class);
                         httpServerToken = doorBean.getToken();
-                        mac_id=doorBean.getMac_id()+"";
+                        mac_id = doorBean.getMac_id() + "";
                         Log.e(TAG, doorBean.toString());
                         //重置广告，图片，通知版本为0，登录时重新加载
                         saveVisionInfo();
@@ -1856,7 +1881,7 @@ public class MainService extends Service {
             DeviceConfig.DEVICE_TYPE = "B";
             blockId = Integer.parseInt(result.getLoudong_id());
             lockId = Integer.parseInt(result.getDanyuan_id());
-            lockName =blockId+"栋"+lockId + "单元";
+            lockName = blockId + "栋" + lockId + "单元";
         }
         communityId = result.getXiangmu_id();
         //目前服务器返回为空
@@ -2862,12 +2887,12 @@ public class MainService extends Service {
 
             //检测输入图像中的人脸特征信息，输出结果保存在 AFR_FSDKFace feature
             err_afr = engine_afr.AFR_FSDK_ExtractFRFeature(data, mBitmap.getWidth(), mBitmap.getHeight(),
-                    AFR_FSDKEngine.CP_PAF_NV21, new Rect(result_afd.get(0).getRect
-                    ()), result_afd.get(0).getDegree(), result_afr);
-            Log.d("com.arcsoft", "Face=" + result_afr.getFeatureData()[0] + "," + result_afr
-                    .getFeatureData()[1] + "," + "" + "" + "" + "" + "" + "" + "" + "" + "" + ""
-                    + "" + "" + "" + "" + "" + "" + "result_afr" + result_afr.toString() + "  " +
-                    "" + result_afr.getFeatureData()[2] + "," + err_afr.getCode());
+                    AFR_FSDKEngine.CP_PAF_NV21, new Rect(result_afd.get(0).getRect()), result_afd.get(0).getDegree(),
+                    result_afr);
+            Log.d("com.arcsoft", "Face=" + result_afr.getFeatureData()[0] + "," + result_afr.getFeatureData()[1] + "," +
+                    "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" +
+                    "result_afr" + result_afr.toString() + "  " + "" + result_afr.getFeatureData()[2] + "," + err_afr
+                    .getCode());
             if (err_afr.getCode() == err_afr.MOK) {//人脸特征检测成功
                 mAFR_FSDKFace = result_afr.clone();
                 // TODO: 2018/5/15 保存mAFR_FSDKFace人脸信息，操作数据库
