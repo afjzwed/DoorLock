@@ -71,6 +71,7 @@ import com.cxwl.hurry.doorlock.config.DeviceConfig;
 import com.cxwl.hurry.doorlock.db.AdTongJiBean;
 import com.cxwl.hurry.doorlock.entity.GuangGaoBean;
 import com.cxwl.hurry.doorlock.entity.NoticeBean;
+import com.cxwl.hurry.doorlock.entity.ResponseBean;
 import com.cxwl.hurry.doorlock.entity.XdoorBean;
 import com.cxwl.hurry.doorlock.face.ArcsoftManager;
 import com.cxwl.hurry.doorlock.face.FaceDB;
@@ -633,7 +634,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         break;
                     case MSG_PASSWORD_CHECK:
                         Log.i(TAG, "服务器验证密码后的返回");
-                        onPasswordCheck((String) msg.obj);
+                        onPasswordCheck((ResponseBean) msg.obj);
                         break;
                     case MSG_LIXIAN_PASSWORD_CHECK_AFTER:
                         Log.i(TAG, "验证离线验证密码后");
@@ -829,7 +830,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
         }
 
-        Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
+        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
         identification = false;
         if (faceHandler != null) {
             faceHandler.removeMessages(MSG_FACE_DETECT_CHECK);
@@ -1449,6 +1450,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         setCurrentStatus(PASSWORD_CHECKING_MODE);
         String thisPassword = guestPassword;
         guestPassword = "";
+        //呼叫前，确认摄像头不被占用 虹软
+//        if (faceHandler != null) {
+//            faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_PAUSE, 0);
+//        }
+
+
         takePicture(thisPassword, false, this);
     }
 
@@ -1486,21 +1493,25 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      *
      * @param code
      */
-    private void onPasswordCheck(String code) {
+    private void onPasswordCheck(ResponseBean code) {
         setCurrentStatus(PASSWORD_MODE);
         setTempkeyValue("");
-        if ("0".equals(code)) {
-            Utils.DisplayToast(MainActivity.this, "您输入的密码验证成功");
+
+        if (code != null) {
+            if ("0".equals(code.getCode())) {
+                Log.i(TAG, "临时密码验证成功");
+            } else {
+                if (code.getMsg() != null) {
+                    Toast.makeText(MainActivity.this, code.getMsg(), Toast.LENGTH_SHORT).show();
+                }
+            }
         } else {
-//            if (code == 1) {
-//                Utils.DisplayToast(MainActivity.this, "您输入的密码不存在");
-//            } else if (code == 2) {
-//                Utils.DisplayToast(MainActivity.this, "您输入的密码已经过期");
-//            } else if (code < 0) {
-//                Utils.DisplayToast(MainActivity.this, "密码验证不成功，请联系管理员");
-//            }
-            Utils.DisplayToast(MainActivity.this, "密码验证不成功，请联系管理员");
+            Toast.makeText(MainActivity.this, "密码验证不成功", Toast.LENGTH_SHORT).show();
         }
+
+//        if (faceHandler != null) {
+//            faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_CONTRAST, 3000);
+//        }
     }
 
     /**
@@ -1516,6 +1527,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         } else {
             Utils.DisplayToast(MainActivity.this, "密码验证不成功，请联系管理员");
+        }
+        if (faceHandler != null) {
+            faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_CONTRAST, 3000);
         }
     }
 
@@ -2007,7 +2021,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         if (isCall) {
             message.what = MainService.MSG_START_DIAL_PICTURE;
         } else {
-            message.what = MainService.MSG_CHECK_PASSWORD_PICTURE;
+           // message.what = MainService.MSG_CHECK_PASSWORD_PICTURE;
         }
         String[] parameters = new String[3];
         parameters[0] = thisValue;
@@ -2790,7 +2804,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         if (max < score.getScore()) {
                             max = score.getScore();//匹配度赋值
                             name = fr.mName;
-                            if (max > 0.732f) {//匹配度的值高于设定值,退出循环
+                            if (max > 0.68f) {//匹配度的值高于设定值,退出循环
                                 break;
                             }
                         }
@@ -2798,7 +2812,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 }
 
                 Log.v("人脸识别", "fit Score:" + max + ", NAME:" + name);
-                if (max > 0.732f) {//匹配度的值高于设定值,发出消息,开门
+                if (max > 0.68f) {//匹配度的值高于设定值,发出消息,开门
                     //fr success.
                     //final float max_score = max;
                     //Log.v(FACE_TAG, "置信度：" + (float) ((int) (max_score * 1000)) / 1000.0);

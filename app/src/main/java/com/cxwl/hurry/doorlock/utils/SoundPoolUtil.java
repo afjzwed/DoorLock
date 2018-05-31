@@ -93,6 +93,8 @@ public class SoundPoolUtil {
 
     public void playVoice(int outgoing) {
         //参数：声音ID，左声道音量大小，右声道音量大小，优先级（值越大优先级越高，0的优先级最低，这个有用），是否需要循环播放（-1表示无穷循环），播放速率
-        streamID = soundPool.play(outgoing, 1, 1, 1, 0, 1);
+        if (soundPool != null) {
+            streamID = soundPool.play(outgoing, 1, 1, 1, 0, 1);
+        }
     }
 }

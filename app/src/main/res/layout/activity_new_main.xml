@@ -29,7 +29,7 @@
                 android:id="@+id/image_view"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:background="@mipmap/bg_19da"
+                android:background="@mipmap/bg_19"
                 android:scaleType="fitXY"/>
 
 
@@ -124,7 +124,8 @@
                     android:layout_width="100dp"
                     android:layout_height="100dp"
                     android:layout_alignParentBottom="true"
-                    android:layout_marginLeft="20dp"/>
+                    android:layout_marginLeft="20dp"
+                    android:visibility="gone"/>
 
                 <TextView
                     android:id="@+id/version_text"
@@ -142,7 +143,7 @@
                     android:layout_width="fill_parent"
                     android:layout_height="60dp"
                     android:layout_alignParentBottom="true"
-                    android:layout_alignParentEnd="true"
+                    android:layout_toLeftOf="@+id/face_container_rel"
                     android:layout_toRightOf="@id/iv_erweima"
                     android:background="@color/black95"
                     android:paddingLeft="20dp"
@@ -208,6 +209,25 @@
                     android:layout_marginBottom="100dp"
                     android:layout_marginRight="10dp"
                     android:orientation="vertical">
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/face_container_rel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentBottom="true"
+                    android:layout_alignParentRight="true"
+                    android:background="@color/black">
+
+                    <com.guo.android_extend.widget.CameraSurfaceView
+                        android:id="@+id/surfaceView"
+                        android:layout_width="1dp"
+                        android:layout_height="1dp"/>
+
+                    <com.guo.android_extend.widget.CameraGLSurfaceView
+                        android:id="@+id/glsurfaceView"
+                        android:layout_width="352dp"
+                        android:layout_height="200dp"/>
                 </LinearLayout>
             </RelativeLayout>
 
@@ -384,18 +404,26 @@
         <LinearLayout
             android:layout_width="240dp"
             android:layout_height="match_parent"
+            android:background="@mipmap/bg_tongzhi"
             android:orientation="vertical">
 
             <!--通告标题-->
             <TextView
                 android:id="@+id/gonggao_title"
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:background="@color/num_red"
+                android:layout_marginTop="24dp"
+                android:paddingTop="10dp"
+                android:paddingBottom="10dp"
+                android:paddingLeft="20dp"
+                android:paddingRight="20dp"
                 android:ellipsize="marquee"
                 android:gravity="center"
                 android:text="标题"
                 android:textColor="@android:color/white"
-                android:textSize="20sp"/>
+                android:textSize="30sp"/>
 
             <!--通告内容-->
             <TextView
@@ -407,9 +435,10 @@
                 android:focusableInTouchMode="true"
                 android:marqueeRepeatLimit="marquee_forever"
                 android:scrollHorizontally="true"
-                android:text="    暂无通知"
-                android:textColor="@android:color/white"
-                android:textSize="20sp"/>
+                android:textColor="@color/black"
+                android:text="暂无通知"
+                android:padding="10dp"
+                android:textSize="25sp"/>
 
         </LinearLayout>
 
@@ -424,28 +453,9 @@
             android:id="@+id/banner"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-           android:layout_toLeftOf="@+id/face_container_rel"
-            android:background="@mipmap/bg_19da"
+            android:background="@mipmap/bg_banner"
             />
 
-        <LinearLayout
-            android:id="@+id/face_container_rel"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentRight="true"
-            android:layout_marginBottom="10dp"
-            android:layout_marginRight="5dp"
-            android:background="@color/black">
 
-            <com.guo.android_extend.widget.CameraSurfaceView
-                android:id="@+id/surfaceView"
-                android:layout_width="1dp"
-                android:layout_height="1dp"/>
-
-            <com.guo.android_extend.widget.CameraGLSurfaceView
-                android:id="@+id/glsurfaceView"
-                android:layout_width="352dp"
-                android:layout_height="200dp"/>
-        </LinearLayout>
     </RelativeLayout>
 </LinearLayout>

@@ -38,6 +38,7 @@ import com.cxwl.hurry.doorlock.entity.DoorBean;
 import com.cxwl.hurry.doorlock.entity.FaceUrlBean;
 import com.cxwl.hurry.doorlock.entity.GuangGaoBean;
 import com.cxwl.hurry.doorlock.entity.LogListBean;
+import com.cxwl.hurry.doorlock.entity.ResponseBean;
 import com.cxwl.hurry.doorlock.entity.XdoorBean;
 import com.cxwl.hurry.doorlock.entity.YeZhuBean;
 import com.cxwl.hurry.doorlock.http.API;
@@ -421,7 +422,7 @@ public class MainService extends Service {
                         break;
                     case MSG_GUEST_PASSWORD_CHECK:
                         Log.i(TAG, "获取获取到服务器返回的密码");
-                        onCheckGuestPassword(msg.obj == null ? null : (String) msg.obj);
+                        onCheckGuestPassword((ResponseBean) msg.obj);
                         break;
                     case MSG_LIXIAN_PASSWORD_CHECK:
                         Log.i(TAG, "获取获取到离线验证密码");
@@ -629,10 +630,8 @@ public class MainService extends Service {
                     message.what = MSG_GUEST_PASSWORD_CHECK;
                     HttpApi.e("验证密码接口->成功" + response);
                     if (null != response) {
-                        String code = JsonUtil.getFieldValue(response, "code");
-                        if ("0".equals(code)) {
-                            message.obj = code;
-                        }
+                        ResponseBean responseBean = JsonUtil.parseJsonToBean(response, ResponseBean.class);
+                       message.obj=responseBean;
                     }
                     mHandler.sendMessage(message);
                 }
@@ -648,9 +647,9 @@ public class MainService extends Service {
         }
     }
 
-    private void onCheckGuestPassword(String result) {
-        if (result != null) {
-            if ("0".equals(result)) {
+    private void onCheckGuestPassword(ResponseBean result) {
+
+            if (result != null&&"0".equals(result.getCode())) {
                 Log.e(TAG, "-----------------临时密码开门成功  开门开门------------------");
                 openLock(6);
                 List<LogDoor> list = new ArrayList<>();
@@ -668,7 +667,7 @@ public class MainService extends Service {
             } else {
                 Log.e(TAG, "--------------------密码开门失败  --------------------");
             }
-        }
+
         sendMessageToMainAcitivity(MSG_PASSWORD_CHECK, result);
     }
 
