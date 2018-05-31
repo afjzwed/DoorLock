@@ -463,7 +463,8 @@ public class MainService extends Service {
                         break;
                     }
                     case MSG_FACE_OPENLOCK: {
-                        openLock();
+                        //脸开门
+                        openLock(3);
                         String[] parame = (String[]) msg.obj;
                         String phoneNum = parame[0];//手机号码
                         String picUrl = parame[1];//图片URL
@@ -650,8 +651,8 @@ public class MainService extends Service {
     private void onCheckGuestPassword(String result) {
         if (result != null) {
             if ("0".equals(result)) {
-                Log.e(TAG, "-----------------密码开门成功  开门开门------------------");
-                openLock();
+                Log.e(TAG, "-----------------临时密码开门成功  开门开门------------------");
+                openLock(6);
                 List<LogDoor> list = new ArrayList<>();
                 LogDoor logDoor = new LogDoor();
                 logDoor.setMac(mac);
@@ -675,7 +676,7 @@ public class MainService extends Service {
         if (result != null) {
             if (result) {
                 Log.e(TAG, "-----------------离线密码开门成功  开门开门------------------");
-                openLock();//调用开门接口
+                openLock(5);//调用开门接口
 //                sendMessageToMainAcitivity(MSG_LOCK_OPENED, "");
                 List<LogDoor> list = new ArrayList<>();
                 LogDoor logDoor = new LogDoor();
@@ -1547,11 +1548,11 @@ public class MainService extends Service {
                                     break;
                             }
                         } else {
-                            Log.e(TAG, "同步信息失败+ type "+type);
+                            Log.e(TAG, "同步信息失败+ type " + type);
                         }
                     } else {
                         //服务器异常或没有网络
-                        Log.e(TAG, "同步信息失败+ type "+type);
+                        Log.e(TAG, "同步信息失败+ type " + type);
                     }
                 }
             });
@@ -2150,12 +2151,12 @@ public class MainService extends Service {
         } else if (content.startsWith("{")) {
             LogDoor logDoor = JsonUtil.parseJsonToBean(content, LogDoor.class);
             cancelOtherMembers(from);
-            Log.v("MainService", "用户直接开门，取消其他呼叫");
+            Log.v("MainService", "用户手机一键开门，取消其他呼叫");
             resetCallMode();
             stopTimeoutCheckThread();
             //开门操作
             Log.e(TAG, "进行开门操作 开门开门");
-            openLock();
+            openLock(2);
 
             List<LogDoor> list = new ArrayList<>();
             //拼接图片地址
@@ -2903,12 +2904,12 @@ public class MainService extends Service {
 
             //检测输入图像中的人脸特征信息，输出结果保存在 AFR_FSDKFace feature
             err_afr = engine_afr.AFR_FSDK_ExtractFRFeature(data, mBitmap.getWidth(), mBitmap.getHeight(),
-                    AFR_FSDKEngine.CP_PAF_NV21, new Rect(result_afd.get(0).getRect
-                            ()), result_afd.get(0).getDegree(), result_afr);
-            Log.d("com.arcsoft", "Face=" + result_afr.getFeatureData()[0] + "," + result_afr
-                    .getFeatureData()[1] + "," + "" + "" + "" + "" + "" + "" + "" + "" + "" + ""
-                    + "" + "" + "" + "" + "" + "" + "result_afr" + result_afr.toString() + "  " +
-                    "" + result_afr.getFeatureData()[2] + "," + err_afr.getCode());
+                    AFR_FSDKEngine.CP_PAF_NV21, new Rect(result_afd.get(0).getRect()), result_afd.get(0).getDegree(),
+                    result_afr);
+            Log.d("com.arcsoft", "Face=" + result_afr.getFeatureData()[0] + "," + result_afr.getFeatureData()[1] + "," +
+                    "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" +
+                    "result_afr" + result_afr.toString() + "  " + "" + result_afr.getFeatureData()[2] + "," + err_afr
+                    .getCode());
             if (err_afr.getCode() == err_afr.MOK) {//人脸特征检测成功
                 mAFR_FSDKFace = result_afr.clone();
                 // TODO: 2018/5/15 保存mAFR_FSDKFace人脸信息，操作数据库
@@ -2997,10 +2998,12 @@ public class MainService extends Service {
             Log.v("MainService", "onCard====卡信息：" + card);
             DbUtils.getInstans().quaryAllKa();
             Ka kaInfo = DbUtils.getInstans().getKaInfo(card);
-            if (kaInfo != null) {//判断数据库中是否有卡
+            Log.v("MainService", "onCard====当前时间：" + System.currentTimeMillis() + "卡过期时间：" + kaInfo.getGuoqi_time() +
+                    "是否失效  》0表示失效" + (System.currentTimeMillis() - Long.parseLong(kaInfo.getGuoqi_time())));
+            if (kaInfo != null && System.currentTimeMillis() < Long.parseLong(kaInfo.getGuoqi_time())) {//判断数据库中是否有卡
                 Log.i(TAG, "刷卡开门成功" + card);
 //                sendMessageToMainAcitivity(MSG_LOCK_OPENED, "");
-                openLock();
+                openLock(1);
                 Log.e(TAG, "onCard====:" + card);
                 LogDoor data = new LogDoor();
                 data.setMac(mac);
@@ -3023,9 +3026,9 @@ public class MainService extends Service {
 
     /****************************卡相关end************************/
 
-    protected void openLock() {
+    protected void openLock(int type) {
 
-        openAexLock();
+        openAexLock(type);
 
         int status = 2;
         Intent ds_intent = new Intent();
@@ -3039,10 +3042,10 @@ public class MainService extends Service {
         sendBroadcast(intent);
     }
 
-    private void openAexLock() {
+    private void openAexLock(int type) {
         int result = aexUtil.openLock();
         if (result > 0) {
-            sendMessageToMainAcitivity(MSG_LOCK_OPENED, null);//开锁
+            sendMessageToMainAcitivity(MSG_LOCK_OPENED, type);//开锁
             SoundPoolUtil.getSoundPoolUtil().loadVoice(getBaseContext(), 011111);
         }
     }

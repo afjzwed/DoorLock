@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              xmlns:app="http://schemas.android.com/apk/res-auto"
               android:layout_width="match_parent"
               android:layout_height="match_parent"
               android:background="@color/black95"
@@ -58,10 +59,10 @@
                     android:layout_below="@id/tv_title"
                     android:layout_centerHorizontal="true"
                     android:layout_marginTop="10dp"
-                    android:visibility="gone"
                     android:background="@android:drawable/edit_text"
                     android:gravity="center"
-                android:hint="请输入楼栋编号"/>
+                    android:hint="请输入楼栋编号"
+                    android:visibility="gone"/>
 
                 <EditText
                     android:id="@+id/et_unitno"
@@ -72,8 +73,8 @@
                     android:layout_marginTop="10dp"
                     android:background="@android:drawable/edit_text"
                     android:gravity="center"
-                    android:maxLength="11"
-                    android:hint="请输入手机号码"/>
+                    android:hint="请输入手机号码"
+                    android:maxLength="11"/>
 
                 <TextView
                     android:id="@+id/tv_message"
@@ -82,8 +83,8 @@
                     android:layout_centerHorizontal="true"
                     android:layout_centerInParent="true"
                     android:layout_centerVertical="true"
-                    android:textColor="#333333"
                     android:text=""
+                    android:textColor="#333333"
                     android:textSize="20sp"/>
             </RelativeLayout>
 
@@ -389,8 +390,8 @@
             <TextView
                 android:id="@+id/gonggao_title"
                 android:layout_width="match_parent"
-                android:ellipsize="marquee"
                 android:layout_height="wrap_content"
+                android:ellipsize="marquee"
                 android:gravity="center"
                 android:text="标题"
                 android:textColor="@android:color/white"
@@ -423,10 +424,10 @@
             android:id="@+id/banner"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-           android:layout_marginRight="357dp"
+           android:layout_toLeftOf="@+id/face_container_rel"
+            android:background="@mipmap/bg_19da"
             />
 
-        <!--人脸识别-->
         <LinearLayout
             android:id="@+id/face_container_rel"
             android:layout_width="wrap_content"
