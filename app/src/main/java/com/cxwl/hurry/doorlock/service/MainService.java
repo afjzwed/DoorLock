@@ -1247,10 +1247,12 @@ public class MainService extends Service {
                                         @Override
                                         public void run() {
                                             try {
-                                                downloadAdvertisement(guangGaoBeen);
-                                                adjustAdvertiseFiles();
-                                                restartAdvertise(guangGaoBeen);
-                                                removeAdvertiseFiles();
+                                                if (guangGaoBeen != null && guangGaoBeen.size() > 0) {
+                                                    downloadAdvertisement(guangGaoBeen);
+                                                    adjustAdvertiseFiles();
+                                                    restartAdvertise(guangGaoBeen);
+                                                    removeAdvertiseFiles();
+                                                }
                                                 syncCallBack("5", v);//同步视频
 
                                                 adInfoStatus = 0;//重置广告视频下载状态
@@ -2176,7 +2178,7 @@ public class MainService extends Service {
             openLock(2);
             //分为手机开门和视屏开门 1和2 进行区分 上传日志统一传2；
             if ("1".equals(logDoor.getKaimenfangshi())) {
-                 logDoor.setKaimenfangshi("2");
+                logDoor.setKaimenfangshi("2");
                 //一键开门拍照
                 if (StringUtils.isFastClick()) {
                     String imgurl = "door/img/" + System.currentTimeMillis() + ".jpg";
@@ -2927,9 +2929,9 @@ public class MainService extends Service {
                     AFR_FSDKEngine.CP_PAF_NV21, new Rect(result_afd.get(0).getRect()), result_afd.get(0).getDegree(),
                     result_afr);
             Log.d("com.arcsoft", "Face=" + result_afr.getFeatureData()[0] + "," + result_afr.getFeatureData()[1] + "," +
-                    "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" +
-                    "result_afr" + result_afr.toString() + "  " + "" + result_afr.getFeatureData()[2] + "," + err_afr
-                    .getCode());
+                    "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + ""
+                    + "result_afr" + result_afr.toString() + "  " + "" + result_afr.getFeatureData()[2] + "," +
+                    err_afr.getCode());
             if (err_afr.getCode() == err_afr.MOK) {//人脸特征检测成功
                 mAFR_FSDKFace = result_afr.clone();
                 // TODO: 2018/5/15 保存mAFR_FSDKFace人脸信息，操作数据库

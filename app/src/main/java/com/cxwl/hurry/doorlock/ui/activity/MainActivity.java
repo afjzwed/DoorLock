@@ -780,7 +780,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 mAdTongJiBean = new AdTongJiBean();
                 mAdTongJiBean.setStart_time(startTime);
                 mAdTongJiBean.setEnd_time(endTime);
-                mAdTongJiBean.setAdd_id(obj1.get(i).getId());
+                mAdTongJiBean.setAd_id(obj1.get(i).getId());
                 mAdTongJiBean.setMac(MacUtils.getMac());
                 mTongJiBeanList.add(mAdTongJiBean);
                 sendMainMessager(MSG_TONGJI_PIC, mTongJiBeanList);

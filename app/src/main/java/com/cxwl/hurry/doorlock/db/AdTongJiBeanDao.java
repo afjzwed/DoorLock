@@ -23,7 +23,7 @@ public class AdTongJiBeanDao extends AbstractDao<AdTongJiBean, Long> {
      */
     public static class Properties {
         public final static Property Id = new Property(0, Long.class, "id", true, "_id");
-        public final static Property Add_id = new Property(1, int.class, "add_id", false, "add_id");
+        public final static Property Ad_id = new Property(1, int.class, "ad_id", false, "ad_id");
         public final static Property Start_time = new Property(2, String.class, "start_time", false, "start_time");
         public final static Property End_time = new Property(3, String.class, "end_time", false, "end_time");
         public final static Property Mac = new Property(4, String.class, "mac", false, "mac");
@@ -43,7 +43,7 @@ public class AdTongJiBeanDao extends AbstractDao<AdTongJiBean, Long> {
         String constraint = ifNotExists? "IF NOT EXISTS ": "";
         db.execSQL("CREATE TABLE " + constraint + "\"AD_TONG_JI_BEAN\" (" + //
                 "\"_id\" INTEGER PRIMARY KEY ," + // 0: id
-                "\"add_id\" INTEGER NOT NULL ," + // 1: add_id
+                "\"ad_id\" INTEGER NOT NULL ," + // 1: ad_id
                 "\"start_time\" TEXT," + // 2: start_time
                 "\"end_time\" TEXT," + // 3: end_time
                 "\"mac\" TEXT);"); // 4: mac
@@ -63,7 +63,7 @@ public class AdTongJiBeanDao extends AbstractDao<AdTongJiBean, Long> {
         if (id != null) {
             stmt.bindLong(1, id);
         }
-        stmt.bindLong(2, entity.getAdd_id());
+        stmt.bindLong(2, entity.getAd_id());
  
         String start_time = entity.getStart_time();
         if (start_time != null) {
@@ -89,7 +89,7 @@ public class AdTongJiBeanDao extends AbstractDao<AdTongJiBean, Long> {
         if (id != null) {
             stmt.bindLong(1, id);
         }
-        stmt.bindLong(2, entity.getAdd_id());
+        stmt.bindLong(2, entity.getAd_id());
  
         String start_time = entity.getStart_time();
         if (start_time != null) {
@@ -116,7 +116,7 @@ public class AdTongJiBeanDao extends AbstractDao<AdTongJiBean, Long> {
     public AdTongJiBean readEntity(Cursor cursor, int offset) {
         AdTongJiBean entity = new AdTongJiBean( //
             cursor.isNull(offset + 0) ? null : cursor.getLong(offset + 0), // id
-            cursor.getInt(offset + 1), // add_id
+            cursor.getInt(offset + 1), // ad_id
             cursor.isNull(offset + 2) ? null : cursor.getString(offset + 2), // start_time
             cursor.isNull(offset + 3) ? null : cursor.getString(offset + 3), // end_time
             cursor.isNull(offset + 4) ? null : cursor.getString(offset + 4) // mac
@@ -127,7 +127,7 @@ public class AdTongJiBeanDao extends AbstractDao<AdTongJiBean, Long> {
     @Override
     public void readEntity(Cursor cursor, AdTongJiBean entity, int offset) {
         entity.setId(cursor.isNull(offset + 0) ? null : cursor.getLong(offset + 0));
-        entity.setAdd_id(cursor.getInt(offset + 1));
+        entity.setAd_id(cursor.getInt(offset + 1));
         entity.setStart_time(cursor.isNull(offset + 2) ? null : cursor.getString(offset + 2));
         entity.setEnd_time(cursor.isNull(offset + 3) ? null : cursor.getString(offset + 3));
         entity.setMac(cursor.isNull(offset + 4) ? null : cursor.getString(offset + 4));
