@@ -91,7 +91,6 @@ import com.cxwl.hurry.doorlock.utils.JsonUtil;
 import com.cxwl.hurry.doorlock.utils.MacUtils;
 import com.cxwl.hurry.doorlock.utils.NetWorkUtils;
 import com.cxwl.hurry.doorlock.utils.NfcReader;
-import com.cxwl.hurry.doorlock.utils.SPUtil;
 import com.google.gson.reflect.TypeToken;
 import com.guo.android_extend.java.AbsLoop;
 import com.guo.android_extend.java.ExtByteArrayOutputStream;
@@ -136,6 +135,7 @@ import static com.cxwl.hurry.doorlock.config.Constant.MSG_CALLMEMBER_NO_ONLINE;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_CALLMEMBER_SERVER_ERROR;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_CALLMEMBER_TIMEOUT;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_CANCEL_CALL;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_CARD_OPENLOCK;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_DELETE_FACE;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_DISCONNECT_VIEDO;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_DETECT_CHECK;
@@ -164,7 +164,6 @@ import static com.cxwl.hurry.doorlock.config.Constant.MSG_TONGJI_VEDIO;
 import static com.cxwl.hurry.doorlock.config.Constant.ONVIDEO_MODE;
 import static com.cxwl.hurry.doorlock.config.Constant.PASSWORD_CHECKING_MODE;
 import static com.cxwl.hurry.doorlock.config.Constant.PASSWORD_MODE;
-import static com.cxwl.hurry.doorlock.config.Constant.SP_XINTIAO_TIME;
 import static com.cxwl.hurry.doorlock.config.Constant.arc_appid;
 import static com.cxwl.hurry.doorlock.config.Constant.fr_key;
 import static com.cxwl.hurry.doorlock.config.Constant.ft_key;
@@ -2811,7 +2810,39 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     }
                 }
 
-                Log.v("人脸识别", "fit Score:" + max + ", NAME:" + name);
+                if (DeviceConfig.OPEN_CARD_STATE == 1) {
+                    //将byte数组转成bitmap再转成图片文件
+                    byte[] data = mImageNV21;
+                    YuvImage yuv = new YuvImage(data, ImageFormat.NV21, mWidth, mHeight, null);
+                    ExtByteArrayOutputStream ops = new ExtByteArrayOutputStream();
+                    yuv.compressToJpeg(new Rect(0,0,0,0), 80, ops);
+                    Bitmap bmp = BitmapFactory.decodeByteArray(ops.getByteArray(), 0, ops.getByteArray().length);
+                    try {
+                        ops.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    File file = null;
+                    if (null != bmp) {
+                        file = BitmapUtils.saveBitmap(MainActivity.this, bmp);//本地截图文件地址
+                    }
+
+                    String par = null;
+                    if (null != file && !TextUtils.isEmpty(file.getPath())) {
+//                            parameters[1]  = filePath;
+                        uploadToQiNiu(file,1);//这里做上传到七牛的操作，不返回图片URL
+                    } else {
+                        faceOpenUrl = "";
+                    }
+                    DeviceConfig.OPEN_CARD_STATE =0;//图片处理完成,重置状态
+                    sendMainMessager(MSG_CARD_OPENLOCK, faceOpenUrl);
+                    file = null;
+                    bmp = null;
+                    yuv = null;
+                    data = null;
+                }
+
+//                Log.v("人脸识别", "fit Score:" + max + ", NAME:" + name);
                 if (max > 0.68f) {//匹配度的值高于设定值,发出消息,开门
                     //fr success.
                     //final float max_score = max;
@@ -2838,7 +2869,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         parameters[0] = name;
                         if (null != file && !TextUtils.isEmpty(file.getPath())) {
 //                            parameters[1]  = filePath;
-                            uploadToQiNiu(file);//这里做上传到七牛的操作，不返回图片URL
+                            uploadToQiNiu(file, 3);//这里做上传到七牛的操作，不返回图片URL
                             parameters[1] = faceOpenUrl;
                         } else {
                             parameters[1] = "";
@@ -2865,17 +2896,22 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     /**
      * 上传图片至七牛
      *
-     * @param file
+     * @param file  本地图片
+     * @param i  开门方式:1卡2手机3人脸4邀请码5离线密码6临时密码
      * @return
      */
-    private void uploadToQiNiu(final File file) {
+    private void uploadToQiNiu(final File file, final int i) {
         //创建地址
         faceOpenUrl = "door/img/" + System.currentTimeMillis() + ".jpg";
         OkHttpUtils.post().url(API.QINIU_IMG).build().execute(new StringCallback() {//七牛token值不固定，每次请求使用
             @Override
             public void onError(Call call, Exception e, int id) {
                 Log.i(TAG, "获取七牛token失败 e" + e.toString());
-                DeviceConfig.OPEN_RENLIAN_STATE = 0;//重置处理图片并上传日志的状态
+                if (i == 1) {
+                    DeviceConfig.OPEN_CARD_STATE = 0;
+                } else if (i == 3) {
+                    DeviceConfig.OPEN_RENLIAN_STATE = 0;//重置处理图片并上传日志的状态
+                }
             }
 
             @Override
@@ -2902,7 +2938,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                     }
                                 } catch (Exception e) {
                                 }
-                                DeviceConfig.OPEN_RENLIAN_STATE = 0;//重置处理图片并上传日志的状态
+                                if (i == 1) {
+                                    DeviceConfig.OPEN_CARD_STATE = 0;
+                                } else if (i == 3) {
+                                    DeviceConfig.OPEN_RENLIAN_STATE = 0;//重置处理图片并上传日志的状态
+                                }
                             }
                         }, null);
                     }

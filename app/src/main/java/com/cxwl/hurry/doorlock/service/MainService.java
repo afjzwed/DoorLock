@@ -112,6 +112,7 @@ import static com.cxwl.hurry.doorlock.config.Constant.MSG_CALLMEMBER_NO_ONLINE;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_CALLMEMBER_SERVER_ERROR;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_CALLMEMBER_TIMEOUT;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_CANCEL_CALL;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_CARD_OPENLOCK;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_DISCONNECT_VIEDO;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_DOWNLOAD;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_INFO;
@@ -207,6 +208,7 @@ public class MainService extends Service {
 
     private boolean netWorkstate = false;//是否有网的标识
     public String tempKey = "";
+    private Ka kaInfo = null;
 
     private AFD_FSDKEngine engine_afd = new AFD_FSDKEngine();//这个类实现了人脸检测的功能
     private AFD_FSDKVersion version_afd = new AFD_FSDKVersion();//这个类用来保存版本信息
@@ -491,6 +493,25 @@ public class MainService extends Service {
                         createAccessLog(list);
                         break;
                     }
+                    case MSG_CARD_OPENLOCK: {
+                        String pic_url = (String) msg.obj;
+                        LogDoor data = new LogDoor();
+                        data.setMac(mac);
+                        data.setPhone(kaInfo.getYezhu_dianhua());
+                        data.setKa_id(kaInfo.getKa_id());
+                        data.setKaimenfangshi("1");
+                        if (TextUtils.isEmpty(pic_url)) {
+                            data.setKaimenjietu("");
+                        } else {
+                            data.setKaimenjietu(pic_url);
+                        }
+                        data.setKaimenshijian(System.currentTimeMillis() + "");
+                        data.setUuid("");
+                        List<LogDoor> list = new ArrayList<>();
+                        list.add(data);
+                        createAccessLog(list);
+                        break;
+                    }
                     default:
                         break;
                 }
@@ -631,7 +652,7 @@ public class MainService extends Service {
                     HttpApi.e("验证密码接口->成功" + response);
                     if (null != response) {
                         ResponseBean responseBean = JsonUtil.parseJsonToBean(response, ResponseBean.class);
-                       message.obj=responseBean;
+                        message.obj = responseBean;
                     }
                     mHandler.sendMessage(message);
                 }
@@ -649,24 +670,24 @@ public class MainService extends Service {
 
     private void onCheckGuestPassword(ResponseBean result) {
 
-            if (result != null&&"0".equals(result.getCode())) {
-                Log.e(TAG, "-----------------临时密码开门成功  开门开门------------------");
-                openLock(6);
-                List<LogDoor> list = new ArrayList<>();
-                LogDoor logDoor = new LogDoor();
-                logDoor.setMac(mac);
-                logDoor.setKa_id("");
-                logDoor.setUuid("");
-                logDoor.setKaimenjietu(imageUrl == null ? "" : imageUrl);
-                logDoor.setPhone("");
-                logDoor.setKaimenshijian(System.currentTimeMillis() + "");
-                logDoor.setKaimenfangshi("6");
-                Log.i(TAG, "上传密码开门日志" + "---logDoor=" + logDoor.toString());
-                list.add(logDoor);
-                createAccessLog(list);
-            } else {
-                Log.e(TAG, "--------------------密码开门失败  --------------------");
-            }
+        if (result != null && "0".equals(result.getCode())) {
+            Log.e(TAG, "-----------------临时密码开门成功  开门开门------------------");
+            openLock(6);
+            List<LogDoor> list = new ArrayList<>();
+            LogDoor logDoor = new LogDoor();
+            logDoor.setMac(mac);
+            logDoor.setKa_id("");
+            logDoor.setUuid("");
+            logDoor.setKaimenjietu(imageUrl == null ? "" : imageUrl);
+            logDoor.setPhone("");
+            logDoor.setKaimenshijian(System.currentTimeMillis() + "");
+            logDoor.setKaimenfangshi("6");
+            Log.i(TAG, "上传密码开门日志" + "---logDoor=" + logDoor.toString());
+            list.add(logDoor);
+            createAccessLog(list);
+        } else {
+            Log.e(TAG, "--------------------密码开门失败  --------------------");
+        }
 
         sendMessageToMainAcitivity(MSG_PASSWORD_CHECK, result);
     }
@@ -1156,7 +1177,7 @@ public class MainService extends Service {
                             String list = JsonUtil.getFieldValue(result, "lian");//服务器字段命名错误
                             faceUrlList = (ArrayList<FaceUrlBean>) JsonUtil.parseJsonToList(list, new
                                     TypeToken<List<FaceUrlBean>>() {
-                            }.getType());
+                                    }.getType());
 
                             //通知MainActivity开始人脸录入流程
                             sendMessageToMainAcitivity(MSG_FACE_INFO, null);
@@ -2996,26 +3017,17 @@ public class MainService extends Service {
         if (!this.cardRecord.checkLastCard(card)) {//判断距离上次刷卡时间是否超过1秒
             Log.v("MainService", "onCard====卡信息：" + card);
             DbUtils.getInstans().quaryAllKa();
-            Ka kaInfo = DbUtils.getInstans().getKaInfo(card);
+            kaInfo = DbUtils.getInstans().getKaInfo(card);
             Log.v("MainService", "onCard====当前时间：" + System.currentTimeMillis() + "卡过期时间：" + kaInfo.getGuoqi_time() +
                     "是否失效  》0表示失效" + (System.currentTimeMillis() - Long.parseLong(kaInfo.getGuoqi_time())));
             if (kaInfo != null && System.currentTimeMillis() < Long.parseLong(kaInfo.getGuoqi_time())) {//判断数据库中是否有卡
                 Log.i(TAG, "刷卡开门成功" + card);
-//                sendMessageToMainAcitivity(MSG_LOCK_OPENED, "");
-                openLock(1);
+                //开始截图
+                if (DeviceConfig.OPEN_CARD_STATE == 0) {
+                    DeviceConfig.OPEN_CARD_STATE = 1;
+                    openLock(1);
+                }
                 Log.e(TAG, "onCard====:" + card);
-                LogDoor data = new LogDoor();
-                data.setMac(mac);
-                data.setPhone(kaInfo.getYezhu_dianhua());
-                data.setKa_id(kaInfo.getKa_id());
-                data.setKaimenfangshi("1");
-                data.setKaimenjietu("");
-                data.setKaimenshijian(System.currentTimeMillis() + "");
-                data.setUuid("");
-                List<LogDoor> list = new ArrayList<>();
-                list.add(data);
-                createAccessLog(list);
-
             } else {
                 Log.e(TAG, "数据库中不存在这个卡 刷卡开门失败" + card);
                 sendMessageToMainAcitivity(MSG_INVALID_CARD, null);//无效房卡
