@@ -21,6 +21,7 @@ public class DeviceConfig {
     public static final String LOCAL_ADP_PATH = "adp";//广告图片储存位置
     public static final String LOCAL_FACE_PATH = "myface";//人脸图片储存位置
     public static final String LOCAL_APK_PATH = "myapk";//apk文件储存位置
+    public static final String LOCAL_FACEINFO_PATH = "myfaceinfo";
 
     public static String DEVICE_TYPE = "B"; //C：社区大门门禁 B:楼栋单元门禁
 
@@ -44,6 +45,7 @@ public class DeviceConfig {
     public static int BLOCK_LENGTH = 8;//楼栋房屋号长度
 
     public static int OPEN_RENLIAN_STATE = 0;//人脸开门是否开始处理图片并上传日志的状态  0:未开始 1:已开始
+    public static int OPEN_CARD_STATE = 0;//卡开门是否开始处理图片并上传日志的状态 0:未开始 1:已开始
 
 
     public static final int DEVICE_KEYCODE_POUND = 66;//确认键

@@ -248,7 +248,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private AFT_FSDKVersion version = new AFT_FSDKVersion();//这个类用来保存版本信息
     private AFT_FSDKEngine engine = new AFT_FSDKEngine();//这个类具体实现了人脸跟踪的功能
     private List<AFT_FSDKFace> result = new ArrayList<>();//摄像头检测到的人脸信息集合
-    private byte[] mImageNV21 = null;//图像数据
+    private byte[] mImageNV21 = null;//人脸图像数据
+    private byte[] picData = null;
     private AFT_FSDKFace mAFT_FSDKFace = null;//这个类用来保存检测到的人脸信息
     private Handler faceHandler;//人脸识别handler
     private boolean identification = false;//人脸识别可以开始对比的标识
@@ -2660,6 +2661,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         }
 
+        if (data != null) {
+            picData = data;
+        }
+
         //保存人脸框数组
         Rect[] rects = new Rect[result.size()];
         for (int i = 0; i < result.size(); i++) {
@@ -2773,6 +2778,42 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
+
+            if (DeviceConfig.OPEN_CARD_STATE == 1) {
+
+                Log.e(TAG, "卡截图");
+                //将byte数组转成bitmap再转成图片文件
+                byte[] data = picData;
+                YuvImage yuv = new YuvImage(data, ImageFormat.NV21, mWidth, mHeight, null);
+                ExtByteArrayOutputStream ops = new ExtByteArrayOutputStream();
+                yuv.compressToJpeg(new Rect(0,0,0,0), 80, ops);
+                Bitmap bmp = BitmapFactory.decodeByteArray(ops.getByteArray(), 0, ops.getByteArray().length);
+                try {
+                    ops.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                File file = null;
+                if (null != bmp) {
+                    file = BitmapUtils.saveBitmap(MainActivity.this, bmp);//本地截图文件地址
+                }
+
+                if (null != file && !TextUtils.isEmpty(file.getPath())) {
+//                            parameters[1]  = filePath;
+                    uploadToQiNiu(file,1);//这里做上传到七牛的操作，不返回图片URL
+                } else {
+                    faceOpenUrl = "";
+                }
+                DeviceConfig.OPEN_CARD_STATE =0;//图片处理完成,重置状态
+
+                sendMainMessager(MSG_CARD_OPENLOCK, faceOpenUrl);
+                file = null;
+                bmp = null;
+                yuv = null;
+                data = null;
+            }
+
+
             if (mImageNV21 != null && identification) {//摄像头检测到人脸信息且处于人脸识别状态
                 long time = System.currentTimeMillis();
                 //检测输入图像中的人脸特征信息，输出结果保存在 AFR_FSDKFace feature
@@ -2808,38 +2849,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             }
                         }
                     }
-                }
-
-                if (DeviceConfig.OPEN_CARD_STATE == 1) {
-                    //将byte数组转成bitmap再转成图片文件
-                    byte[] data = mImageNV21;
-                    YuvImage yuv = new YuvImage(data, ImageFormat.NV21, mWidth, mHeight, null);
-                    ExtByteArrayOutputStream ops = new ExtByteArrayOutputStream();
-                    yuv.compressToJpeg(new Rect(0,0,0,0), 80, ops);
-                    Bitmap bmp = BitmapFactory.decodeByteArray(ops.getByteArray(), 0, ops.getByteArray().length);
-                    try {
-                        ops.close();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                    File file = null;
-                    if (null != bmp) {
-                        file = BitmapUtils.saveBitmap(MainActivity.this, bmp);//本地截图文件地址
-                    }
-
-                    String par = null;
-                    if (null != file && !TextUtils.isEmpty(file.getPath())) {
-//                            parameters[1]  = filePath;
-                        uploadToQiNiu(file,1);//这里做上传到七牛的操作，不返回图片URL
-                    } else {
-                        faceOpenUrl = "";
-                    }
-                    DeviceConfig.OPEN_CARD_STATE =0;//图片处理完成,重置状态
-                    sendMainMessager(MSG_CARD_OPENLOCK, faceOpenUrl);
-                    file = null;
-                    bmp = null;
-                    yuv = null;
-                    data = null;
                 }
 
 //                Log.v("人脸识别", "fit Score:" + max + ", NAME:" + name);

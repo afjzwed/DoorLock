@@ -494,6 +494,7 @@ public class MainService extends Service {
                         break;
                     }
                     case MSG_CARD_OPENLOCK: {
+                        Log.e(TAG, "卡开门");
                         String pic_url = (String) msg.obj;
                         LogDoor data = new LogDoor();
                         data.setMac(mac);
@@ -3018,12 +3019,13 @@ public class MainService extends Service {
             Log.v("MainService", "onCard====卡信息：" + card);
             DbUtils.getInstans().quaryAllKa();
             kaInfo = DbUtils.getInstans().getKaInfo(card);
-            Log.v("MainService", "onCard====当前时间：" + System.currentTimeMillis() + "卡过期时间：" + kaInfo.getGuoqi_time() +
-                    "是否失效  》0表示失效" + (System.currentTimeMillis() - Long.parseLong(kaInfo.getGuoqi_time())));
             if (kaInfo != null && System.currentTimeMillis() < Long.parseLong(kaInfo.getGuoqi_time())) {//判断数据库中是否有卡
+                Log.v("MainService", "onCard====当前时间：" + System.currentTimeMillis() + "卡过期时间：" + kaInfo.getGuoqi_time
+                        () + "是否失效  》0表示失效" + (System.currentTimeMillis() - Long.parseLong(kaInfo.getGuoqi_time())));
                 Log.i(TAG, "刷卡开门成功" + card);
                 //开始截图
                 if (DeviceConfig.OPEN_CARD_STATE == 0) {
+                    Log.e(TAG, "刷卡开门，开始截图");
                     DeviceConfig.OPEN_CARD_STATE = 1;
                     openLock(1);
                 }
