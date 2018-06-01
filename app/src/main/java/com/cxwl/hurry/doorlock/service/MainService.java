@@ -1179,7 +1179,7 @@ public class MainService extends Service {
                             String list = JsonUtil.getFieldValue(result, "lian");//服务器字段命名错误
                             faceUrlList = (ArrayList<FaceUrlBean>) JsonUtil.parseJsonToList(list, new
                                     TypeToken<List<FaceUrlBean>>() {
-                                    }.getType());
+                            }.getType());
 
                             //通知MainActivity开始人脸录入流程
                             sendMessageToMainAcitivity(MSG_FACE_INFO, null);
@@ -2173,30 +2173,24 @@ public class MainService extends Service {
             stopTimeoutCheckThread();
             //开门操作
             Log.e(TAG, "进行开门操作 开门开门");
-
+            openLock(2);
             //分为手机开门和视屏开门 1和2 进行区分 上传日志统一传2；
             if ("1".equals(logDoor.getKaimenfangshi())) {
-                //
-                logDoor.setKaimenfangshi("2");
-                String imgurl = "door/img/" + System.currentTimeMillis() + ".jpg";
-                sendMessageToMainAcitivity(MSG_YIJIANKAIMEN_TAKEPIC, imgurl);
-                logDoor.setKaimenjietu(imgurl);
-                // TODO: 2018/6/1 暂时注释
-//                if (DeviceConfig.OPEN_PHONE_STATE == 0) {
-//                    Log.e(TAG, "刷卡开门，开始截图");
-//                    DeviceConfig.OPEN_CARD_STATE = 1;
-//                }
+                 logDoor.setKaimenfangshi("2");
+                //一键开门拍照
+                if (StringUtils.isFastClick()) {
+                    String imgurl = "door/img/" + System.currentTimeMillis() + ".jpg";
+                    sendMessageToMainAcitivity(MSG_YIJIANKAIMEN_TAKEPIC, imgurl);
+                    logDoor.setKaimenjietu(imageUrl);
+                }
             }
             List<LogDoor> list = new ArrayList<>();
             //拼接图片地址
-            if (StringUtils.isNoEmpty(logDoor.getKaimenjietu())) {
-                logDoor.setKaimenjietu(logDoor.getKaimenjietu());
-            }
+            logDoor.setKaimenjietu(logDoor.getKaimenjietu());
             Log.e(TAG, "图片imageUrl" + logDoor.getKaimenjietu());
             list.add(logDoor);
             //上传日志
             createAccessLog(list);
-            openLock(2);
         } else if (content.startsWith("refuse call")) { //拒绝接听
 //            if (!rejectUserList.contains(from)) {
 //                rejectUserList.add(from);
