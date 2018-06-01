@@ -2183,7 +2183,7 @@ public class MainService extends Service {
                 if (StringUtils.isFastClick()) {
                     String imgurl = "door/img/" + System.currentTimeMillis() + ".jpg";
                     sendMessageToMainAcitivity(MSG_YIJIANKAIMEN_TAKEPIC, imgurl);
-                    logDoor.setKaimenjietu(imageUrl);
+                    logDoor.setKaimenjietu(imgurl);
                 }
             }
             List<LogDoor> list = new ArrayList<>();
