@@ -1527,10 +1527,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         setCurrentStatus(PASSWORD_MODE);
         setTempkeyValue("");
         if (code) {
-            Utils.DisplayToast(MainActivity.this, "您输入的密码验证成功");
+           // Utils.DisplayToast(MainActivity.this, "您输入的密码验证成功");
 
         } else {
-            Utils.DisplayToast(MainActivity.this, "密码验证不成功，请联系管理员");
+            Utils.DisplayToast(MainActivity.this, "密码验证不成功");
         }
         if (faceHandler != null) {
             faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_CONTRAST, 3000);
