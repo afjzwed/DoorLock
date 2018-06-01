@@ -468,34 +468,34 @@ public class MainService extends Service {
                     }
                     case MSG_FACE_OPENLOCK: {
                         //脸开门
-                        openLock(3);
                         String[] parame = (String[]) msg.obj;
                         String phoneNum = parame[0];//手机号码
                         String picUrl = parame[1];//图片URL
-
-                        LogDoor data = new LogDoor();
-                        data.setMac(mac);
-                        data.setKaimenfangshi("3");
-                        if (TextUtils.isEmpty(phoneNum)) {
-                            data.setPhone("");
-                        } else {
-                            data.setPhone(phoneNum);
+                        if (!cardRecord.checkLastCard(phoneNum)) {//判断距离上次刷脸时间是否超过2秒
+                            LogDoor data = new LogDoor();
+                            data.setMac(mac);
+                            data.setKaimenfangshi("3");
+                            if (TextUtils.isEmpty(phoneNum)) {
+                                data.setPhone("");
+                            } else {
+                                data.setPhone(phoneNum);
+                            }
+                            if (TextUtils.isEmpty(picUrl)) {
+                                data.setKaimenjietu("");
+                            } else {
+                                data.setKaimenjietu(picUrl);
+                            }
+                            data.setKa_id("");
+                            data.setKaimenshijian(System.currentTimeMillis() + "");
+                            data.setUuid("");
+                            List<LogDoor> list = new ArrayList<>();
+                            list.add(data);
+                            createAccessLog(list);
+                            openLock(3);
                         }
-                        if (TextUtils.isEmpty(picUrl)) {
-                            data.setKaimenjietu("");
-                        } else {
-                            data.setKaimenjietu(picUrl);
-                        }
-                        data.setKa_id("");
-                        data.setKaimenshijian(System.currentTimeMillis() + "");
-                        data.setUuid("");
-                        List<LogDoor> list = new ArrayList<>();
-                        list.add(data);
-                        createAccessLog(list);
                         break;
                     }
                     case MSG_CARD_OPENLOCK: {
-                        Log.e(TAG, "卡开门");
                         String pic_url = (String) msg.obj;
                         LogDoor data = new LogDoor();
                         data.setMac(mac);
@@ -2173,14 +2173,19 @@ public class MainService extends Service {
             stopTimeoutCheckThread();
             //开门操作
             Log.e(TAG, "进行开门操作 开门开门");
-            openLock(2);
+
             //分为手机开门和视屏开门 1和2 进行区分 上传日志统一传2；
             if ("1".equals(logDoor.getKaimenfangshi())) {
                 //
                 logDoor.setKaimenfangshi("2");
                 String imgurl = "door/img/" + System.currentTimeMillis() + ".jpg";
                 sendMessageToMainAcitivity(MSG_YIJIANKAIMEN_TAKEPIC, imgurl);
-                logDoor.setKaimenjietu(imageUrl);
+                logDoor.setKaimenjietu(imgurl);
+                // TODO: 2018/6/1 暂时注释
+//                if (DeviceConfig.OPEN_PHONE_STATE == 0) {
+//                    Log.e(TAG, "刷卡开门，开始截图");
+//                    DeviceConfig.OPEN_CARD_STATE = 1;
+//                }
             }
             List<LogDoor> list = new ArrayList<>();
             //拼接图片地址
@@ -2191,6 +2196,7 @@ public class MainService extends Service {
             list.add(logDoor);
             //上传日志
             createAccessLog(list);
+            openLock(2);
         } else if (content.startsWith("refuse call")) { //拒绝接听
 //            if (!rejectUserList.contains(from)) {
 //                rejectUserList.add(from);
@@ -3014,7 +3020,7 @@ public class MainService extends Service {
      * @param card
      */
     private void onCardIncome(String card) {
-        if (!this.cardRecord.checkLastCard(card)) {//判断距离上次刷卡时间是否超过1秒
+        if (!this.cardRecord.checkLastCard(card)) {//判断距离上次刷卡时间是否超过2秒
             Log.v("MainService", "onCard====卡信息：" + card);
             DbUtils.getInstans().quaryAllKa();
             kaInfo = DbUtils.getInstans().getKaInfo(card);

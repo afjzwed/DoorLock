@@ -46,6 +46,7 @@ public class DeviceConfig {
 
     public static int OPEN_RENLIAN_STATE = 0;//人脸开门是否开始处理图片并上传日志的状态  0:未开始 1:已开始
     public static int OPEN_CARD_STATE = 0;//卡开门是否开始处理图片并上传日志的状态 0:未开始 1:已开始
+    public static int OPEN_PHONE_STATE = 0;//手机一键开门是否开始处理图片并上传日志的状态 0:未开始 1:已开始
 
 
     public static final int DEVICE_KEYCODE_POUND = 66;//确认键

@@ -30,7 +30,7 @@ public interface API {
 
     String VERSION_ADDRESS = HTTP_HOST + "/xdoor/device/version";//获取版本更新路径
 
-    String ADV_TONGJI = HTTP_HOST + "/xdoor/device/addTongji";//获取版本更新路径
+    String ADV_TONGJI = HTTP_HOST + "/xdoor/device/tongji";//获取版本更新路径
 
     String QINIU_IMG = HTTP_HOST + "/qiniu/getQiniuToken";//获取七牛图片路径
 

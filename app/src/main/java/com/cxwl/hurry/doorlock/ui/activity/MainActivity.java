@@ -678,7 +678,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         String value = (String) msg.obj;
                         noticeBeanList = (ArrayList<NoticeBean>) JsonUtil.parseJsonToList(value, new
                                 TypeToken<List<NoticeBean>>() {
-                        }.getType());
+                                }.getType());
                         tongGaoIndex = 0;
                         if (!isTongGaoThreadStart) {//线程未开启
                             isTongGaoThreadStart = !isTongGaoThreadStart;
@@ -710,7 +710,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         Log.e(TAG, "人脸信息删除" + " delete " + delete);
                         break;
                     case MSG_YIJIANKAIMEN_TAKEPIC:
-                       takePicture1((String) msg.obj);
+                        takePicture1((String) msg.obj);
                         break;
                     default:
                         break;
@@ -1700,128 +1700,133 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }.start();
         }
     }
+
     protected void takePicture1(final String imgUrl) {
-            Log.v("MainActivity", "开始启动拍照");
+        Log.v("MainActivity", "开始启动拍照");
+
         //启动人脸识别
         if (faceHandler != null) {
-            faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_CONTRAST, 3000);
+            faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_PAUSE, 0);
+            faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_CONTRAST, 4000);
         }
-            new Thread() {
-                @Override
-                public void run() {
-                    try {
-                        Thread.sleep(300);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
+        new Thread() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
 
-                    mCamerarelease = false;
+                mCamerarelease = false;
 
+                try {
+                    camera = Camera.open();
+                    parameters(camera);
+                    Log.e(TAG, "打开照相机 1");
+                } catch (Exception e) {
+                    Log.e(TAG, "打开照相机 2 " + e.toString());
+                }
+                Log.v(TAG, "打开照相机");
+                if (camera == null) {
                     try {
-                        camera = Camera.open();
-                        parameters(camera);
-                        Log.e(TAG, "打开照相机 1");
+                        camera = Camera.open(0);
+                        Log.e(TAG, "打开照相机 3");
                     } catch (Exception e) {
-                        Log.e(TAG, "打开照相机 2 " + e.toString());
+                        Log.e(TAG, "打开照相机 4" + e.toString());
                     }
-                    Log.v(TAG, "打开照相机");
-                    if (camera == null) {
-                        try {
-                            camera = Camera.open(0);
-                            Log.e(TAG, "打开照相机 3");
-                        } catch (Exception e) {
-                            Log.e(TAG, "打开照相机 4" + e.toString());
-                        }
-                    }
-                    if (camera != null) {
-                        try {
-                            Camera.Parameters parameters = camera.getParameters();
-                            parameters.setPreviewSize(320, 240);
-                            camera.setParameters(parameters);
-                            camera.setPreviewDisplay(autoCameraHolder);
-                            camera.startPreview();
-                            camera.autoFocus(null);
-                            Log.v("MainActivity", "开始拍照");
-                            camera.takePicture(null, null, new Camera.PictureCallback() {
-                                @Override
-                                public void onPictureTaken(byte[] data, Camera camera1) {
-                                    try {
-                                        camera.setPreviewCallback(null);
-                                        camera.stopPreview();
-                                        camera.release();
-                                        camera = null;
-                                        mCamerarelease = true;
-                                        Log.v("MainActivity", "释放照相机资源");
-                                        Log.v("MainActivity", "拍照成功");
-                                        Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
-                                        final File file = new File(Environment.getExternalStorageDirectory(), System
-                                                .currentTimeMillis() + ".jpg");
-                                        FileOutputStream outputStream = new FileOutputStream(file);
-                                        bitmap.compress(Bitmap.CompressFormat.JPEG, 50, outputStream);
-                                        outputStream.close();
+                }
+                if (camera != null) {
+                    try {
+                        Camera.Parameters parameters = camera.getParameters();
+                        parameters.setPreviewSize(320, 240);
+                        camera.setParameters(parameters);
+                        camera.setPreviewDisplay(autoCameraHolder);
+                        camera.startPreview();
+                        camera.autoFocus(null);
+                        Log.v("MainActivity", "开始拍照");
+                        camera.takePicture(null, null, new Camera.PictureCallback() {
+                            @Override
+                            public void onPictureTaken(byte[] data, Camera camera1) {
+                                try {
+                                    camera.setPreviewCallback(null);
+                                    camera.stopPreview();
+                                    camera.release();
+                                    camera = null;
+                                    mCamerarelease = true;
+                                    Log.v("MainActivity", "释放照相机资源");
+                                    Log.v("MainActivity", "拍照成功");
+                                    Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
+                                    final File file = new File(Environment.getExternalStorageDirectory(), System
+                                            .currentTimeMillis() + ".jpg");
+                                    FileOutputStream outputStream = new FileOutputStream(file);
+                                    bitmap.compress(Bitmap.CompressFormat.JPEG, 50, outputStream);
+                                    outputStream.close();
 
-                                            OkHttpUtils.post().url(API.QINIU_IMG).build().execute(new StringCallback() {
+                                    OkHttpUtils.post().url(API.QINIU_IMG).build().execute(new StringCallback() {
+                                        @Override
+                                        public void onError(Call call, Exception e, int id) {
+                                            Log.i(TAG, "获取七牛token失败 e" + e.toString());
+                                        }
+
+                                        @Override
+                                        public void onResponse(final String response, int id) {
+                                            new Thread() {
                                                 @Override
-                                                public void onError(Call call, Exception e, int id) {
-                                                    Log.i(TAG, "获取七牛token失败 e" + e.toString());
-                                                }
+                                                public void run() {
+                                                    String token = JsonUtil.getFieldValue(response, "data");
+                                                    Log.i(TAG, "获取七牛token成功 开始上传照片  token" + token);
+                                                    Log.e(TAG, "file七牛储存地址：" + imgUrl);
+                                                    Log.e(TAG, "file本地地址：" + file.getPath() + "file大小" + file.length());
 
-                                                @Override
-                                                public void onResponse(final String response, int id) {
-                                                    new Thread() {
-                                                        @Override
-                                                        public void run() {
-                                                            String token = JsonUtil.getFieldValue(response, "data");
-                                                            Log.i(TAG, "获取七牛token成功 开始上传照片  token" + token);
-                                                            Log.e(TAG, "file七牛储存地址：" + imgUrl);
-                                                            Log.e(TAG, "file本地地址：" + file.getPath() + "file大小" + file.length());
+                                                    uploadManager.put(file.getPath(), imgUrl, token, new
+                                                            UpCompletionHandler() {
+                                                                @Override
+                                                                public void complete(String key, ResponseInfo info,
+                                                                                     JSONObject
+                                                                                             response) {
+                                                                    if (info.isOK()) {
+                                                                        Log.e(TAG, "手机一键开门七牛上传图片成功 +图片地址" + curUrl);
 
-                                                            uploadManager.put(file.getPath(), imgUrl, token, new
-                                                                    UpCompletionHandler() {
-                                                                        @Override
-                                                                        public void complete(String key, ResponseInfo info, JSONObject
-                                                                                response) {
-                                                                            if (info.isOK()) {
-                                                                                Log.e(TAG, "手机一键开门七牛上传图片成功 +图片地址"+curUrl);
-
-                                                                            } else {
-                                                                                Log.e(TAG, "手机一键开门七牛上传图片失败");
-                                                                            }
-                                                                            try {
-                                                                                if (file != null) {
-                                                                                    file.delete();
-                                                                                }
-                                                                            } catch (Exception e) {
-                                                                            }
+                                                                    } else {
+                                                                        Log.e(TAG, "手机一键开门七牛上传图片失败");
+                                                                    }
+                                                                    try {
+                                                                        if (file != null) {
+                                                                            file.delete();
                                                                         }
-                                                                    }, null);
-                                                        }
-                                                    }.start();
+                                                                    } catch (Exception e) {
+                                                                    }
+                                                                }
+                                                            }, null);
                                                 }
-                                            });
+                                            }.start();
+                                        }
+                                    });
 
-                                    } catch (Exception e) {
-                                        Log.e(TAG, "打开照相机 5" + e.toString());
-                                        e.printStackTrace();
-                                    }
+                                } catch (Exception e) {
+                                    Log.e(TAG, "打开照相机 5" + e.toString());
+                                    e.printStackTrace();
                                 }
-                            });
-                        } catch (Exception e) {
-                            try {
-                                camera.stopPreview();
-                                camera.release();
-                                camera = null;
-                                mCamerarelease = true;
-                                Log.v("MainActivity", "照相出异常清除UUID");
-                            } catch (Exception err) {
-
                             }
+                        });
+                    } catch (Exception e) {
+                        try {
+                            camera.stopPreview();
+                            camera.release();
+                            camera = null;
+                            mCamerarelease = true;
+                            Log.v("MainActivity", "照相出异常清除UUID");
+                        } catch (Exception err) {
+
                         }
                     }
                 }
-            }.start();
+            }
+        }.start();
 
     }
+
     public void parameters(Camera camera) {
         List<Camera.Size> pictureSizes = camera.getParameters().getSupportedPictureSizes();
         List<Camera.Size> previewSizes = camera.getParameters().getSupportedPreviewSizes();
@@ -1901,31 +1906,34 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                                                 uploadManager.put(file.getPath(), curUrl, token, new
                                                         UpCompletionHandler() {
-                                                    @Override
-                                                    public void complete(String key, ResponseInfo info, JSONObject
-                                                            response) {
-                                                        if (info.isOK()) {
-                                                            Log.e(TAG, "七牛上传图片成功");
+                                                            @Override
+                                                            public void complete(String key, ResponseInfo info,
+                                                                                 JSONObject
+                                                                                         response) {
+                                                                if (info.isOK()) {
+                                                                    Log.e(TAG, "七牛上传图片成功");
 
-                                                        } else {
-                                                            Log.e(TAG, "七牛上传图片失败");
-                                                        }
-                                                        if (checkTakePictureAvailable(uuid) && info.isOK()&&isCall) {
-                                                            Log.i(TAG, "开始发送图片");
-                                                            callback.afterTakePickture(thisValue, curUrl, isCall, uuid);
-                                                        } else {
-                                                            Log.v("MainActivity", "上传照片成功,但已取消");
-                                                        }
-                                                        clearImageUuidAvaible(uuid);
-                                                        Log.v(TAG, "正常清除" + uuid);
-                                                        try {
-                                                            if (file != null) {
-                                                                file.delete();
+                                                                } else {
+                                                                    Log.e(TAG, "七牛上传图片失败");
+                                                                }
+                                                                if (checkTakePictureAvailable(uuid) && info.isOK() &&
+                                                                        isCall) {
+                                                                    Log.i(TAG, "开始发送图片");
+                                                                    callback.afterTakePickture(thisValue, curUrl,
+                                                                            isCall, uuid);
+                                                                } else {
+                                                                    Log.v("MainActivity", "上传照片成功,但已取消");
+                                                                }
+                                                                clearImageUuidAvaible(uuid);
+                                                                Log.v(TAG, "正常清除" + uuid);
+                                                                try {
+                                                                    if (file != null) {
+                                                                        file.delete();
+                                                                    }
+                                                                } catch (Exception e) {
+                                                                }
                                                             }
-                                                        } catch (Exception e) {
-                                                        }
-                                                    }
-                                                }, null);
+                                                        }, null);
                                             }
                                         }.start();
                                     }
@@ -2146,7 +2154,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         if (isCall) {
             message.what = MainService.MSG_START_DIAL_PICTURE;
         } else {
-           // message.what = MainService.MSG_CHECK_PASSWORD_PICTURE;
+            // message.what = MainService.MSG_CHECK_PASSWORD_PICTURE;
         }
         String[] parameters = new String[3];
         parameters[0] = thisValue;
@@ -2787,7 +2795,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
 
         if (data != null) {
-            picData = data;
+            picData = data.clone();
         }
 
         //保存人脸框数组
@@ -2905,13 +2913,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
 
             if (DeviceConfig.OPEN_CARD_STATE == 1) {
-
-                Log.e(TAG, "卡截图");
                 //将byte数组转成bitmap再转成图片文件
                 byte[] data = picData;
                 YuvImage yuv = new YuvImage(data, ImageFormat.NV21, mWidth, mHeight, null);
+//                ByteArrayOutputStream stream =newByteArrayOutputStream();
+//                image.compressToJpeg(newRect(0,0, Width, Height),80, stream);
+////Bitmap bmp = BitmapFactory.decodeByteArray(stream.toByteArray(), 0, stream.size());
+//                bmp = BitmapFactory.decodeByteArray(stream.toByteArray(),0, stream.size());
                 ExtByteArrayOutputStream ops = new ExtByteArrayOutputStream();
-                yuv.compressToJpeg(new Rect(0,0,0,0), 80, ops);
+                yuv.compressToJpeg(new Rect(0, 0, mWidth, mHeight), 80, ops);
                 Bitmap bmp = BitmapFactory.decodeByteArray(ops.getByteArray(), 0, ops.getByteArray().length);
                 try {
                     ops.close();
@@ -2925,11 +2935,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                 if (null != file && !TextUtils.isEmpty(file.getPath())) {
 //                            parameters[1]  = filePath;
-                    uploadToQiNiu(file,1);//这里做上传到七牛的操作，不返回图片URL
+                    uploadToQiNiu(file, 1);//这里做上传到七牛的操作，不返回图片URL
                 } else {
                     faceOpenUrl = "";
                 }
-                DeviceConfig.OPEN_CARD_STATE =0;//图片处理完成,重置状态
+                DeviceConfig.OPEN_CARD_STATE = 0;//图片处理完成,重置状态
 
                 sendMainMessager(MSG_CARD_OPENLOCK, faceOpenUrl);
                 file = null;
@@ -2981,13 +2991,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     //fr success.
                     //final float max_score = max;
                     //Log.v(FACE_TAG, "置信度：" + (float) ((int) (max_score * 1000)) / 1000.0);
-                    if (DeviceConfig.OPEN_RENLIAN_STATE == 0) {//开启截图、上传图片、开门、上传日志流程
+                    if (DeviceConfig.OPEN_RENLIAN_STATE == 0 && DeviceConfig.OPEN_CARD_STATE == 0)
+                    {//开启截图、上传图片、开门、上传日志流程
                         DeviceConfig.OPEN_RENLIAN_STATE = 1;//已开始处理图片
                         //将byte数组转成bitmap再转成图片文件
                         byte[] data = mImageNV21;
                         YuvImage yuv = new YuvImage(data, ImageFormat.NV21, mWidth, mHeight, null);
                         ExtByteArrayOutputStream ops = new ExtByteArrayOutputStream();
-                        yuv.compressToJpeg(mAFT_FSDKFace.getRect(), 80, ops);
+                        yuv.compressToJpeg(new Rect(0, 0, mWidth, mHeight), 80, ops);
                         Bitmap bmp = BitmapFactory.decodeByteArray(ops.getByteArray(), 0, ops.getByteArray().length);
                         try {
                             ops.close();
@@ -3030,8 +3041,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     /**
      * 上传图片至七牛
      *
-     * @param file  本地图片
-     * @param i  开门方式:1卡2手机3人脸4邀请码5离线密码6临时密码
+     * @param file 本地图片
+     * @param i    开门方式:1卡2手机3人脸4邀请码5离线密码6临时密码
      * @return
      */
     private void uploadToQiNiu(final File file, final int i) {
