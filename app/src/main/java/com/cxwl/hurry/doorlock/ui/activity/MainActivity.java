@@ -161,6 +161,7 @@ import static com.cxwl.hurry.doorlock.config.Constant.MSG_RTC_ONVIDEO;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_RTC_REGISTER;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_TONGJI_PIC;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_TONGJI_VEDIO;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_YIJIANKAIMEN_TAKEPIC;
 import static com.cxwl.hurry.doorlock.config.Constant.ONVIDEO_MODE;
 import static com.cxwl.hurry.doorlock.config.Constant.PASSWORD_CHECKING_MODE;
 import static com.cxwl.hurry.doorlock.config.Constant.PASSWORD_MODE;
@@ -707,6 +708,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             Toast.makeText(MainActivity.this, "数据库中没有此人脸信息", Toast.LENGTH_SHORT).show();
                         }
                         Log.e(TAG, "人脸信息删除" + " delete " + delete);
+                        break;
+                    case MSG_YIJIANKAIMEN_TAKEPIC:
+                       takePicture1((String) msg.obj);
                         break;
                     default:
                         break;
@@ -1450,10 +1454,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         setCurrentStatus(PASSWORD_CHECKING_MODE);
         String thisPassword = guestPassword;
         guestPassword = "";
-        //呼叫前，确认摄像头不被占用 虹软
-//        if (faceHandler != null) {
-//            faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_PAUSE, 0);
-//        }
+//        呼叫前，确认摄像头不被占用 虹软
+        if (faceHandler != null) {
+            faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_PAUSE, 0);
+        }
 
 
         takePicture(thisPassword, false, this);
@@ -1509,9 +1513,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             Toast.makeText(MainActivity.this, "密码验证不成功", Toast.LENGTH_SHORT).show();
         }
 
-//        if (faceHandler != null) {
-//            faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_CONTRAST, 3000);
-//        }
+        if (faceHandler != null) {
+            faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_CONTRAST, 3000);
+        }
     }
 
     /**
@@ -1696,7 +1700,128 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }.start();
         }
     }
+    protected void takePicture1(final String imgUrl) {
+            Log.v("MainActivity", "开始启动拍照");
+        //启动人脸识别
+        if (faceHandler != null) {
+            faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_CONTRAST, 3000);
+        }
+            new Thread() {
+                @Override
+                public void run() {
+                    try {
+                        Thread.sleep(300);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
 
+                    mCamerarelease = false;
+
+                    try {
+                        camera = Camera.open();
+                        parameters(camera);
+                        Log.e(TAG, "打开照相机 1");
+                    } catch (Exception e) {
+                        Log.e(TAG, "打开照相机 2 " + e.toString());
+                    }
+                    Log.v(TAG, "打开照相机");
+                    if (camera == null) {
+                        try {
+                            camera = Camera.open(0);
+                            Log.e(TAG, "打开照相机 3");
+                        } catch (Exception e) {
+                            Log.e(TAG, "打开照相机 4" + e.toString());
+                        }
+                    }
+                    if (camera != null) {
+                        try {
+                            Camera.Parameters parameters = camera.getParameters();
+                            parameters.setPreviewSize(320, 240);
+                            camera.setParameters(parameters);
+                            camera.setPreviewDisplay(autoCameraHolder);
+                            camera.startPreview();
+                            camera.autoFocus(null);
+                            Log.v("MainActivity", "开始拍照");
+                            camera.takePicture(null, null, new Camera.PictureCallback() {
+                                @Override
+                                public void onPictureTaken(byte[] data, Camera camera1) {
+                                    try {
+                                        camera.setPreviewCallback(null);
+                                        camera.stopPreview();
+                                        camera.release();
+                                        camera = null;
+                                        mCamerarelease = true;
+                                        Log.v("MainActivity", "释放照相机资源");
+                                        Log.v("MainActivity", "拍照成功");
+                                        Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
+                                        final File file = new File(Environment.getExternalStorageDirectory(), System
+                                                .currentTimeMillis() + ".jpg");
+                                        FileOutputStream outputStream = new FileOutputStream(file);
+                                        bitmap.compress(Bitmap.CompressFormat.JPEG, 50, outputStream);
+                                        outputStream.close();
+
+                                            OkHttpUtils.post().url(API.QINIU_IMG).build().execute(new StringCallback() {
+                                                @Override
+                                                public void onError(Call call, Exception e, int id) {
+                                                    Log.i(TAG, "获取七牛token失败 e" + e.toString());
+                                                }
+
+                                                @Override
+                                                public void onResponse(final String response, int id) {
+                                                    new Thread() {
+                                                        @Override
+                                                        public void run() {
+                                                            String token = JsonUtil.getFieldValue(response, "data");
+                                                            Log.i(TAG, "获取七牛token成功 开始上传照片  token" + token);
+                                                            Log.e(TAG, "file七牛储存地址：" + imgUrl);
+                                                            Log.e(TAG, "file本地地址：" + file.getPath() + "file大小" + file.length());
+
+                                                            uploadManager.put(file.getPath(), imgUrl, token, new
+                                                                    UpCompletionHandler() {
+                                                                        @Override
+                                                                        public void complete(String key, ResponseInfo info, JSONObject
+                                                                                response) {
+                                                                            if (info.isOK()) {
+                                                                                Log.e(TAG, "手机一键开门七牛上传图片成功 +图片地址"+curUrl);
+
+                                                                            } else {
+                                                                                Log.e(TAG, "手机一键开门七牛上传图片失败");
+                                                                            }
+                                                                            try {
+                                                                                if (file != null) {
+                                                                                    file.delete();
+                                                                                }
+                                                                            } catch (Exception e) {
+                                                                            }
+                                                                        }
+                                                                    }, null);
+                                                        }
+                                                    }.start();
+                                                }
+                                            });
+
+                                    } catch (Exception e) {
+                                        Log.e(TAG, "打开照相机 5" + e.toString());
+                                        e.printStackTrace();
+                                    }
+                                }
+                            });
+                        } catch (Exception e) {
+                            try {
+                                camera.stopPreview();
+                                camera.release();
+                                camera = null;
+                                mCamerarelease = true;
+                                Log.v("MainActivity", "照相出异常清除UUID");
+                            } catch (Exception err) {
+
+                            }
+                        }
+                    }
+                }
+            }.start();
+
+    }
     public void parameters(Camera camera) {
         List<Camera.Size> pictureSizes = camera.getParameters().getSupportedPictureSizes();
         List<Camera.Size> previewSizes = camera.getParameters().getSupportedPreviewSizes();
@@ -1785,7 +1910,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                                         } else {
                                                             Log.e(TAG, "七牛上传图片失败");
                                                         }
-                                                        if (checkTakePictureAvailable(uuid) && info.isOK()) {
+                                                        if (checkTakePictureAvailable(uuid) && info.isOK()&&isCall) {
                                                             Log.i(TAG, "开始发送图片");
                                                             callback.afterTakePickture(thisValue, curUrl, isCall, uuid);
                                                         } else {

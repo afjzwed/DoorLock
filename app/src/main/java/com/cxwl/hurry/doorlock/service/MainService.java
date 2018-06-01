@@ -133,6 +133,7 @@ import static com.cxwl.hurry.doorlock.config.Constant.MSG_RTC_ONVIDEO;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_RTC_REGISTER;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_TONGJI_PIC;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_TONGJI_VEDIO;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_YIJIANKAIMEN_TAKEPIC;
 import static com.cxwl.hurry.doorlock.config.Constant.RTC_APP_ID;
 import static com.cxwl.hurry.doorlock.config.Constant.RTC_APP_KEY;
 import static com.cxwl.hurry.doorlock.config.Constant.SP_LIXIAN_MIMA;
@@ -2160,16 +2161,11 @@ public class MainService extends Service {
         HttpApi.i("from = " + from + "    mime = " + mime + "     content = " + content);
         // sendMessageToMainAcitivity(MSG_RTC_MESSAGE, null);
         if (content.equals("refresh card info")) {
-//            sendDialMessenger(MSG_REFRESH_DATA, "card");
-//            retrieveCardList();//获取已注册卡信息
         } else if (content.equals("refresh finger info")) {
-//            sendDialMessenger(MSG_REFRESH_DATA, "finger");
         } else if (content.equals("refresh all info")) {
         } else if (content.startsWith("reject call")) { //挂断
-//            if (!rejectUserList.contains(from)) {
-//                rejectUserList.add(from);
-//            }
         } else if (content.startsWith("{")) {
+            //手机开门
             LogDoor logDoor = JsonUtil.parseJsonToBean(content, LogDoor.class);
             cancelOtherMembers(from);
             Log.v("MainService", "用户手机一键开门，取消其他呼叫");
@@ -2178,15 +2174,18 @@ public class MainService extends Service {
             //开门操作
             Log.e(TAG, "进行开门操作 开门开门");
             openLock(2);
-
+            //分为手机开门和视屏开门 1和2 进行区分 上传日志统一传2；
+            if ("1".equals(logDoor.getKaimenfangshi())) {
+                //
+                logDoor.setKaimenfangshi("2");
+                String imgurl = "door/img/" + System.currentTimeMillis() + ".jpg";
+                sendMessageToMainAcitivity(MSG_YIJIANKAIMEN_TAKEPIC, imgurl);
+                logDoor.setKaimenjietu(imageUrl);
+            }
             List<LogDoor> list = new ArrayList<>();
             //拼接图片地址
             if (StringUtils.isNoEmpty(logDoor.getKaimenjietu())) {
                 logDoor.setKaimenjietu(logDoor.getKaimenjietu());
-            } else {
-                if (StringUtils.isNoEmpty(imageUrl)) {
-                    logDoor.setKaimenjietu(imageUrl);
-                }
             }
             Log.e(TAG, "图片imageUrl" + logDoor.getKaimenjietu());
             list.add(logDoor);
@@ -2928,7 +2927,7 @@ public class MainService extends Service {
                     AFR_FSDKEngine.CP_PAF_NV21, new Rect(result_afd.get(0).getRect()), result_afd.get(0).getDegree(),
                     result_afr);
             Log.d("com.arcsoft", "Face=" + result_afr.getFeatureData()[0] + "," + result_afr.getFeatureData()[1] + "," +
-                    "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" +
+                    "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" +
                     "result_afr" + result_afr.toString() + "  " + "" + result_afr.getFeatureData()[2] + "," + err_afr
                     .getCode());
             if (err_afr.getCode() == err_afr.MOK) {//人脸特征检测成功
