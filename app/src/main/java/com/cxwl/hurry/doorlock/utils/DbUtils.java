@@ -5,6 +5,8 @@ import android.util.Log;
 
 import com.cxwl.hurry.doorlock.db.AdTongJiBean;
 import com.cxwl.hurry.doorlock.db.AdTongJiBeanDao;
+import com.cxwl.hurry.doorlock.db.ImgFile;
+import com.cxwl.hurry.doorlock.db.ImgFileDao;
 import com.cxwl.hurry.doorlock.db.KaDao;
 import com.cxwl.hurry.doorlock.db.LogDoor;
 
@@ -29,6 +31,7 @@ public class DbUtils {
     private LogDoorDao mLogDao;
     private final static String TAG = "DB";
     private AdTongJiBeanDao mAdTongJiBeanDao;
+    private ImgFileDao mImgFileDao;
 
     private DbUtils(DaoSession daoSession) {
         this.mDaoSession = daoSession;
@@ -36,6 +39,7 @@ public class DbUtils {
         mLianDao = this.mDaoSession.getLianDao();
         mLogDao = this.mDaoSession.getLogDoorDao();
         mAdTongJiBeanDao = this.mDaoSession.getAdTongJiBeanDao();
+        mImgFileDao = this.mDaoSession.getImgFileDao();
     }
 
     private static DbUtils mDbUtils;
@@ -220,5 +224,30 @@ public class DbUtils {
     public void deleteAllTongji() {
         mAdTongJiBeanDao.deleteAll();
         Log.i(TAG, "删除数据库中统计信息");
+    }
+    /**
+     * 删除一张照片
+     */
+    public void deleteOneImg(ImgFile imgFile) {
+        mImgFileDao.delete(imgFile);
+        Log.i(TAG, "删除数据库中一张照片信息");
+    }
+    /**
+     * 添加一张照片
+     */
+    public void insertOneImg(ImgFile imgFile) {
+        mImgFileDao.insert(imgFile);
+        Log.i(TAG, "保存数据库中一张照片信息");
+    }
+
+    /**
+     * 查询是否存在本地照片
+     */
+    public List<ImgFile> quaryImg() {
+        List<ImgFile> list = mImgFileDao.queryBuilder().list();
+        if (list != null) {
+            Log.i(TAG, "查询所有离线照片信息 有"+list.size()+"条");
+        }
+        return list;
     }
 }

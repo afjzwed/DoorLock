@@ -21,6 +21,8 @@ public class DeviceConfig {
     public static final String LOCAL_ADP_PATH = "adp";//广告图片储存位置
     public static final String LOCAL_FACE_PATH = "myface";//人脸图片储存位置
     public static final String LOCAL_APK_PATH = "myapk";//apk文件储存位置
+    public static final String LOCAL_IMG_PATH = "img_local";//所有照片
+
     public static final String LOCAL_FACEINFO_PATH = "myfaceinfo";
 
     public static String DEVICE_TYPE = "B"; //C：社区大门门禁 B:楼栋单元门禁

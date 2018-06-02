@@ -9,11 +9,13 @@ import org.greenrobot.greendao.identityscope.IdentityScopeType;
 import org.greenrobot.greendao.internal.DaoConfig;
 
 import com.cxwl.hurry.doorlock.db.AdTongJiBean;
+import com.cxwl.hurry.doorlock.db.ImgFile;
 import com.cxwl.hurry.doorlock.db.Ka;
 import com.cxwl.hurry.doorlock.db.Lian;
 import com.cxwl.hurry.doorlock.db.LogDoor;
 
 import com.cxwl.hurry.doorlock.db.AdTongJiBeanDao;
+import com.cxwl.hurry.doorlock.db.ImgFileDao;
 import com.cxwl.hurry.doorlock.db.KaDao;
 import com.cxwl.hurry.doorlock.db.LianDao;
 import com.cxwl.hurry.doorlock.db.LogDoorDao;
@@ -28,11 +30,13 @@ import com.cxwl.hurry.doorlock.db.LogDoorDao;
 public class DaoSession extends AbstractDaoSession {
 
     private final DaoConfig adTongJiBeanDaoConfig;
+    private final DaoConfig imgFileDaoConfig;
     private final DaoConfig kaDaoConfig;
     private final DaoConfig lianDaoConfig;
     private final DaoConfig logDoorDaoConfig;
 
     private final AdTongJiBeanDao adTongJiBeanDao;
+    private final ImgFileDao imgFileDao;
     private final KaDao kaDao;
     private final LianDao lianDao;
     private final LogDoorDao logDoorDao;
@@ -44,6 +48,9 @@ public class DaoSession extends AbstractDaoSession {
         adTongJiBeanDaoConfig = daoConfigMap.get(AdTongJiBeanDao.class).clone();
         adTongJiBeanDaoConfig.initIdentityScope(type);
 
+        imgFileDaoConfig = daoConfigMap.get(ImgFileDao.class).clone();
+        imgFileDaoConfig.initIdentityScope(type);
+
         kaDaoConfig = daoConfigMap.get(KaDao.class).clone();
         kaDaoConfig.initIdentityScope(type);
 
@@ -54,11 +61,13 @@ public class DaoSession extends AbstractDaoSession {
         logDoorDaoConfig.initIdentityScope(type);
 
         adTongJiBeanDao = new AdTongJiBeanDao(adTongJiBeanDaoConfig, this);
+        imgFileDao = new ImgFileDao(imgFileDaoConfig, this);
         kaDao = new KaDao(kaDaoConfig, this);
         lianDao = new LianDao(lianDaoConfig, this);
         logDoorDao = new LogDoorDao(logDoorDaoConfig, this);
 
         registerDao(AdTongJiBean.class, adTongJiBeanDao);
+        registerDao(ImgFile.class, imgFileDao);
         registerDao(Ka.class, kaDao);
         registerDao(Lian.class, lianDao);
         registerDao(LogDoor.class, logDoorDao);
@@ -66,6 +75,7 @@ public class DaoSession extends AbstractDaoSession {
     
     public void clear() {
         adTongJiBeanDaoConfig.clearIdentityScope();
+        imgFileDaoConfig.clearIdentityScope();
         kaDaoConfig.clearIdentityScope();
         lianDaoConfig.clearIdentityScope();
         logDoorDaoConfig.clearIdentityScope();
@@ -73,6 +83,10 @@ public class DaoSession extends AbstractDaoSession {
 
     public AdTongJiBeanDao getAdTongJiBeanDao() {
         return adTongJiBeanDao;
+    }
+
+    public ImgFileDao getImgFileDao() {
+        return imgFileDao;
     }
 
     public KaDao getKaDao() {

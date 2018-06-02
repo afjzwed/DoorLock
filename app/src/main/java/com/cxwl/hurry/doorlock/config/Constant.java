@@ -97,6 +97,6 @@ public class Constant {
     public static final int MSG_ADVERTISE_REFRESH = 10013;//刷新广告
     public static final int MSG_ADVERTISE_REFRESH_PIC = 10014;//刷新广告图片
     public static final int MSG_YIJIANKAIMEN_TAKEPIC = 10098;//手机一键开门拍照片
-
+    public static final int MSG_UPLOAD_LIXIAN_IMG = 100001;//上传离线img
 
 }

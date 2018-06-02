@@ -69,6 +69,7 @@ import com.cxwl.hurry.doorlock.callback.AdverTongJiCallBack;
 import com.cxwl.hurry.doorlock.callback.GlideImagerBannerLoader;
 import com.cxwl.hurry.doorlock.config.DeviceConfig;
 import com.cxwl.hurry.doorlock.db.AdTongJiBean;
+import com.cxwl.hurry.doorlock.db.ImgFile;
 import com.cxwl.hurry.doorlock.entity.GuangGaoBean;
 import com.cxwl.hurry.doorlock.entity.NoticeBean;
 import com.cxwl.hurry.doorlock.entity.ResponseBean;
@@ -100,8 +101,11 @@ import com.guo.android_extend.widget.CameraSurfaceView;
 import com.qiniu.android.common.FixedZone;
 import com.qiniu.android.http.ResponseInfo;
 import com.qiniu.android.storage.Configuration;
+import com.qiniu.android.storage.UpCancellationSignal;
 import com.qiniu.android.storage.UpCompletionHandler;
+import com.qiniu.android.storage.UpProgressHandler;
 import com.qiniu.android.storage.UploadManager;
+import com.qiniu.android.storage.UploadOptions;
 import com.youth.banner.Banner;
 import com.youth.banner.BannerConfig;
 import com.zhy.http.okhttp.OkHttpUtils;
@@ -161,6 +165,7 @@ import static com.cxwl.hurry.doorlock.config.Constant.MSG_RTC_ONVIDEO;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_RTC_REGISTER;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_TONGJI_PIC;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_TONGJI_VEDIO;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_UPLOAD_LIXIAN_IMG;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_YIJIANKAIMEN_TAKEPIC;
 import static com.cxwl.hurry.doorlock.config.Constant.ONVIDEO_MODE;
 import static com.cxwl.hurry.doorlock.config.Constant.PASSWORD_CHECKING_MODE;
@@ -170,6 +175,7 @@ import static com.cxwl.hurry.doorlock.config.Constant.fr_key;
 import static com.cxwl.hurry.doorlock.config.Constant.ft_key;
 import static com.cxwl.hurry.doorlock.config.DeviceConfig.DEVICE_KEYCODE_POUND;
 import static com.cxwl.hurry.doorlock.config.DeviceConfig.DEVICE_KEYCODE_STAR;
+import static com.cxwl.hurry.doorlock.config.DeviceConfig.LOCAL_IMG_PATH;
 import static com.cxwl.hurry.doorlock.utils.NetWorkUtils.NETWOKR_TYPE_ETHERNET;
 import static com.cxwl.hurry.doorlock.utils.NetWorkUtils.NETWOKR_TYPE_MOBILE;
 import static com.cxwl.hurry.doorlock.utils.NetWorkUtils.NETWORK_TYPE_NONE;
@@ -678,7 +684,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         String value = (String) msg.obj;
                         noticeBeanList = (ArrayList<NoticeBean>) JsonUtil.parseJsonToList(value, new
                                 TypeToken<List<NoticeBean>>() {
-                                }.getType());
+                        }.getType());
                         tongGaoIndex = 0;
                         if (!isTongGaoThreadStart) {//线程未开启
                             isTongGaoThreadStart = !isTongGaoThreadStart;
@@ -711,6 +717,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         break;
                     case MSG_YIJIANKAIMEN_TAKEPIC:
                         takePicture1((String) msg.obj);
+                        break;
+                    case MSG_UPLOAD_LIXIAN_IMG:
+                        uploadImgs((List<ImgFile>)msg.obj);
                         break;
                     default:
                         break;
@@ -1527,7 +1536,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         setCurrentStatus(PASSWORD_MODE);
         setTempkeyValue("");
         if (code) {
-           // Utils.DisplayToast(MainActivity.this, "您输入的密码验证成功");
+            // Utils.DisplayToast(MainActivity.this, "您输入的密码验证成功");
 
         } else {
             Utils.DisplayToast(MainActivity.this, "密码验证不成功");
@@ -1722,7 +1731,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                 try {
                     camera = Camera.open();
-                    parameters(camera);
                     Log.e(TAG, "打开照相机 1");
                 } catch (Exception e) {
                     Log.e(TAG, "打开照相机 2 " + e.toString());
@@ -1757,16 +1765,24 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                     Log.v("MainActivity", "释放照相机资源");
                                     Log.v("MainActivity", "拍照成功");
                                     Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
-                                    final File file = new File(Environment.getExternalStorageDirectory(), System
-                                            .currentTimeMillis() + ".jpg");
+                                    String fileurl = Environment.getExternalStorageDirectory() + "/" + LOCAL_IMG_PATH
+                                            + "/" + System.currentTimeMillis() + ".jpg";
+                                    final File file = new File(fileurl);
+                                    File parentFile = file.getParentFile();
+                                    if (!parentFile.exists()) {
+                                        parentFile.mkdirs();
+                                    }
                                     FileOutputStream outputStream = new FileOutputStream(file);
                                     bitmap.compress(Bitmap.CompressFormat.JPEG, 50, outputStream);
                                     outputStream.close();
-
+                                    final ImgFile imgFile = new ImgFile();
+                                    imgFile.setImg_localurl(fileurl);
+                                    imgFile.setImg_uploadurl(curUrl);
                                     OkHttpUtils.post().url(API.QINIU_IMG).build().execute(new StringCallback() {
                                         @Override
                                         public void onError(Call call, Exception e, int id) {
-                                            Log.i(TAG, "获取七牛token失败 e" + e.toString());
+                                            Log.i(TAG, "获取七牛token失败 e" + e.toString() + "手机一键开门七牛上传图片失败 保存照片信息到数据库");
+                                            DbUtils.getInstans().insertOneImg(imgFile);
                                         }
 
                                         @Override
@@ -1781,24 +1797,18 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                                                     uploadManager.put(file.getPath(), imgUrl, token, new
                                                             UpCompletionHandler() {
-                                                                @Override
-                                                                public void complete(String key, ResponseInfo info,
-                                                                                     JSONObject
-                                                                                             response) {
-                                                                    if (info.isOK()) {
-                                                                        Log.e(TAG, "手机一键开门七牛上传图片成功 +图片地址" + curUrl);
-
-                                                                    } else {
-                                                                        Log.e(TAG, "手机一键开门七牛上传图片失败");
-                                                                    }
-                                                                    try {
-                                                                        if (file != null) {
-                                                                            file.delete();
-                                                                        }
-                                                                    } catch (Exception e) {
-                                                                    }
-                                                                }
-                                                            }, null);
+                                                        @Override
+                                                        public void complete(String key, ResponseInfo info,
+                                                                             JSONObject response) {
+                                                            if (info.isOK()) {
+                                                                Log.e(TAG, "手机一键开门七牛上传图片成功 +图片地址" + curUrl + "删除本地图片");
+                                                                file.delete();
+                                                            } else {
+                                                                Log.e(TAG, "手机一键开门七牛上传图片失败 保存照片信息到数据库");
+                                                                DbUtils.getInstans().insertOneImg(imgFile);
+                                                            }
+                                                        }
+                                                    }, null);
                                                 }
                                             }.start();
                                         }
@@ -1827,19 +1837,72 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     }
 
-    public void parameters(Camera camera) {
-        List<Camera.Size> pictureSizes = camera.getParameters().getSupportedPictureSizes();
-        List<Camera.Size> previewSizes = camera.getParameters().getSupportedPreviewSizes();
-        Camera.Size psize;
-        for (int i = 0; i < pictureSizes.size(); i++) {
-            psize = pictureSizes.get(i);
-            Log.i("pictureSize", psize.width + " x " + psize.height);
-        }
-        for (int i = 0; i < previewSizes.size(); i++) {
-            psize = previewSizes.get(i);
-            Log.i("previewSize", psize.width + " x " + psize.height);
+    /**
+     * 七牛图片多文件上传
+     */
+    int curUploadImgIndex = 0;
+    int curUploadImgIndexSuccess = 0;
+    int curUploadImgIndexFail = 0;
+    int uploadImgStatus = 0; //0没上传 1正在上传
+
+    private void uploadImgs(final List<ImgFile> imgFiles) {
+        if (uploadImgStatus==0){
+            //正在上传
+            uploadImgStatus = 1;
+        OkHttpUtils.post().url(API.QINIU_IMG).build().execute(new StringCallback() {
+            @Override
+            public void onError(Call call, Exception e, int id) {
+                Log.i("七牛", "onError七牛获取离线上传照片token 失败" + e.toString());
+                uploadImgStatus = 0;
+            }
+
+            @Override
+            public void onResponse(String response, int id) {
+                final String token = JsonUtil.getFieldValue(response, "data");
+                Log.i("七牛", "获取七牛离线上传照片token成功 开始上传照片  token" + token);
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        curUploadImgIndex = 0;
+                        curUploadImgIndexFail = 0;
+                        curUploadImgIndexSuccess = 0;
+                        for (int i = 0; i < imgFiles.size(); i++) {
+                            Log.i("七牛", "共有" + imgFiles.size() + "  开始传第  " + i + "  张图");
+                            final ImgFile imgFile = imgFiles.get(i);
+                            final File file = new File(imgFile.getImg_localurl());
+                            final String curUrl = imgFile.getImg_uploadurl();
+                            uploadManager.put(imgFile.getImg_localurl(), curUrl, token, new UpCompletionHandler() {
+                                @Override
+                                public void complete(String key, ResponseInfo info, JSONObject res) {
+                                    curUploadImgIndex++;
+                                    if (info.isOK()) {
+                                        curUploadImgIndexSuccess++;
+                                        //当前图片上传成功
+                                        //删除文件
+                                        file.delete();
+                                        //删除数据库中数据
+                                        DbUtils.getInstans().deleteOneImg(imgFile);
+                                        //判断图片是否都上传完成
+                                        if ((curUploadImgIndex) == imgFiles.size()) {
+                                            Log.i("七牛", curUploadImgIndex + "张上传完成\n" + curUploadImgIndexSuccess +
+                                                    "张上传成功\n" + curUploadImgIndexFail + "张上传失败");
+                                            uploadImgStatus = 0;
+                                        }
+                                    } else {
+                                        //当前图片上传失败
+                                        curUploadImgIndexFail++;
+                                    }
+                                }
+                            }, null);
+                        }
+                    }
+                }).start();
+            }
+        });
+
         }
     }
+
 
     private synchronized void doTakePicture(final String thisValue, final String curUrl, final boolean isCall, final
     String uuid, final TakePictureCallback callback) {
@@ -1847,7 +1910,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         try {
             camera = Camera.open();
-            parameters(camera);
             Log.e(TAG, "打开照相机 1");
         } catch (Exception e) {
             Log.e(TAG, "打开照相机 2 " + e.toString());
@@ -1882,16 +1944,25 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             Log.v("MainActivity", "释放照相机资源");
                             Log.v("MainActivity", "拍照成功");
                             Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
-                            final File file = new File(Environment.getExternalStorageDirectory(), System
-                                    .currentTimeMillis() + ".jpg");
+                            String fileurl = Environment.getExternalStorageDirectory() + "/" + LOCAL_IMG_PATH + "/" +
+                                    System.currentTimeMillis() + ".jpg";
+                            final File file = new File(fileurl);
+                            File parentFile = file.getParentFile();
+                            if (!parentFile.exists()) {
+                                parentFile.mkdirs();
+                            }
                             FileOutputStream outputStream = new FileOutputStream(file);
                             bitmap.compress(Bitmap.CompressFormat.JPEG, 50, outputStream);
                             outputStream.close();
+                            final ImgFile imgFile = new ImgFile();
+                            imgFile.setImg_localurl(fileurl);
+                            imgFile.setImg_uploadurl(curUrl);
                             if (checkTakePictureAvailable(uuid)) {
                                 OkHttpUtils.post().url(API.QINIU_IMG).build().execute(new StringCallback() {
                                     @Override
                                     public void onError(Call call, Exception e, int id) {
-                                        Log.i(TAG, "获取七牛token失败 e" + e.toString());
+                                        Log.i(TAG, "获取七牛token失败 e" + e.toString() + "保存照片信息到数据库");
+                                        DbUtils.getInstans().insertOneImg(imgFile);
                                     }
 
                                     @Override
@@ -1906,34 +1977,28 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                                                 uploadManager.put(file.getPath(), curUrl, token, new
                                                         UpCompletionHandler() {
-                                                            @Override
-                                                            public void complete(String key, ResponseInfo info,
-                                                                                 JSONObject
-                                                                                         response) {
-                                                                if (info.isOK()) {
-                                                                    Log.e(TAG, "七牛上传图片成功");
-
-                                                                } else {
-                                                                    Log.e(TAG, "七牛上传图片失败");
-                                                                }
-                                                                if (checkTakePictureAvailable(uuid) && info.isOK() &&
-                                                                        isCall) {
-                                                                    Log.i(TAG, "开始发送图片");
-                                                                    callback.afterTakePickture(thisValue, curUrl,
-                                                                            isCall, uuid);
-                                                                } else {
-                                                                    Log.v("MainActivity", "上传照片成功,但已取消");
-                                                                }
-                                                                clearImageUuidAvaible(uuid);
-                                                                Log.v(TAG, "正常清除" + uuid);
-                                                                try {
-                                                                    if (file != null) {
-                                                                        file.delete();
-                                                                    }
-                                                                } catch (Exception e) {
-                                                                }
+                                                    @Override
+                                                    public void complete(String key, ResponseInfo info, JSONObject
+                                                            response) {
+                                                        if (info.isOK()) {
+                                                            Log.e(TAG, "七牛上传图片成功 删除本地图片");
+                                                            if (file != null) {
+                                                                file.delete();
                                                             }
-                                                        }, null);
+                                                        } else {
+                                                            Log.e(TAG, "七牛上传图片失败 保存照片信息到数据库");
+                                                            DbUtils.getInstans().insertOneImg(imgFile);
+                                                        }
+                                                        if (checkTakePictureAvailable(uuid) && info.isOK() && isCall) {
+                                                            Log.i(TAG, "开始发送图片到手机显示照片");
+                                                            callback.afterTakePickture(thisValue, curUrl, isCall, uuid);
+                                                        } else {
+                                                            Log.v("MainActivity", "上传照片成功不发送到手机,但已取消");
+                                                        }
+                                                        clearImageUuidAvaible(uuid);
+                                                        Log.v(TAG, "正常清除" + uuid);
+                                                    }
+                                                }, null);
                                             }
                                         }.start();
                                     }
