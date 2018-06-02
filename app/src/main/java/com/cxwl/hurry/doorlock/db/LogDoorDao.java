@@ -24,12 +24,14 @@ public class LogDoorDao extends AbstractDao<LogDoor, Long> {
     public static class Properties {
         public final static Property Id = new Property(0, Long.class, "id", true, "_id");
         public final static Property Ka_id = new Property(1, String.class, "ka_id", false, "ka_id");
-        public final static Property Kaimenfangshi = new Property(2, String.class, "kaimenfangshi", false, "kaimenfangshi");
+        public final static Property Kaimenfangshi = new Property(2, int.class, "kaimenfangshi", false, "kaimenfangshi");
         public final static Property Mac = new Property(3, String.class, "mac", false, "mac");
         public final static Property Kaimenshijian = new Property(4, String.class, "kaimenshijian", false, "kaimenshijian");
         public final static Property Phone = new Property(5, String.class, "phone", false, "phone");
         public final static Property Uuid = new Property(6, String.class, "uuid", false, "uuid");
         public final static Property Kaimenjietu = new Property(7, String.class, "kaimenjietu", false, "kaimenjietu");
+        public final static Property Mima = new Property(8, String.class, "mima", false, "mima");
+        public final static Property State = new Property(9, int.class, "state", false, "state");
     }
 
 
@@ -47,12 +49,14 @@ public class LogDoorDao extends AbstractDao<LogDoor, Long> {
         db.execSQL("CREATE TABLE " + constraint + "\"LOG_DOOR\" (" + //
                 "\"_id\" INTEGER PRIMARY KEY ," + // 0: id
                 "\"ka_id\" TEXT," + // 1: ka_id
-                "\"kaimenfangshi\" TEXT," + // 2: kaimenfangshi
+                "\"kaimenfangshi\" INTEGER NOT NULL ," + // 2: kaimenfangshi
                 "\"mac\" TEXT," + // 3: mac
                 "\"kaimenshijian\" TEXT," + // 4: kaimenshijian
                 "\"phone\" TEXT," + // 5: phone
                 "\"uuid\" TEXT," + // 6: uuid
-                "\"kaimenjietu\" TEXT);"); // 7: kaimenjietu
+                "\"kaimenjietu\" TEXT," + // 7: kaimenjietu
+                "\"mima\" TEXT," + // 8: mima
+                "\"state\" INTEGER NOT NULL );"); // 9: state
     }
 
     /** Drops the underlying database table. */
@@ -74,11 +78,7 @@ public class LogDoorDao extends AbstractDao<LogDoor, Long> {
         if (ka_id != null) {
             stmt.bindString(2, ka_id);
         }
- 
-        String kaimenfangshi = entity.getKaimenfangshi();
-        if (kaimenfangshi != null) {
-            stmt.bindString(3, kaimenfangshi);
-        }
+        stmt.bindLong(3, entity.getKaimenfangshi());
  
         String mac = entity.getMac();
         if (mac != null) {
@@ -104,6 +104,12 @@ public class LogDoorDao extends AbstractDao<LogDoor, Long> {
         if (kaimenjietu != null) {
             stmt.bindString(8, kaimenjietu);
         }
+ 
+        String mima = entity.getMima();
+        if (mima != null) {
+            stmt.bindString(9, mima);
+        }
+        stmt.bindLong(10, entity.getState());
     }
 
     @Override
@@ -119,11 +125,7 @@ public class LogDoorDao extends AbstractDao<LogDoor, Long> {
         if (ka_id != null) {
             stmt.bindString(2, ka_id);
         }
- 
-        String kaimenfangshi = entity.getKaimenfangshi();
-        if (kaimenfangshi != null) {
-            stmt.bindString(3, kaimenfangshi);
-        }
+        stmt.bindLong(3, entity.getKaimenfangshi());
  
         String mac = entity.getMac();
         if (mac != null) {
@@ -149,6 +151,12 @@ public class LogDoorDao extends AbstractDao<LogDoor, Long> {
         if (kaimenjietu != null) {
             stmt.bindString(8, kaimenjietu);
         }
+ 
+        String mima = entity.getMima();
+        if (mima != null) {
+            stmt.bindString(9, mima);
+        }
+        stmt.bindLong(10, entity.getState());
     }
 
     @Override
@@ -161,12 +169,14 @@ public class LogDoorDao extends AbstractDao<LogDoor, Long> {
         LogDoor entity = new LogDoor( //
             cursor.isNull(offset + 0) ? null : cursor.getLong(offset + 0), // id
             cursor.isNull(offset + 1) ? null : cursor.getString(offset + 1), // ka_id
-            cursor.isNull(offset + 2) ? null : cursor.getString(offset + 2), // kaimenfangshi
+            cursor.getInt(offset + 2), // kaimenfangshi
             cursor.isNull(offset + 3) ? null : cursor.getString(offset + 3), // mac
             cursor.isNull(offset + 4) ? null : cursor.getString(offset + 4), // kaimenshijian
             cursor.isNull(offset + 5) ? null : cursor.getString(offset + 5), // phone
             cursor.isNull(offset + 6) ? null : cursor.getString(offset + 6), // uuid
-            cursor.isNull(offset + 7) ? null : cursor.getString(offset + 7) // kaimenjietu
+            cursor.isNull(offset + 7) ? null : cursor.getString(offset + 7), // kaimenjietu
+            cursor.isNull(offset + 8) ? null : cursor.getString(offset + 8), // mima
+            cursor.getInt(offset + 9) // state
         );
         return entity;
     }
@@ -175,12 +185,14 @@ public class LogDoorDao extends AbstractDao<LogDoor, Long> {
     public void readEntity(Cursor cursor, LogDoor entity, int offset) {
         entity.setId(cursor.isNull(offset + 0) ? null : cursor.getLong(offset + 0));
         entity.setKa_id(cursor.isNull(offset + 1) ? null : cursor.getString(offset + 1));
-        entity.setKaimenfangshi(cursor.isNull(offset + 2) ? null : cursor.getString(offset + 2));
+        entity.setKaimenfangshi(cursor.getInt(offset + 2));
         entity.setMac(cursor.isNull(offset + 3) ? null : cursor.getString(offset + 3));
         entity.setKaimenshijian(cursor.isNull(offset + 4) ? null : cursor.getString(offset + 4));
         entity.setPhone(cursor.isNull(offset + 5) ? null : cursor.getString(offset + 5));
         entity.setUuid(cursor.isNull(offset + 6) ? null : cursor.getString(offset + 6));
         entity.setKaimenjietu(cursor.isNull(offset + 7) ? null : cursor.getString(offset + 7));
+        entity.setMima(cursor.isNull(offset + 8) ? null : cursor.getString(offset + 8));
+        entity.setState(cursor.getInt(offset + 9));
      }
     
     @Override

@@ -475,7 +475,7 @@ public class MainService extends Service {
                         if (!cardRecord.checkLastCard(phoneNum)) {//判断距离上次刷脸时间是否超过2秒
                             LogDoor data = new LogDoor();
                             data.setMac(mac);
-                            data.setKaimenfangshi("3");
+                            data.setKaimenfangshi(3);
                             if (TextUtils.isEmpty(phoneNum)) {
                                 data.setPhone("");
                             } else {
@@ -487,6 +487,7 @@ public class MainService extends Service {
                                 data.setKaimenjietu(picUrl);
                             }
                             data.setKa_id("");
+                            data.setState(1);
                             data.setKaimenshijian(System.currentTimeMillis() + "");
                             data.setUuid("");
                             List<LogDoor> list = new ArrayList<>();
@@ -502,7 +503,8 @@ public class MainService extends Service {
                         data.setMac(mac);
                         data.setPhone(kaInfo.getYezhu_dianhua());
                         data.setKa_id(kaInfo.getKa_id());
-                        data.setKaimenfangshi("1");
+                        data.setKaimenfangshi(1);
+                        data.setState(1);
                         if (TextUtils.isEmpty(pic_url)) {
                             data.setKaimenjietu("");
                         } else {
@@ -683,8 +685,9 @@ public class MainService extends Service {
             logDoor.setUuid("");
             logDoor.setKaimenjietu(imageUrl == null ? "" : imageUrl);
             logDoor.setPhone("");
+            logDoor.setState(1);
             logDoor.setKaimenshijian(System.currentTimeMillis() + "");
-            logDoor.setKaimenfangshi("6");
+            logDoor.setKaimenfangshi(6);
             Log.i(TAG, "上传临时密码开门日志" + "---logDoor=" + logDoor.toString());
             list.add(logDoor);
             createAccessLog(list);
@@ -718,27 +721,31 @@ public class MainService extends Service {
                 logDoor.setMac(mac);
                 logDoor.setKa_id(""); //// TODO: 2018/6/2 离线密码1表示成功-1表示失败
                 logDoor.setUuid("");
+                logDoor.setState(1);
+                logDoor.setMima(tempKey);
                 logDoor.setKaimenjietu(imageUrl == null ? "" : imageUrl);
                 logDoor.setPhone("");
                 logDoor.setKaimenshijian(System.currentTimeMillis() + "");
-                logDoor.setKaimenfangshi("5");
+                logDoor.setKaimenfangshi(5);
                 Log.i(TAG, "上传离线密码开门成功日志" + "---logDoor=" + logDoor.toString());
                 list.add(logDoor);
                 createAccessLog(list);
             } else {
                 Log.e(TAG, "--------------------离线密码开门失败   上传开门日志--------------------");
-//                List<LogDoor> list = new ArrayList<>();
-//                LogDoor logDoor = new LogDoor();
-//                logDoor.setMac(mac);
-//                logDoor.setKa_id("-1"); //离线密码1表示成功-1表示失败
-//                logDoor.setUuid("");
-//                logDoor.setKaimenjietu(imageUrl == null ? "" : imageUrl);
-//                logDoor.setPhone("");
-//                logDoor.setKaimenshijian(System.currentTimeMillis() + "");
-//                logDoor.setKaimenfangshi("5");
-//                Log.i(TAG, "上传离线密码开门失败日志" + "---logDoor=" + logDoor.toString());
-//                list.add(logDoor);
-//                createAccessLog(list);
+                List<LogDoor> list = new ArrayList<>();
+                LogDoor logDoor = new LogDoor();
+                logDoor.setMac(mac);
+                logDoor.setKa_id(""); //离线密码1表示成功-1表示失败
+                logDoor.setUuid("");
+                logDoor.setState(-1);
+                logDoor.setMima(tempKey);
+                logDoor.setKaimenjietu(imageUrl == null ? "" : imageUrl);
+                logDoor.setPhone("");
+                logDoor.setKaimenshijian(System.currentTimeMillis() + "");
+                logDoor.setKaimenfangshi(5);
+                Log.i(TAG, "上传离线密码开门失败日志" + "---logDoor=" + logDoor.toString());
+                list.add(logDoor);
+                createAccessLog(list);
             }
         }
         sendMessageToMainAcitivity(MSG_LIXIAN_PASSWORD_CHECK_AFTER, result);
@@ -2208,8 +2215,8 @@ public class MainService extends Service {
             Log.e(TAG, "进行开门操作 开门开门");
             openLock(2);
             //分为手机开门和视屏开门 1和2 进行区分 上传日志统一传2；
-            if ("1".equals(logDoor.getKaimenfangshi())) {
-                logDoor.setKaimenfangshi("2");
+            if (logDoor.getKaimenfangshi()==1) {
+                logDoor.setKaimenfangshi(2);
                 //一键开门拍照
                 if (StringUtils.isFastClick()) {
                     String imgurl = "door/img/" + System.currentTimeMillis() + ".jpg";
@@ -2217,6 +2224,7 @@ public class MainService extends Service {
                     logDoor.setKaimenjietu(imgurl);
                 }
             }
+            logDoor.setState(1);
             List<LogDoor> list = new ArrayList<>();
             //拼接图片地址
             logDoor.setKaimenjietu(logDoor.getKaimenjietu());
