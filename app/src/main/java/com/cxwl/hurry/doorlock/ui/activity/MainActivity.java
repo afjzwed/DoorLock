@@ -494,7 +494,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     protected void initVoiceVolume(AudioManager audioManager, int type, int value) {
         int thisValue = audioManager.getStreamMaxVolume(type);//得到最大音量
         //   thisValue = thisValue * value / 10;//具体音量值
-        audioManager.setStreamVolume(type, thisValue, AudioManager.FLAG_PLAY_SOUND);//调整音量时播放声音
+        audioManager.setStreamVolume(type, 0, AudioManager.FLAG_PLAY_SOUND);//调整音量时播放声音
     }
 
     /**
@@ -737,6 +737,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      * @param obj
      */
     public void onAdvertiseRefresh(Object obj) {
+//        if (obj==null){
+//            advertiseHandler.onDestroy();
+//            return;
+//        }
         List<GuangGaoBean> obj1 = (List<GuangGaoBean>) obj;
         Log.d(TAG, "UpdateAdvertise: 8");
         advertiseHandler.initData(obj1, mainMessage, (currentStatus == ONVIDEO_MODE), adverErrorCallBack,

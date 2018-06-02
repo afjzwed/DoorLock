@@ -1,5 +1,8 @@
 package com.cxwl.hurry.doorlock.utils;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
 /**
  * @author xlei
  * @Date 2018/5/23.
@@ -21,6 +24,7 @@ public class StringUtils {
         }
         return true;
     }
+
     // 两次点击按钮之间的点击间隔不能少于1000毫秒
     private static final int MIN_CLICK_DELAY_TIME = 4000;
     private static long lastClickTime;
@@ -33,5 +37,28 @@ public class StringUtils {
         }
         lastClickTime = curClickTime;
         return flag;
+    }
+
+    /**
+
+     * 把毫秒转化成日期
+
+     * @param dateFormat(日期格式，例如：MM/ dd/yyyy HH:mm:ss)
+
+     * @param millSec(毫秒数)
+
+     * @return
+
+     */
+
+    public static String transferLongToDate(String dateFormat, Long millSec) {
+
+        SimpleDateFormat sdf = new SimpleDateFormat(dateFormat);
+
+        Date date = new Date(millSec);
+
+        return sdf.format(date);
+
+
     }
 }
