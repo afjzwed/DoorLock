@@ -468,8 +468,7 @@ public class MainService extends Service {
                         }
                         break;
                     }
-                    case MSG_FACE_OPENLOCK: {
-                        //脸开门
+                    case MSG_FACE_OPENLOCK: { //脸开门
                         String[] parame = (String[]) msg.obj;
                         String phoneNum = parame[0];//手机号码
                         String picUrl = parame[1];//图片URL
@@ -2849,7 +2848,6 @@ public class MainService extends Service {
         //人脸识别初始化引擎，设置检测角度、范围，数量。创建对象后，必须先于其他成员函数调用
         err_afr = engine_afr.AFR_FSDK_InitialEngine(arc_appid, fr_key);
 
-
         if (err_afd.getCode() != AFD_FSDKError.MOK) {//FD初始化失败
             Log.e(TAG, "FD初始化失败，错误码：" + err_afd.getCode());
         } else if (err_afr.getCode() != AFD_FSDKError.MOK) {
@@ -2887,8 +2885,7 @@ public class MainService extends Service {
             //根据文件名返回本地路径
             String localFile = HttpUtils.getLocalFile(fileName);
             if (localFile == null) {
-                //如果本地没有对应文件,则下载文件至本地
-                localFile = HttpUtils.downloadFile(file);
+                localFile = HttpUtils.downloadFile(file);//如果本地没有对应文件,则下载文件至本地
                 if (localFile != null) {
                     if (localFile.endsWith(".temp")) {
                         localFile = localFile.substring(0, localFile.length() - 5);
@@ -2977,7 +2974,6 @@ public class MainService extends Service {
                 Log.e(TAG, "人脸特征无法检测");
                 return true;
             }
-
         } else {
             //没有人脸数据
             Log.e(TAG, "没有人脸数据");
@@ -3057,9 +3053,11 @@ public class MainService extends Service {
                         () + "是否失效  》0表示失效" + (System.currentTimeMillis() - Long.parseLong(kaInfo.getGuoqi_time())));
                 Log.i(TAG, "刷卡开门成功" + card);
                 //开始截图
-                if (DeviceConfig.OPEN_CARD_STATE == 0) {
+//                if (DeviceConfig.OPEN_CARD_STATE == 0) {
+                if (DeviceConfig.PRINTSCREEN_STATE == 0) {
                     Log.e(TAG, "刷卡开门，开始截图");
-                    DeviceConfig.OPEN_CARD_STATE = 1;
+//                    DeviceConfig.OPEN_CARD_STATE = 1;
+                    DeviceConfig.PRINTSCREEN_STATE = 2;
                     openLock(1);
                 }
                 Log.e(TAG, "onCard====:" + card);
@@ -3071,7 +3069,6 @@ public class MainService extends Service {
     }
 
     /****************************卡相关end************************/
-
     protected void openLock(int type) {
 
         openAexLock(type);

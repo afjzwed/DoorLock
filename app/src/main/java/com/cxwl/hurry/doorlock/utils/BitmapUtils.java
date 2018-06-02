@@ -3,17 +3,24 @@ package com.cxwl.hurry.doorlock.utils;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.ImageFormat;
 import android.graphics.Matrix;
+import android.graphics.Rect;
+import android.graphics.YuvImage;
 import android.media.ExifInterface;
 import android.os.Environment;
 import android.util.Log;
 
 import com.cxwl.hurry.doorlock.config.DeviceConfig;
+import com.cxwl.hurry.doorlock.ui.activity.MainActivity;
+import com.guo.android_extend.java.ExtByteArrayOutputStream;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.UUID;
+
+import static com.cxwl.hurry.doorlock.config.DeviceConfig.LOCAL_IMG_PATH;
 
 /**
  * Created by William on 2018/5/15.
@@ -89,8 +96,6 @@ public class BitmapUtils {
     }
 
 
-    private static final String SD_PATH = "/sdcard/dskqxt/pic/";
-    private static final String IN_PATH = "/dskqxt/pic/";
 
     /**
      * 保存bitmap到本地
@@ -100,17 +105,17 @@ public class BitmapUtils {
      * @return
      */
     public static File saveBitmap(Context context, Bitmap mBitmap) {
-        String savePath;
         File filePic;
+        String savePath;
        /* if (Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
             savePath = SD_PATH;
         } else {
             savePath = context.getApplicationContext().getFilesDir().getAbsolutePath()+ IN_PATH;
         }*/
-        savePath = Environment.getExternalStorageDirectory() + "" + File.separator + DeviceConfig.LOCAL_FACE_PATH +
-                File.separator;
+        savePath = Environment.getExternalStorageDirectory() + "" + File.separator + DeviceConfig.LOCAL_IMG_PATH +
+                File.separator + System.currentTimeMillis() + ".jpg";
         try {
-            filePic = new File(savePath + generateFileName() + ".jpg");
+            filePic = new File(savePath);
             if (!filePic.exists()) {
                 filePic.getParentFile().mkdirs();
                 filePic.createNewFile();
@@ -125,5 +130,102 @@ public class BitmapUtils {
             return null;
         }
         return filePic;
+    }
+
+    /**
+     * 视频字节数组数据转bitmap
+     *
+     * @param data
+     * @param width
+     * @param height
+     * @return
+     */
+    public static Bitmap byteToFile(byte[] data, int width, int height) {
+        YuvImage yuv = new YuvImage(data, ImageFormat.NV21, width, height, null);
+        ExtByteArrayOutputStream ops = new ExtByteArrayOutputStream();
+        yuv.compressToJpeg(new Rect(0, 0, width, height), 80, ops);
+        Bitmap bmp = BitmapFactory.decodeByteArray(ops.getByteArray(), 0, ops.getByteArray().length);
+        try {
+            ops.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        yuv = null;
+        return bmp;
+//                ByteArrayOutputStream stream =newByteArrayOutputStream();
+//                image.compressToJpeg(newRect(0,0, Width, Height),80, stream);
+////Bitmap bmp = BitmapFactory.decodeByteArray(stream.toByteArray(), 0, stream.size());
+//                bmp = BitmapFactory.decodeByteArray(stream.toByteArray(),0, stream.size());
+    }
+
+    /**
+     * Bitmap旋转180度
+     *
+     * @param bmp
+     * @return
+     */
+    public static Bitmap rotateBitmap(Bitmap bmp) {
+        if (null != bmp) {
+            Matrix matrix = new Matrix();
+            // 缩放原图
+            matrix.postScale(1f, 1f);
+            // 向左旋转45度，参数为正则向右旋转
+            matrix.postRotate(-180);
+            //bmp.getWidth(), 500分别表示重绘后的位图宽高
+            Bitmap dstbmp = Bitmap.createBitmap(bmp, 0, 0, bmp.getWidth(), bmp.getHeight(),
+                    matrix, true);
+            return dstbmp;
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * 读取照片exif信息中的旋转角度
+     *
+     * @param path 照片路径
+     * @return角度
+     */
+    public static int readPictureDegree(String path) {
+        int degree = 0;
+        try {
+            ExifInterface exifInterface = new ExifInterface(path);
+            int orientation =
+                    exifInterface.getAttributeInt(ExifInterface.TAG_ORIENTATION,
+                            ExifInterface.ORIENTATION_NORMAL);
+            switch (orientation) {
+                case ExifInterface.ORIENTATION_ROTATE_90:
+                    degree = 90;
+                    break;
+                case ExifInterface.ORIENTATION_ROTATE_180:
+                    degree = 180;
+                    break;
+                case ExifInterface.ORIENTATION_ROTATE_270:
+                    degree = 270;
+                    break;
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return degree;
+    }
+
+//    int degree = ImageUtil.readPictureDegree(imageUri.getPath());
+//    Bitmap bmpOk = ImageUtil.rotateToDegrees(bmp, degree);
+
+    /**
+     * 图片旋转
+     *
+     * @param tmpBitmap
+     * @param degrees
+     * @return
+     */
+    public static Bitmap rotateToDegrees(Bitmap tmpBitmap, float degrees) {
+        Matrix matrix = new Matrix();
+        matrix.reset();
+        matrix.setRotate(degrees);
+        return tmpBitmap =
+                Bitmap.createBitmap(tmpBitmap, 0, 0, tmpBitmap.getWidth(), tmpBitmap.getHeight(), matrix,
+                        true);
     }
 }

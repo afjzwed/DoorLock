@@ -8,8 +8,8 @@ import com.arcsoft.facerecognition.AFR_FSDKEngine;
 import com.arcsoft.facerecognition.AFR_FSDKError;
 import com.arcsoft.facerecognition.AFR_FSDKFace;
 import com.arcsoft.facerecognition.AFR_FSDKVersion;
+import com.cxwl.hurry.doorlock.entity.FaceRegist;
 import com.cxwl.hurry.doorlock.utils.BitmapUtils;
-import com.google.gson.Gson;
 import com.guo.android_extend.java.ExtInputStream;
 import com.guo.android_extend.java.ExtOutputStream;
 
@@ -37,17 +37,6 @@ public class FaceDB {
     AFR_FSDKEngine mFREngine;
     AFR_FSDKVersion mFRVersion;
     boolean mUpgrade;
-
-    public class FaceRegist {
-        public String mName;
-        public List<AFR_FSDKFace> mFaceList, mIDFaceList;
-
-        public FaceRegist(String name) {
-            mName = name;
-            mFaceList = new ArrayList<>();
-            mIDFaceList = new ArrayList<>();
-        }
-    }
 
     public FaceDB(String path) {
         mDBPath = path;
@@ -205,18 +194,18 @@ public class FaceDB {
         try {
             //check if already registered.
             boolean add = true;
-            for (FaceRegist frface : mRegister) {
-                if (frface.mName.equals(name)) {
+            for (FaceRegist frface : mRegister) {//遍历已有数据库，检测是否注册过手机号
+                if (frface.mName.equals(name)) {//数据库中已有对应手机号，直接添加数据至对应集合中
                     if (name.length() > 11) {
-                        frface.mIDFaceList.add(face);
+                        frface.mIDFaceList.add(face);//大于11位录入身份证号
                     } else {
-                        frface.mFaceList.add(face);
+                        frface.mFaceList.add(face);//11位以下录入手机号
                     }
                     add = false;
                     break;
                 }
             }
-            if (add) { // not registered.
+            if (add) { // not registered.手机号未注册
                 FaceRegist frface = new FaceRegist(name);
                 if (name.length() > 11) {
                     frface.mIDFaceList.add(face);
@@ -228,7 +217,7 @@ public class FaceDB {
             }
 
             Log.v("人脸识别", "addFace-->" + 111);
-            bool = saveInfo();
+            bool = saveInfo();//保存数据
             if (bool) {
                 //update all names
                 FileOutputStream fs = new FileOutputStream(mDBPath + "/face.txt", true);

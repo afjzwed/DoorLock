@@ -13,11 +13,11 @@ public class FaceUrlBean {
      * yezhu_id : 1
      */
 
-    private String chiyouren;
-    private String dianhua;
-    private String zhaopian;
-    private String guoqi_shijian;
-    private String yezhu_id;
+    private String chiyouren;//持有人
+    private String dianhua;//电话
+    private String zhaopian;//照片地址
+    private String guoqi_shijian;//过期时间
+    private String yezhu_id;//业主ID
 
     public String getChiyouren() {
         return chiyouren;

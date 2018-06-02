@@ -16,7 +16,6 @@ import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.ImageFormat;
 import android.graphics.Rect;
-import android.graphics.YuvImage;
 import android.hardware.Camera;
 import android.media.AudioManager;
 import android.net.wifi.WifiInfo;
@@ -75,7 +74,7 @@ import com.cxwl.hurry.doorlock.entity.NoticeBean;
 import com.cxwl.hurry.doorlock.entity.ResponseBean;
 import com.cxwl.hurry.doorlock.entity.XdoorBean;
 import com.cxwl.hurry.doorlock.face.ArcsoftManager;
-import com.cxwl.hurry.doorlock.face.FaceDB;
+import com.cxwl.hurry.doorlock.entity.FaceRegist;
 import com.cxwl.hurry.doorlock.face.PhotographActivity2;
 import com.cxwl.hurry.doorlock.http.API;
 import com.cxwl.hurry.doorlock.interfac.TakePictureCallback;
@@ -94,18 +93,14 @@ import com.cxwl.hurry.doorlock.utils.NetWorkUtils;
 import com.cxwl.hurry.doorlock.utils.NfcReader;
 import com.google.gson.reflect.TypeToken;
 import com.guo.android_extend.java.AbsLoop;
-import com.guo.android_extend.java.ExtByteArrayOutputStream;
 import com.guo.android_extend.widget.CameraFrameData;
 import com.guo.android_extend.widget.CameraGLSurfaceView;
 import com.guo.android_extend.widget.CameraSurfaceView;
 import com.qiniu.android.common.FixedZone;
 import com.qiniu.android.http.ResponseInfo;
 import com.qiniu.android.storage.Configuration;
-import com.qiniu.android.storage.UpCancellationSignal;
 import com.qiniu.android.storage.UpCompletionHandler;
-import com.qiniu.android.storage.UpProgressHandler;
 import com.qiniu.android.storage.UploadManager;
-import com.qiniu.android.storage.UploadOptions;
 import com.youth.banner.Banner;
 import com.youth.banner.BannerConfig;
 import com.zhy.http.okhttp.OkHttpUtils;
@@ -115,7 +110,6 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -765,6 +759,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         if (obj1.size() == 1) {
             //表示只有一张图片 需要轮播 在添加一张一样的开始轮播
             obj1.add(obj1.get(0));
+        }
+        if (obj1.size()==0){
+            banner.update(obj1);
+            return;
         }
         Log.d(TAG, "banner加载图片 size" + obj1.size());
         //白天banner
@@ -2913,7 +2911,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         AFR_FSDKFace result = new AFR_FSDKFace();
 
         // TODO: 2018/5/14 这里拿到本地数据库脸信息表
-        List<FaceDB.FaceRegist> mResgist = ArcsoftManager.getInstance().mFaceDB.mRegister;
+        List<FaceRegist> mResgist = ArcsoftManager.getInstance().mFaceDB.mRegister;
 //        List<Lian> mFaceList = new ArrayList<>();
 
 
@@ -2977,22 +2975,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 e.printStackTrace();
             }
 
-            if (DeviceConfig.OPEN_CARD_STATE == 1) {
+//            if (DeviceConfig.PRINTSCREEN_STATE == 1) {
+            if (DeviceConfig.PRINTSCREEN_STATE == 2) {
                 //将byte数组转成bitmap再转成图片文件
                 byte[] data = picData;
-                YuvImage yuv = new YuvImage(data, ImageFormat.NV21, mWidth, mHeight, null);
-//                ByteArrayOutputStream stream =newByteArrayOutputStream();
-//                image.compressToJpeg(newRect(0,0, Width, Height),80, stream);
-////Bitmap bmp = BitmapFactory.decodeByteArray(stream.toByteArray(), 0, stream.size());
-//                bmp = BitmapFactory.decodeByteArray(stream.toByteArray(),0, stream.size());
-                ExtByteArrayOutputStream ops = new ExtByteArrayOutputStream();
-                yuv.compressToJpeg(new Rect(0, 0, mWidth, mHeight), 80, ops);
-                Bitmap bmp = BitmapFactory.decodeByteArray(ops.getByteArray(), 0, ops.getByteArray().length);
-                try {
-                    ops.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                Bitmap bmp = BitmapUtils.byteToFile(data, mWidth, mHeight);
                 File file = null;
                 if (null != bmp) {
                     file = BitmapUtils.saveBitmap(MainActivity.this, bmp);//本地截图文件地址
@@ -3004,12 +2991,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 } else {
                     faceOpenUrl = "";
                 }
-                DeviceConfig.OPEN_CARD_STATE = 0;//图片处理完成,重置状态
-
+//                DeviceConfig.OPEN_CARD_STATE = 0;//图片处理完成,重置状态
+                DeviceConfig.PRINTSCREEN_STATE = 0;//图片处理完成,重置状态
                 sendMainMessager(MSG_CARD_OPENLOCK, faceOpenUrl);
                 file = null;
                 bmp = null;
-                yuv = null;
                 data = null;
             }
 
@@ -3029,9 +3015,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 float max = 0.0f;//匹配度的值
                 String name = null;
 
-
                 //遍历本地信息表
-                for (FaceDB.FaceRegist fr : mResgist) {
+                for (FaceRegist fr : mResgist) {
                     Log.v("人脸识别", "loop:" + mResgist.size() + "/" + fr.mFaceList.size());
                     if (fr.mName.length() > 11) {
                         continue;
@@ -3056,25 +3041,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     //fr success.
                     //final float max_score = max;
                     //Log.v(FACE_TAG, "置信度：" + (float) ((int) (max_score * 1000)) / 1000.0);
-                    if (DeviceConfig.OPEN_RENLIAN_STATE == 0 && DeviceConfig.OPEN_CARD_STATE == 0)
-                    {//开启截图、上传图片、开门、上传日志流程
-                        DeviceConfig.OPEN_RENLIAN_STATE = 1;//已开始处理图片
+//                    if (DeviceConfig.OPEN_RENLIAN_STATE == 0 && DeviceConfig.OPEN_CARD_STATE == 0)
+                    if (DeviceConfig.PRINTSCREEN_STATE == 0) {//开启截图、上传图片、开门、上传日志流程
+//                        DeviceConfig.OPEN_RENLIAN_STATE = 1;//已开始处理人脸图片
+                        DeviceConfig.PRINTSCREEN_STATE = 1;
                         //将byte数组转成bitmap再转成图片文件
                         byte[] data = mImageNV21;
-                        YuvImage yuv = new YuvImage(data, ImageFormat.NV21, mWidth, mHeight, null);
-                        ExtByteArrayOutputStream ops = new ExtByteArrayOutputStream();
-                        yuv.compressToJpeg(new Rect(0, 0, mWidth, mHeight), 80, ops);
-                        Bitmap bmp = BitmapFactory.decodeByteArray(ops.getByteArray(), 0, ops.getByteArray().length);
-                        try {
-                            ops.close();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
+                        Bitmap bmp = BitmapUtils.byteToFile(data, mWidth, mHeight);
                         File file = null;
                         if (null != bmp) {
                             file = BitmapUtils.saveBitmap(MainActivity.this, bmp);//本地截图文件地址
                         }
-
                         String[] parameters = new String[2];
                         parameters[0] = name;
                         if (null != file && !TextUtils.isEmpty(file.getPath())) {
@@ -3084,11 +3061,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         } else {
                             parameters[1] = "";
                         }
-                        DeviceConfig.OPEN_RENLIAN_STATE = 0;//图片处理完成（异步处理，成功与否尽人事，听天命）,重置状态
+//                        DeviceConfig.OPEN_RENLIAN_STATE = 0;//图片处理完成（异步处理，成功与否尽人事，听天命）,重置状态
+                        DeviceConfig.PRINTSCREEN_STATE = 0;
                         sendMainMessager(MSG_FACE_OPENLOCK, parameters);
                         file = null;
                         bmp = null;
-                        yuv = null;
                         data = null;
                     }
                 }
@@ -3113,15 +3090,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private void uploadToQiNiu(final File file, final int i) {
         //创建地址
         faceOpenUrl = "door/img/" + System.currentTimeMillis() + ".jpg";
+        final ImgFile imgFile = new ImgFile();
+        imgFile.setImg_localurl(file.getAbsolutePath());
+        imgFile.setImg_uploadurl(faceOpenUrl);
         OkHttpUtils.post().url(API.QINIU_IMG).build().execute(new StringCallback() {//七牛token值不固定，每次请求使用
             @Override
             public void onError(Call call, Exception e, int id) {
                 Log.i(TAG, "获取七牛token失败 e" + e.toString());
-                if (i == 1) {
-                    DeviceConfig.OPEN_CARD_STATE = 0;
-                } else if (i == 3) {
-                    DeviceConfig.OPEN_RENLIAN_STATE = 0;//重置处理图片并上传日志的状态
-                }
+                DbUtils.getInstans().insertOneImg(imgFile);//获取token失败，图片存在本地
+                DeviceConfig.PRINTSCREEN_STATE =0;//重置处理图片并上传日志的状态
             }
 
             @Override
@@ -3138,21 +3115,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             public void complete(String key, ResponseInfo info, JSONObject response) {
                                 if (info.isOK()) {
                                     Log.e(TAG, "七牛上传图片成功");
-
+                                    try {//删除本地图片文件
+                                        if (file != null) {
+                                            file.delete();
+                                        }
+                                    } catch (Exception e) {
+                                    }
                                 } else {
                                     Log.e(TAG, "七牛上传图片失败");
+                                    DbUtils.getInstans().insertOneImg(imgFile);//获取token失败，图片存在本地
                                 }
-                                try {//删除本地图片文件
-                                    if (file != null) {
-                                        file.delete();
-                                    }
-                                } catch (Exception e) {
-                                }
-                                if (i == 1) {
-                                    DeviceConfig.OPEN_CARD_STATE = 0;
-                                } else if (i == 3) {
-                                    DeviceConfig.OPEN_RENLIAN_STATE = 0;//重置处理图片并上传日志的状态
-                                }
+                                DeviceConfig.PRINTSCREEN_STATE = 0;//重置处理图片并上传日志的状态
                             }
                         }, null);
                     }
@@ -3239,7 +3212,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         OkHttpUtils.getInstance().cancelTag(MainService.class);//取消网络请求
 
         // TODO: 2018/5/15 还有资源未释放，之后再查
-
 
         super.onDestroy();
     }
