@@ -21,6 +21,15 @@ public class NoticeBean {
     private String shixiao_shijian;
     private String celve;
     private String leixing;
+    private int id;
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
 
     public String getBiaoti() {
         return biaoti;
@@ -72,9 +81,14 @@ public class NoticeBean {
 
     @Override
     public String toString() {
-        return "NoticeBean{" + "biaoti='" + biaoti + '\'' + ", neirong='" + neirong + '\'' + ", " +
-                "kaishi_shijian='" + kaishi_shijian + '\'' + ", shixiao_shijian='" +
-                shixiao_shijian + '\'' + ", celve='" + celve + '\'' + ", leixing='" + leixing +
-                '\'' + '}';
+        return "NoticeBean{" +
+                "biaoti='" + biaoti + '\'' +
+                ", neirong='" + neirong + '\'' +
+                ", kaishi_shijian='" + kaishi_shijian + '\'' +
+                ", shixiao_shijian='" + shixiao_shijian + '\'' +
+                ", celve='" + celve + '\'' +
+                ", leixing='" + leixing + '\'' +
+                ", id=" + id +
+                '}';
     }
 }

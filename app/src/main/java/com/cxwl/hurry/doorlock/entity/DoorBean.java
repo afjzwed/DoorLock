@@ -28,6 +28,17 @@ public class DoorBean {
      *
      */
 
+    // TODO: 2018/6/3 6个新增字段
+//    private Object lianGx;
+//    private String tonggaoGx;
+//    private String guanggaoGx;
+//    private String tupian;
+//    private String tupianGx;
+//    private Object beforeTime;
+
+
+
+
     private int id;
     private String ka;
     private String ka_gx;

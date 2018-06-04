@@ -20,6 +20,20 @@ public class XdoorBean {
      * version : null
      */
 //"danyuan_name":null,"loudong_name":null,"xiangmu_name":null
+
+    // TODO: 2018/6/3 10个新增字段
+//    private int shanchu;
+//    private Object sheng_id;
+//    private Object shi_id;
+//    private Object xian_id;
+//    private Object jiedao_id;
+//    private Object shequ;
+//    private Object gongsi_name;
+//    private Object tempPassword;
+//    private int xinhao;
+//    private boolean online;
+
+
     private int id;
     private String name;
     private String key;

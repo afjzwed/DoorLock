@@ -61,6 +61,7 @@ import com.arcsoft.facetracking.AFT_FSDKEngine;
 import com.arcsoft.facetracking.AFT_FSDKError;
 import com.arcsoft.facetracking.AFT_FSDKFace;
 import com.arcsoft.facetracking.AFT_FSDKVersion;
+import com.cxwl.hurry.doorlock.Bean.NewDoorBean;
 import com.cxwl.hurry.doorlock.MainApplication;
 import com.cxwl.hurry.doorlock.R;
 import com.cxwl.hurry.doorlock.callback.AdverErrorCallBack;
@@ -922,7 +923,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      */
     private void onLoginAfter(Message msg) {
         if (msg.obj != null) {
-            XdoorBean result = (XdoorBean) msg.obj;
+            NewDoorBean result = (NewDoorBean) msg.obj;
             sendMainMessager(MSG_RTC_REGISTER, null);
             //初始化社区信息
             setCommunityName(result.getXiangmu_name() == null ? "欣社区" : result.getXiangmu_name());
@@ -941,6 +942,27 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
             sendMainMessager(MainService.REGISTER_ACTIVITY_DIAL, null);//开始心跳包
         }
+        // TODO: 2018/6/3 注释
+        /*if (msg.obj != null) {
+            XdoorBean result = (XdoorBean) msg.obj;
+            sendMainMessager(MSG_RTC_REGISTER, null);
+            //初始化社区信息
+            setCommunityName(result.getXiangmu_name() == null ? "欣社区" : result.getXiangmu_name());
+            setLockName(MainService.lockName);
+            if ("C".equals(DeviceConfig.DEVICE_TYPE)) {//判断是否社区大门
+                setDialStatus("请输入楼栋编号");
+            }
+
+            Log.e(TAG, "可以读卡");
+            enableReaderMode();//登录成功后开启读卡
+
+            //人脸识别开始
+            if (faceHandler != null) {
+                faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_CONTRAST, 1000);
+            }
+
+            sendMainMessager(MainService.REGISTER_ACTIVITY_DIAL, null);//开始心跳包
+        }*/
 //                else if (code == 1) { //登录失败,MAC地址不存在服务器
 //                    //显示MAC地址并提示添加
 //                    showMacaddress(result.getString("mac"));

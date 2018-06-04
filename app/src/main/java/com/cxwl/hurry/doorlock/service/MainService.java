@@ -28,12 +28,15 @@ import com.arcsoft.facerecognition.AFR_FSDKEngine;
 import com.arcsoft.facerecognition.AFR_FSDKError;
 import com.arcsoft.facerecognition.AFR_FSDKFace;
 import com.arcsoft.facerecognition.AFR_FSDKVersion;
+import com.cxwl.hurry.doorlock.Bean.BanbenBean;
+import com.cxwl.hurry.doorlock.Bean.DeviceBean;
+import com.cxwl.hurry.doorlock.Bean.NewDoorBean;
 import com.cxwl.hurry.doorlock.config.Constant;
 import com.cxwl.hurry.doorlock.config.DeviceConfig;
+import com.cxwl.hurry.doorlock.db.AdTongJiBean;
 import com.cxwl.hurry.doorlock.db.ImgFile;
 import com.cxwl.hurry.doorlock.db.Ka;
 import com.cxwl.hurry.doorlock.db.LogDoor;
-import com.cxwl.hurry.doorlock.db.AdTongJiBean;
 import com.cxwl.hurry.doorlock.entity.ConnectReportBean;
 import com.cxwl.hurry.doorlock.entity.DoorBean;
 import com.cxwl.hurry.doorlock.entity.FaceUrlBean;
@@ -777,12 +780,120 @@ public class MainService extends Service {
                 @Override
                 public void onResponse(String response, int id) {
                     Log.e(TAG, "onResponse 心跳接口 connectReport " + response);
-
                     if (null != response) {
                         String code = JsonUtil.getFieldValue(response, "code");
                         if (code.equals("0")) {
+                            String result = JsonUtil.getResult(response);
+                            DeviceBean deviceBean = JsonUtil.parseJsonToBean(result, DeviceBean.class);
+                            BanbenBean banbenBean = deviceBean.getBanben();
+                            if (null != deviceBean && null != banbenBean) {
+                                if (StringUtils.isNoEmpty(deviceBean.getLixian_mima())) {
+                                    Log.i(TAG, "心跳--服务器返回的离线密码" + deviceBean.getLixian_mima());
+                                    SPUtil.put(MainService.this, Constant.SP_LIXIAN_MIMA, deviceBean.getLixian_mima());
+                                }
+                                Log.i(TAG, "心跳--服务器返回的心跳时间（秒）" + (long) (deviceBean.getXintiao_shijian() * 1000));
+                                if (0L != ((long) (deviceBean.getXintiao_shijian()))) {
+                                    SPUtil.put(MainService.this, Constant.SP_XINTIAO_TIME, (long) (deviceBean.getXintiao_shijian() * 1000));
+                                } else {
+                                    SPUtil.put(MainService.this, Constant.SP_XINTIAO_TIME, (long) (60000));
+                                }
+                                if (StringUtils.isNoEmpty(banbenBean.getKa())) {
+                                    long kaVision = (long) SPUtil.get(MainService.this, Constant.SP_VISION_KA, 0L);
+                                    Log.i(TAG, "心跳--当前卡版本：" + kaVision + "   服务器卡版本：" + Long.parseLong(banbenBean.getKa()));
+                                    if (Long.parseLong(banbenBean.getKa()) > kaVision) {
+                                        Log.i(TAG, "心跳中有卡信息更新");
+                                       getCardInfo(Long.parseLong(banbenBean.getKa()));
+                                    }
+                                }
+                                if (StringUtils.isNoEmpty(banbenBean.getLian())) {
+                                    long lianVision = (long) SPUtil.get(MainService.this, Constant.SP_VISION_LIAN, 0L);
+                                    if (Long.parseLong(banbenBean.getLian()) > lianVision) {
+                                        Log.i(TAG, "心跳中有脸信息更新");
+                                        if (faceStatus == 0) {
+                                            //判断是否正在下载
+//                                    getFaceUrlInfo();
+                                        }
+                                    }
+                                }
+                                if (StringUtils.isNoEmpty(banbenBean.getTupian())) {
+                                    long guanggaoVision = (long) SPUtil.get(MainService.this, Constant
+                                            .SP_VISION_GUANGGAO, 0L);
+                                    Log.i(TAG, "心跳--当前广告图片版本：" + guanggaoVision + "   服务器广告图片版本：" + Long.parseLong
+                                            (banbenBean.getTupian()));
+                                    if (Long.parseLong(banbenBean.getTupian()) > guanggaoVision) {
+                                        Log.i(TAG, "心跳中有广告图片信息更新");
+                                        getTupian(Long.parseLong(banbenBean.getTupian()));
+                                    }
+                                }
+                                if (StringUtils.isNoEmpty(banbenBean.getGuanggao())) {
+                                    long guanggaoVadioVision = (long) SPUtil.get(MainService.this, Constant
+                                            .SP_VISION_GUANGGAO_VIDEO, 0L);
+                                    Log.i(TAG, "心跳--当前广告视频版本：" + guanggaoVadioVision + "   " + "服务器广告视频版本：" + Long
+                                            .parseLong(banbenBean.getGuanggao()));
+                                    if (Long.parseLong(banbenBean.getGuanggao()) > guanggaoVadioVision) {
+                                        Log.i(TAG, "心跳中有广告视频信息更新");
+                                        getGuanggao(Long.parseLong(banbenBean.getGuanggao()));
+                                    }
+                                }
+                                //// TODO: 2018/5/17 拿app版本信息 去掉点
+                                if (StringUtils.isNoEmpty(deviceBean.getVersion())) {
+                                    String appVision = (String) SPUtil.get(MainService.this, Constant.SP_VISION_APP,
+                                            getVersionName());
+                                    Log.i(TAG, "心跳--当前app版本：" + appVision + "   服务器app版本：" + (deviceBean
+                                            .getVersion()));
+                                    if (Integer.parseInt(deviceBean.getVersion()) > Integer
+                                            .parseInt(appVision.replace(".", ""))) {
+                                        Log.i(TAG, "心跳中有APP信息更新");
+                                        if (lastVersionStatus.equals("D")) {//正在下载最新包
+                                            //不获取地址
+                                            Log.e(TAG, "正在下载最新包,不获取地址");
+//                                    setDownloadingFlag(2);
+                                        } else if (lastVersionStatus.equals("P")) {//已下载,未安装
+                                            // TODO: 2018/4/28 这里的数据fileName会做成成员变量，以供使用
+//                                    lastVersionStatus = "I";//版本状态设为正在安装
+//                                    updateApp(fileName);
+                                            //不获取地址
+                                            Log.e(TAG, "已下载等待未安装,不获取地址");
+                                        } else if (lastVersionStatus.equals("I")) {//已下载,安装中
+                                            //不获取地址
+                                            Log.e(TAG, "已下载,安装中,不获取地址");
+                                        } else if (lastVersionStatus.equals("L")) {//未下载状态
+                                            getVersionInfo();
+                                        } else if (lastVersionStatus.equals("N")) {//正在获取下载地址
+                                            //不获取地址
+                                            Log.e(TAG, "未下载,正在获取下载地址,不获取地址");
+                                        }
+                                    }
+                                }
+                                if (StringUtils.isNoEmpty(banbenBean.getTonggao())) {
+                                    long tonggaoVision = (long) SPUtil.get(MainService.this, Constant.SP_VISION_TONGGAO,
+                                            0L);
+                                    if (Long.parseLong(banbenBean.getTonggao()) > tonggaoVision) {
+                                        Log.i(TAG, "心跳中有通告信息更新");
+                                        if (noticesStatus == 0) {//判断是否正在下载
+                                            getTongGaoInfo(Long.parseLong(banbenBean.getTonggao()));
+                                        }
+                                    }
+                                }
+                                //查询数据库中是否有离线照片
+                                List<ImgFile> imgFiles = DbUtils.getInstans().quaryImg();
+                                if (imgFiles!=null&&imgFiles.size()>0){
+                                    Log.i(TAG, "存在"+imgFiles.size()+"张离线照片");
+                                    sendMessageToMainAcitivity(MSG_UPLOAD_LIXIAN_IMG,imgFiles);
+                                }
+                            }
+                        } else {
+                            //服务器异常或没有网络
+                            HttpApi.e("getClientInfo()->服务器无响应");
+                            Log.e(TAG, "onResponse 心跳接口 connectReport " + response);
+                        }
+                    }
+                    // TODO: 2018/6/3 注释
+                    /*if (null != response) {
+                        String code = JsonUtil.getFieldValue(response, "code");
+                        if (code.equals("0")) {
 
-                            /**
+                            *//**
                              * {"id":1,"ka":"1","ka_gx":"2018-05-09 17:20:50","lian":"1",
                              * "lian_gx":"2018-05-09
                              * 17:20:42","guanggaopic":"1","guanggaovideo":"",
@@ -792,7 +903,7 @@ public class MainService extends Service {
                              * "xiangmu_id":346,"xdoor":null,"xintiao_time":300,
                              * "fuwuqi_time":"1526610665487",
                              * "lixian_mima":"123465","version":"1.00","token":null}
-                             */
+                             *//*
                             String result = JsonUtil.getResult(response);
                             ConnectReportBean connectReportBean = JsonUtil.parseJsonToBean(result, ConnectReportBean
                                     .class);
@@ -901,7 +1012,7 @@ public class MainService extends Service {
                             HttpApi.e("getClientInfo()->服务器无响应");
                             Log.e(TAG, "onResponse 心跳接口 connectReport " + response);
                         }
-                    }
+                    }*/
                 }
             });
         } catch (JSONException e) {
@@ -1037,7 +1148,7 @@ public class MainService extends Service {
                         new Thread(new Runnable() {
                             @Override
                             public void run() {
-                                downloadApp(address, fileName);
+                                 downloadApp(address, fileName);
                             }
                         }).start();
                     } else {
@@ -1262,12 +1373,12 @@ public class MainService extends Service {
 
                     @Override
                     public void onError(Call call, Exception e, int id) {
-                        Log.e(TAG, "onError 获取广告接口 getGuangGao  Exception=" + e.toString());
+                        Log.e(TAG, "onError 获取广告视频接口 getGuangGao  Exception=" + e.toString());
                     }
 
                     @Override
                     public void onResponse(String response, int id) {
-                        Log.e(TAG, "onResponse 获取广告接口 getGuangGao  response=" + response);
+                        Log.e(TAG, "onResponse 获取广告视频接口 getGuangGao  response=" + response);
                         if (null != response) {
                             String code = JsonUtil.getFieldValue(response, "code");
                             if ("0".equals(code)) {
@@ -1839,14 +1950,27 @@ public class MainService extends Service {
                     ("application/json; charset=utf-8")).tag(this).build().execute();
             if (null != execute) {
                 String response = execute.body().string();
+                Log.e(TAG, "登录返回 " + response);
                 if (null != response) {
                     String code = JsonUtil.getFieldValue(response, "code");
                     if ("0".equals(code)) {
                         resultValue = true;
                         String result = JsonUtil.getResult(response);
-                        DoorBean doorBean = JsonUtil.parseJsonToBean(result, DoorBean.class);
+                        DeviceBean deviceBean = JsonUtil.parseJsonToBean(result, DeviceBean.class);
+                        httpServerToken = deviceBean.getToken();
+                        mac_id = deviceBean.getDoor().getId()+"";
+                        Log.e(TAG, deviceBean.toString());
+                        //重置广告，图片，通知版本为0，登录时重新加载
+                        saveVisionInfo();
+                        //保存返回数据，通知主线程继续下一步逻辑
+                        Message message = mHandler.obtainMessage();
+                        message.what = MSG_LOGIN;
+                        message.obj = deviceBean.getDoor();
+                        mHandler.sendMessage(message);
+
+                       /* NewDoorBean doorBean = JsonUtil.parseJsonToBean(result, NewDoorBean.class);
                         httpServerToken = doorBean.getToken();
-                        mac_id = doorBean.getMac_id() + "";
+                        mac_id = doorBean.getXdoor().getId() + "";//MacID从xdoor中取，不从door里取
                         Log.e(TAG, doorBean.toString());
                         //重置广告，图片，通知版本为0，登录时重新加载
                         saveVisionInfo();
@@ -1854,7 +1978,7 @@ public class MainService extends Service {
                         Message message = mHandler.obtainMessage();
                         message.what = MSG_LOGIN;
                         message.obj = doorBean.getXdoor();
-                        mHandler.sendMessage(message);
+                        mHandler.sendMessage(message);*/
                     }
                 } else {
 //                    服务器异常或没有网络
@@ -1896,7 +2020,7 @@ public class MainService extends Service {
      * @throws JSONException
      */
     protected void getClientInfo() {
-        try {
+        /*try {
             String url = API.DEVICE_LOGIN;
             JSONObject data = new JSONObject();
             // TODO: 2018/5/16 参数之后要改
@@ -1920,7 +2044,7 @@ public class MainService extends Service {
                         String code = JsonUtil.getFieldValue(response, "code");
                         if ("0".equals(code)) {
                             String result1 = JsonUtil.getResult(response);
-                            DoorBean doorBean = JsonUtil.parseJsonToBean(result1, DoorBean.class);
+                            NewDoorBean doorBean = JsonUtil.parseJsonToBean(result1, NewDoorBean.class);
                             httpServerToken = doorBean.getToken();
                             Log.e(TAG, doorBean.toString());
                             //保存返回数据，通知主线程继续下一步逻辑
@@ -1941,7 +2065,7 @@ public class MainService extends Service {
             });
         } catch (Exception e) {
             HttpApi.e("登录接口返回参数getClientInfo()->服务器数据解析异常");
-        }
+        }*/
     }
 
     /**
@@ -1950,12 +2074,7 @@ public class MainService extends Service {
      * @param msg
      */
     protected void onLogin(Message msg) {
-        //"id":1,"name":"大门","key":"442c05e69cc5","ip":"123456","mac":"44:2c:05:e6:9c:c5",
-        // "type":"0",
-        // "danyuan_id":"1","loudong_id":"1","xiangmu_id":346,"gongsi_id":"1",
-        // "lixian_mima":"123456","version":null,
-        // "xintiao_time":null
-        XdoorBean result = (XdoorBean) msg.obj;
+        NewDoorBean result = (NewDoorBean) msg.obj;
         if ("0".equals(result.getType())) {//大门
             DeviceConfig.DEVICE_TYPE = "C";
             lockName = "大门";
@@ -1979,6 +2098,32 @@ public class MainService extends Service {
         } catch (RemoteException e) {
             e.printStackTrace();
         }
+
+        // TODO: 2018/6/3 注释
+        /*XdoorBean result = (XdoorBean) msg.obj;
+        if ("0".equals(result.getType())) {//大门
+            DeviceConfig.DEVICE_TYPE = "C";
+            lockName = "大门";
+        } else if ("1".equals(result.getType())) {//单元门
+            DeviceConfig.DEVICE_TYPE = "B";
+            blockId = Integer.parseInt(result.getLoudong_id());
+            lockId = Integer.parseInt(result.getDanyuan_id());
+            lockName = blockId + "栋" + lockId + "单元";
+        }
+        communityId = result.getXiangmu_id();
+        //目前服务器返回为空
+        communityName = result.getXiangmu_name() == null ? "欣社区" : result.getXiangmu_name();
+
+        // 保存消息  需要操作
+        saveInfoIntoLocal(communityId, blockId, lockId, communityName, lockName);
+        Message message = Message.obtain();
+        message.what = MSG_LOGIN_AFTER;
+        message.obj = result;
+        try {
+            mainMessage.send(message);
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }*/
     }
 
     protected void loadInfoFromLocal() {
@@ -2611,8 +2756,6 @@ public class MainService extends Service {
 
                 @Override
                 public void onResponse(String response, int id) {
-                    Log.e("wh response", response);
-
                     if (null != response) {
                         String code = JsonUtil.getFieldValue(response, "code");
                         if ("0".equals(code) && isCurrentCallWorking(callUuid)) {
@@ -2862,7 +3005,7 @@ public class MainService extends Service {
 
         if (err_afd.getCode() != AFD_FSDKError.MOK) {//FD初始化失败
             Log.e(TAG, "FD初始化失败，错误码：" + err_afd.getCode());
-        } else if (err_afr.getCode() != AFD_FSDKError.MOK) {
+        } else if (err_afr.getCode() != AFD_FSDKError.MOK) {//FR初始化失败
             Log.e(TAG, "FR初始化失败，错误码：" + err_afr.getCode());
         } else {
             err_afd = engine_afd.AFD_FSDK_GetVersion(version_afd);
