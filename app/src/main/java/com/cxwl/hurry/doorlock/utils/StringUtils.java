@@ -1,5 +1,6 @@
 package com.cxwl.hurry.doorlock.utils;
 
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -59,6 +60,24 @@ public class StringUtils {
 
         return sdf.format(date);
 
+    }
 
+    /**
+     * 日期转毫秒
+     * @param dateFormat
+     * @return
+     */
+    public static String transferDateToLong(String dateFormat) {
+        String timeStamp = null;
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        Date d;
+        try {
+            d = sdf.parse(dateFormat);
+            long l = d.getTime();
+            timeStamp = String.valueOf(l);
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+        return timeStamp;
     }
 }

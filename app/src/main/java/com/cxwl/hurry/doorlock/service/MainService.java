@@ -697,18 +697,20 @@ public class MainService extends Service {
             createAccessLog(list);
         } else {
             Log.e(TAG, "--------------------临时密码开门失败 上传开门日志  --------------------");
-//            List<LogDoor> list = new ArrayList<>();
-//            LogDoor logDoor = new LogDoor();
-//            logDoor.setMac(mac);
-//            logDoor.setKa_id("-1");
-//            logDoor.setUuid("");
-//            logDoor.setKaimenjietu(imageUrl == null ? "" : imageUrl);
-//            logDoor.setPhone("");
-//            logDoor.setKaimenshijian(System.currentTimeMillis() + "");
-//            logDoor.setKaimenfangshi("6");
-//            Log.i(TAG, "上传临时密码开门日志" + "---logDoor=" + logDoor.toString());
-//            list.add(logDoor);
-//            createAccessLog(list);
+            List<LogDoor> list = new ArrayList<>();
+            LogDoor logDoor = new LogDoor();
+            logDoor.setMac(mac);
+            logDoor.setKa_id("");
+            logDoor.setUuid("");
+            logDoor.setKaimenjietu(imageUrl == null ? "" : imageUrl);
+            logDoor.setPhone("");
+            logDoor.setState(-1);
+            logDoor.setMima(tempKey);
+            logDoor.setKaimenshijian(StringUtils.transferLongToDate("yyyy-MM-dd HH:mm:ss",System.currentTimeMillis()));
+            logDoor.setKaimenfangshi(6);
+            Log.i(TAG, "上传临时密码开门日志" + "---logDoor=" + logDoor.toString());
+            list.add(logDoor);
+            createAccessLog(list);
         }
 
         sendMessageToMainAcitivity(MSG_PASSWORD_CHECK, result);
