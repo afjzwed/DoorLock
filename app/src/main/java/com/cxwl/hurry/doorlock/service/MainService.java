@@ -1393,6 +1393,12 @@ public class MainService extends Service {
 // "" + "" + "" + "" + ""
 //                                        + ".com/uploads/allimg/120727/201995-120HG1030762.jpg");
 //                                guangGaoBeen.add(guangGaoBeen1);
+                                    if (guangGaoBeen==null||guangGaoBeen.size()<1){
+                                        sendMessageToMainAcitivity(MSG_ADVERTISE_REFRESH,guangGaoBeen);
+                                        syncCallBack("5", v);//同步视频
+                                        adInfoStatus = 0;//重置广告视频下载状态
+                                        return;
+                                    }
                                     new Thread(new Runnable() {
                                         @Override
                                         public void run() {
@@ -2262,7 +2268,8 @@ public class MainService extends Service {
             Log.i(TAG, "登陆状态 ,result=" + result);
             if (result == RtcConst.CallCode_Success) { //注销也存在此处
                 Log.e(TAG, "-----------登陆成功-------------key=" + key + "------------");
-            } else if (result == RtcConst.NoNetwork) {
+            } else if (result == RtcConst.NoNetwork|| result == RtcConst.CallCode_Network) {
+                onNoNetWork();
                 Log.i(TAG, "断网销毁，自动重连接");
             } else if (result == RtcConst.ChangeNetwork) {
                 Log.i(TAG, "网络状态改变，自动重连接");
@@ -2272,13 +2279,31 @@ public class MainService extends Service {
                 Log.i(TAG, " 网络原因导致多次登陆不成功，由用户选择是否继续，如想继续尝试，可以重建device");
             } else if (result == RtcConst.DeviceEvt_KickedOff) {
                 Log.i(TAG, "被另外一个终端踢下线，由用户选择是否继续，如果再次登录，需要重新获取token，重建device");
+                isRtcInit=false;
+                initTYSDK();
             } else if (result == RtcConst.DeviceEvt_MultiLogin) {
             } else if (result == RtcConst.CallCode_Forbidden) {
                 Log.i(TAG, "密码错误 重新登陆啦 result=" + result);
+                isRtcInit=false;
+                initTYSDK();
             } else if (result == RtcConst.CallCode_NotFound) {
                 Log.i(TAG, "被叫号码从未获取token登录过 result=" + result);
-            } else {
+            } else if (result == RtcConst.CallCode_Timeout){
+                isRtcInit=false;
+                initTYSDK();
+            }else {
                 Log.i(TAG, "登陆失败 result=" + result);
+            }
+        }
+
+
+        private void onNoNetWork() {
+            Log.v("MainService", "onNoNetWork");
+            //断网销毁
+            if (callConnection != null) {
+                callConnection.disconnect();
+                callConnection = null;
+                sendMessageToMainAcitivity(MSG_RTC_DISCONNECT,"");
             }
         }
 
