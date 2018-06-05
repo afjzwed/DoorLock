@@ -44,4 +44,10 @@ public class ImgFile {
     @Generated(hash = 137030121)
     public ImgFile() {
     }
+
+    @Override
+    public String toString() {
+        return "ImgFile{" + "id=" + id + ", img_localurl='" + img_localurl + '\'' + ", img_uploadurl='" +
+                img_uploadurl + '\'' + '}';
+    }
 }

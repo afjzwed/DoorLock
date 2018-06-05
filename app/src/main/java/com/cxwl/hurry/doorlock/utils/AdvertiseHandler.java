@@ -100,6 +100,7 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
     }
 
     public void prepareMediaView() {
+
         //给SurfaceView添加CallBack监听
         surfaceHolder = videoView.getHolder();
         surfaceHolder.addCallback(this);
@@ -116,10 +117,10 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
         //创建
-        Log.i("xiao_", "SurfaceView 创建成功");
+        Log.i("AdvertiseHandler", "SurfaceView 创建成功");
         surfaceViewCreate = true;
         //必须在surface创建后才能初始化MediaPlayer,否则不会显示图像
-        //startMediaPlay(mediaPlayerSource);
+//        startMediaPlay(mediaPlayerSource);
         // 当SurfaceView中的Surface被创建的时候被调用
         //在这里我们指定MediaPlayer在当前的Surface中进行播放setDisplay(holder)
         //在指定了MediaPlayer播放的容器后，我们就可以使用prepare或者prepareAsync来准备播放了player.prepareAsync()
@@ -128,12 +129,14 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
         //销毁
-        Log.i("xiao_", "SurfaceView 销毁成功");
+        Log.i("AdvertiseHandler", "SurfaceView 销毁成功");
         surfaceViewCreate = false;
     }
 
     public void initData(List<GuangGaoBean> rows, Messenger dialMessenger, boolean isOnVideo, AdverErrorCallBack
             errorCallBack, AdverTongJiCallBack mCallBack) {
+        imageView.setVisibility(View.INVISIBLE);
+        videoView.setVisibility(View.VISIBLE);
         this.dialMessenger = dialMessenger;
         initList(rows);
         mAdverTongJiCallBack = mCallBack;
@@ -146,11 +149,12 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
 
     }
 
-    private void initList(List<GuangGaoBean> rows){
+    private void initList(List<GuangGaoBean> rows) {
         listIndex = 0;
         list.clear();
         list.addAll(rows);
     }
+
     private void initInterger() {
         listCount.clear();
         for (int i = 0; i < list.size(); i++) {
@@ -193,7 +197,7 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
 
     public void playVideo(GuangGaoBean item) {
         try {
-            Log.e("广告", item.toString());
+            Log.e("AdvertiseHandler", item.toString());
             String fileUrls = item.getNeirong();
 
             String source = HttpUtils.getLocalFileFromUrl(fileUrls);
@@ -206,7 +210,7 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
                 initMediaPlayer();
                 startMediaPlay(mediaPlayerSource);
             } else {
-                Log.e("广告", "next");
+                Log.e("AdvertiseHandler", "next");
                 //  next();
             }
         } catch (Exception e) {
@@ -311,6 +315,7 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
         mediaPlayer.setOnErrorListener(new MediaPlayer.OnErrorListener() {
             @Override
             public boolean onError(MediaPlayer mp, int what, int extra) {
+                Log.e("AdvertiseHandler", "OnErrorListener");
                 imageView.setVisibility(View.VISIBLE);
                 return false;
             }
@@ -339,8 +344,23 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
         mAdTongJiBean.setAd_id(list.get(listIndex).getId());
         mAdTongJiBean.setMac(MacUtils.getMac());
         mTongJiBeanList.add(mAdTongJiBean);
-        mAdverTongJiCallBack.sendTj(mTongJiBeanList);
+          mAdverTongJiCallBack.sendTj(mTongJiBeanList);
+        if (Long.parseLong(StringUtils.transferDateToLong(list.get(listIndex).getShixiao_shijian())) < System
+                .currentTimeMillis()) {
+            //视频已失效
+            Log.e("AdvertiseHandler", "当前视频已经失效 list.size()" + list.size());
+            if (list.size() > 1) {
+                list.remove(list.get(listIndex));
+                listIndex = 0;
+                Log.e("AdvertiseHandler", "当前视频已经失效 继续播放重第一个开始" + list.size());
+            } else {
+                list.remove(list.get(listIndex));
+                onDestroy();
+                Log.e("AdvertiseHandler", "当前视频已经失效 停止播放" + list.size());
+                return;
+            }
 
+        }
         next();
     }
 
@@ -380,6 +400,7 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
                     mediaPlayer.stop();
                 }
                 mediaPlayer.release();
+                mediaPlayer =null;
             }
             if (voicePlayer != null) {
                 if (voicePlayer.isPlaying()) {
@@ -389,12 +410,13 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
                 voicePlayer = null;
             }
         } catch (IllegalStateException e) {
-            Log.d("AdvertiseHandler", "UpdateAdvertise: onDestroy error="+e.toString());
+            Log.d("AdvertiseHandler", "UpdateAdvertise: onDestroy error=" + e.toString());
         }
         Log.e("AdvertiseHandler", "停止播放");
         if (videoView != null && imageView != null) {
             videoView.setVisibility(View.GONE);
             imageView.setVisibility(View.VISIBLE);
+            Log.e("AdvertiseHandler", "显示背景图");
         }
 
     }

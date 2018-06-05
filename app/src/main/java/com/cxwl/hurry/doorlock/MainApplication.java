@@ -11,6 +11,7 @@ import com.cxwl.hurry.doorlock.db.DaoMaster;
 import com.cxwl.hurry.doorlock.db.DaoSession;
 import com.cxwl.hurry.doorlock.face.ArcsoftManager;
 import com.cxwl.hurry.doorlock.ui.activity.MainActivity;
+import com.tencent.bugly.crashreport.CrashReport;
 import com.zhy.http.okhttp.OkHttpUtils;
 import com.zhy.http.okhttp.log.LoggerInterceptor;
 
@@ -35,7 +36,8 @@ public class MainApplication extends Application  {
         ArcsoftManager.getInstance().initArcsoft(this);//虹软人脸识别初始化
 
         super.onCreate();
-
+        //初始化腾讯buggly
+        CrashReport.initCrashReport(this, "2f1233331c", true);
         //okhttp初始化
         OkHttpClient okHttpClient = new OkHttpClient.Builder().addInterceptor(new LoggerInterceptor("okhttp", true))
                 .connectTimeout(10000L, TimeUnit.MILLISECONDS).readTimeout(10000L, TimeUnit.MILLISECONDS)
