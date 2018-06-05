@@ -267,6 +267,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private boolean isTongGaoThreadStart = false;//通告更新线程是否开启的标志
     private ArrayList<NoticeBean> noticeBeanList = new ArrayList<>();//通告集合
     private NoticeBean currentNoticeBean = null;//当前显示通告
+    private NoticeBean defaultNotice = null;//默认通告
     private int tongGaoIndex = 0;//通告更新计数
 
     Timer timer = new Timer();
@@ -361,6 +362,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      * ********************************************/
 
     private void startTonggaoThread() {
+        defaultNotice = new NoticeBean();
+        defaultNotice.setBiaoti("暂无通知");
+        defaultNotice.setNeirong("暂无通知");
+        defaultNotice.setShixiao_shijian("2050-06-02 10:17:00.0");
+
         if (null != noticeThread) {
             noticeThread.interrupt();
             noticeThread = null;
@@ -2040,7 +2046,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                                             @Override
                                                             public void complete(String key, ResponseInfo info,
                                                                                  JSONObject
-                                                                    response) {
+                                                                                         response) {
                                                                 if (info.isOK()) {
                                                                     Log.e(TAG, "七牛上传图片成功 删除本地图片");
                                                                     if (file != null) {
@@ -2426,12 +2432,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 tongGaoIndex = 0;
             }
         } else {//通告列表无数据
-            currentNoticeBean = new NoticeBean();
-            currentNoticeBean.setBiaoti("暂无通知");
-            currentNoticeBean.setNeirong("暂无通知");
-            currentNoticeBean.setShixiao_shijian("2020-06-02 10:17:00.0");
+            currentNoticeBean = defaultNotice;
         }
         Log.e(TAG, "设置通告 currentNoticeBean" + currentNoticeBean.toString());
+        Log.e(TAG, "设置通告 过期时间 " + currentNoticeBean.getShixiao_shijian() + " 当前时间 " +
+                StringUtils.transferLongToDate("yyyy-MM-dd HH:mm:ss", System.currentTimeMillis()));
         Log.e(TAG, "设置通告 过期时间 " + StringUtils.transferDateToLong(currentNoticeBean.getShixiao_shijian()) + " 当前时间 " +
                 System.currentTimeMillis());
         if (Long.parseLong(StringUtils.transferDateToLong(currentNoticeBean.getShixiao_shijian())) > System
@@ -2445,7 +2450,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 }
             });
         } else {
-//            setTongGaoInfo();
+            tongGaoIndex--;
+            if (tongGaoIndex == -1) {
+                Log.e(TAG, "通告清零");
+                noticeBeanList.clear();
+                noticeBeanList = null;
+            } else {
+                Log.e(TAG, "移除一条通告");
+                noticeBeanList.remove(tongGaoIndex);
+            }
+            setTongGaoInfo();
         }
     }
 
