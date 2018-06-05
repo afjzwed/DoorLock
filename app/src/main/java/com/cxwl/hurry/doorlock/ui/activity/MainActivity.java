@@ -2425,23 +2425,46 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     private void setTongGaoInfo() {
-        if (null != noticeBeanList && noticeBeanList.size() > 0) {//通告列表有数据
-            currentNoticeBean = noticeBeanList.get(tongGaoIndex);
-            tongGaoIndex++;
-            if (tongGaoIndex == noticeBeanList.size()) {//循环一遍以后，重置游标
-                tongGaoIndex = 0;
+        if (isTongGaoStart()) {
+            if (null != noticeBeanList && noticeBeanList.size() > 0) {//通告列表有数据
+                currentNoticeBean = noticeBeanList.get(tongGaoIndex);
+                tongGaoIndex++;
+                if (tongGaoIndex == noticeBeanList.size()) {//循环一遍以后，重置游标
+                    tongGaoIndex = 0;
+                }
+            } else {//通告列表无数据
+                currentNoticeBean = defaultNotice;
             }
-        } else {//通告列表无数据
+            Log.e(TAG, "设置通告 currentNoticeBean" + currentNoticeBean.toString());
+            Log.e(TAG, "设置通告 过期时间 " + currentNoticeBean.getShixiao_shijian() + " 当前时间 " +
+                    StringUtils.transferLongToDate("yyyy-MM-dd HH:mm:ss", System.currentTimeMillis()));
+            Log.e(TAG, "设置通告 过期时间 " + StringUtils.transferDateToLong(currentNoticeBean.getShixiao_shijian()) + " 当前时间" +
+                    " " +
+                    System.currentTimeMillis());
+            if (Long.parseLong(StringUtils.transferDateToLong(currentNoticeBean.getShixiao_shijian())) > System
+                    .currentTimeMillis()) {
+                Log.e(TAG, "设置通告 有数据");
+                handler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        setTextView(R.id.gonggao, currentNoticeBean.getNeirong());
+                        setTextView(R.id.gonggao_title, currentNoticeBean.getBiaoti());
+                    }
+                });
+            } else {
+                tongGaoIndex--;
+                if (tongGaoIndex == -1) {
+                    Log.e(TAG, "通告清零");
+                    noticeBeanList.clear();
+                    noticeBeanList = null;
+                } else {
+                    Log.e(TAG, "移除一条通告");
+                    noticeBeanList.remove(tongGaoIndex);
+                }
+                setTongGaoInfo();
+            }
+        } else {
             currentNoticeBean = defaultNotice;
-        }
-        Log.e(TAG, "设置通告 currentNoticeBean" + currentNoticeBean.toString());
-        Log.e(TAG, "设置通告 过期时间 " + currentNoticeBean.getShixiao_shijian() + " 当前时间 " +
-                StringUtils.transferLongToDate("yyyy-MM-dd HH:mm:ss", System.currentTimeMillis()));
-        Log.e(TAG, "设置通告 过期时间 " + StringUtils.transferDateToLong(currentNoticeBean.getShixiao_shijian()) + " 当前时间 " +
-                System.currentTimeMillis());
-        if (Long.parseLong(StringUtils.transferDateToLong(currentNoticeBean.getShixiao_shijian())) > System
-                .currentTimeMillis()) {
-            Log.e(TAG, "设置通告 有数据");
             handler.post(new Runnable() {
                 @Override
                 public void run() {
@@ -2449,18 +2472,22 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     setTextView(R.id.gonggao_title, currentNoticeBean.getBiaoti());
                 }
             });
-        } else {
-            tongGaoIndex--;
-            if (tongGaoIndex == -1) {
-                Log.e(TAG, "通告清零");
-                noticeBeanList.clear();
-                noticeBeanList = null;
-            } else {
-                Log.e(TAG, "移除一条通告");
-                noticeBeanList.remove(tongGaoIndex);
-            }
-            setTongGaoInfo();
         }
+    }
+
+    private boolean isTongGaoStart() {
+        Log.e(TAG, "开始通告判断");
+        boolean b = false;
+        if (null != noticeBeanList && noticeBeanList.size() > 0) {
+            for (NoticeBean noticeBean : noticeBeanList) {
+                if (Long.parseLong(StringUtils.transferDateToLong(noticeBean.getKaishi_shijian())) < System
+                        .currentTimeMillis()) {
+                    b = true;
+                    break;
+                }
+            }
+        }
+        return b;
     }
 
     /**
