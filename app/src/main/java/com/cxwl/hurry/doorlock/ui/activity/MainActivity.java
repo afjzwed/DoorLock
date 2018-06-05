@@ -2444,13 +2444,18 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             if (Long.parseLong(StringUtils.transferDateToLong(currentNoticeBean.getShixiao_shijian())) > System
                     .currentTimeMillis()) {
                 Log.e(TAG, "设置通告 有数据");
-                handler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        setTextView(R.id.gonggao, currentNoticeBean.getNeirong());
-                        setTextView(R.id.gonggao_title, currentNoticeBean.getBiaoti());
-                    }
-                });
+                if (Long.parseLong(StringUtils.transferDateToLong(currentNoticeBean.getKaishi_shijian())) < System
+                        .currentTimeMillis()) {//开始时间小于当前时间，可以显示
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            setTextView(R.id.gonggao, currentNoticeBean.getNeirong());
+                            setTextView(R.id.gonggao_title, currentNoticeBean.getBiaoti());
+                        }
+                    });
+                } else {//开始时间大于当前时间，跳过，直接显示下一条
+                    setTongGaoInfo();
+                }
             } else {
                 tongGaoIndex--;
                 if (tongGaoIndex == -1) {
