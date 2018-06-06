@@ -13,7 +13,7 @@ import android.widget.ScrollView;
 
 public class AutoScrollView extends ScrollView {
     private Handler handler = new Handler();
-    private long duration = 50;
+    private long duration = 200;
     private boolean isScrolled = false;
     private int currentIndex = 0;
     private long period = 1000;
