@@ -95,6 +95,7 @@ import com.cxwl.hurry.doorlock.utils.MacUtils;
 import com.cxwl.hurry.doorlock.utils.NetWorkUtils;
 import com.cxwl.hurry.doorlock.utils.NfcReader;
 import com.cxwl.hurry.doorlock.utils.StringUtils;
+import com.cxwl.hurry.doorlock.view.AutoScrollView;
 import com.google.gson.reflect.TypeToken;
 import com.guo.android_extend.java.AbsLoop;
 import com.guo.android_extend.widget.CameraFrameData;
@@ -206,6 +207,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private TextView headPaneTextView, tv_message, tv_battery, showMacText;
     private EditText et_blackno, et_unitno, tv_input_text;
     private TextView tv_gonggao_title;
+    private TextView tv_gonggao;
+    private AutoScrollView as;
 
     private Handler handler;
     private Messenger mainMessage;
@@ -273,6 +276,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private NoticeBean currentNoticeBean = null;//当前显示通告
     private NoticeBean defaultNotice = null;//默认通告
     private int tongGaoIndex = 0;//通告更新计数
+    private boolean isTongGaoFrist = true;//通告是否是第一次滚动
 
     Timer timer = new Timer();
     private boolean mCamerarelease = true; //判断照相机是否释放
@@ -383,6 +387,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     setTongGaoInfo();
                     while (!isInterrupted()) {//检测线程是否已经中断
                         sleep(1000 * 60);//间隔时间
+                        isTongGaoFrist= false;
                         setTongGaoInfo();
                     }
                 } catch (InterruptedException e) {
@@ -596,6 +601,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         videoLayout = (LinearLayout) findViewById(R.id.ll_video);//用于添加视频通话的根布局
         banner = (Banner) findViewById(R.id.banner);//用于添加视频通话的根布局
         tv_gonggao_title = (TextView) findViewById(R.id.gonggao_title);
+        tv_gonggao = (TextView) findViewById(R.id.gonggao);
+        as = (AutoScrollView)findViewById(R.id.as);
+
         //getBgBanners();// 网络获得轮播背景图片数据
         rl_nfc = (RelativeLayout) findViewById(R.id.rl_nfc);//删除脸信息布局(原录卡布局)
         et_unitno = (EditText) findViewById(R.id.et_unitno);//删除脸信息的手机号(录卡时房屋编号)
@@ -2520,8 +2528,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            setTextView(R.id.gonggao, currentNoticeBean.getNeirong());
                             setTextView(R.id.gonggao_title, currentNoticeBean.getBiaoti());
+//                            setTextView(R.id.gonggao, currentNoticeBean.getNeirong());
+                            as.setScrolled(false);//关闭自动滚动
+                            as.change();//位置重置
+                            as.setScrolled(true);//打开自动滚动
+                            as.autoScroll(isTongGaoFrist);//开启自动滚动
+                            tv_gonggao.setText(currentNoticeBean.getNeirong());
                         }
                     });
                 } else {//开始时间大于当前时间，跳过，直接显示下一条
@@ -2544,8 +2557,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             handler.post(new Runnable() {
                 @Override
                 public void run() {
-                    setTextView(R.id.gonggao, currentNoticeBean.getNeirong());
                     setTextView(R.id.gonggao_title, currentNoticeBean.getBiaoti());
+                    as.setScrolled(false);//关闭自动滚动
+                    as.change();//位置重置
+                    setTextView(R.id.gonggao, currentNoticeBean.getNeirong());
                 }
             });
         }
@@ -3334,6 +3349,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             isRestartPlay = false;
             advertiseHandler.start(adverErrorCallBack);
         }
+
+        if (!as.isScrolled()) {
+            as.setScrolled(true);
+            as.autoScroll(isTongGaoFrist);
+        }
     }
 
     private boolean isRestartPlay = false;
@@ -3364,6 +3384,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_PAUSE, 1000);
             faceHandler.sendEmptyMessageDelayed(MSG_ID_CARD_DETECT_PAUSE, 1000);
         }
+
+        if (as.isScrolled()) {
+            as.setScrolled(false);
+            as.change();
+        }
     }
 
     @Override
@@ -3388,6 +3413,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         identification = false;
         if (mFRAbsLoop != null) {
             mFRAbsLoop.shutdown();
+        }
+
+        if (as!=null) {
+            as.removeRunnable();
         }
 
         AFT_FSDKError err = engine.AFT_FSDK_UninitialFaceEngine();
