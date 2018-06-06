@@ -28,18 +28,18 @@ public class CardRecord {
         return result;
     }
 
-    public boolean checkLastCardNew(String card) {
+    public boolean checkLastCardNew(String name) {
         boolean result = false;
-        if (this.card.equals(card)) {
+        if (this.card.equals(name)) {
             long offset = new Date().getTime() - this.creDate.getTime();
             if (offset > 3000) {
-                this.card = card;
+                this.card = name;
                 this.creDate = new Date();
             } else {
                 result = true;
             }
         } else {
-            this.card = card;
+            this.card = name;
             this.creDate = new Date();
         }
         return result;

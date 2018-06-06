@@ -51,6 +51,7 @@ import com.cxwl.hurry.doorlock.utils.AexUtil;
 import com.cxwl.hurry.doorlock.utils.Ajax;
 import com.cxwl.hurry.doorlock.utils.BitmapUtils;
 import com.cxwl.hurry.doorlock.utils.CardRecord;
+import com.cxwl.hurry.doorlock.utils.DLLog;
 import com.cxwl.hurry.doorlock.utils.DbUtils;
 import com.cxwl.hurry.doorlock.utils.HttpApi;
 import com.cxwl.hurry.doorlock.utils.HttpUtils;
@@ -475,29 +476,32 @@ public class MainService extends Service {
                         String[] parame = (String[]) msg.obj;
                         String phoneNum = parame[0];//手机号码
                         String picUrl = parame[1];//图片URL
-                        if (!cardRecord.checkLastCard(phoneNum)) {//判断距离上次刷脸时间是否超过2秒
-                            LogDoor data = new LogDoor();
-                            data.setMac(mac);
-                            data.setKaimenfangshi(3);
-                            if (TextUtils.isEmpty(phoneNum)) {
-                                data.setPhone("");
-                            } else {
-                                data.setPhone(phoneNum);
-                            }
-                            if (TextUtils.isEmpty(picUrl)) {
-                                data.setKaimenjietu("");
-                            } else {
-                                data.setKaimenjietu(picUrl);
-                            }
-                            data.setKa_id("");
-                            data.setState(1);
-                            data.setKaimenshijian(StringUtils.transferLongToDate("yyyy-MM-dd HH:mm:ss",System.currentTimeMillis()));
-                            data.setUuid("");
-                            List<LogDoor> list = new ArrayList<>();
-                            list.add(data);
-                            createAccessLog(list);
-                            openLock(3);
+//                        if (!cardRecord.checkLastCard(phoneNum)) {//判断距离上次刷脸时间是否超过2秒
+                        LogDoor data = new LogDoor();
+                        data.setMac(mac);
+                        data.setKaimenfangshi(3);
+                        if (TextUtils.isEmpty(phoneNum)) {
+                            data.setPhone("");
+                        } else {
+                            data.setPhone(phoneNum);
                         }
+                        if (TextUtils.isEmpty(picUrl)) {
+                            data.setKaimenjietu("");
+                        } else {
+                            data.setKaimenjietu(picUrl);
+                        }
+                        data.setKa_id("");
+                        data.setState(1);
+                        data.setKaimenshijian(StringUtils.transferLongToDate("yyyy-MM-dd HH:mm:ss", System
+                                .currentTimeMillis()));
+                        data.setUuid("");
+                        List<LogDoor> list = new ArrayList<>();
+                        list.add(data);
+                        DLLog.e(TAG, "人脸截图 开始上传日志");
+                        createAccessLog(list);
+                        DLLog.e(TAG, "人脸截图 开始开门");
+                        openLock(3);
+//                        }
                         break;
                     }
                     case MSG_CARD_OPENLOCK: {
@@ -513,7 +517,8 @@ public class MainService extends Service {
                         } else {
                             data.setKaimenjietu(pic_url);
                         }
-                        data.setKaimenshijian(StringUtils.transferLongToDate("yyyy-MM-dd HH:mm:ss",System.currentTimeMillis()));
+                        data.setKaimenshijian(StringUtils.transferLongToDate("yyyy-MM-dd HH:mm:ss", System
+                                .currentTimeMillis()));
                         data.setUuid("");
                         List<LogDoor> list = new ArrayList<>();
                         list.add(data);
@@ -690,7 +695,7 @@ public class MainService extends Service {
             logDoor.setPhone("");
             logDoor.setState(1);
             logDoor.setMima(tempKey);
-            logDoor.setKaimenshijian(StringUtils.transferLongToDate("yyyy-MM-dd HH:mm:ss",System.currentTimeMillis()));
+            logDoor.setKaimenshijian(StringUtils.transferLongToDate("yyyy-MM-dd HH:mm:ss", System.currentTimeMillis()));
             logDoor.setKaimenfangshi(6);
             Log.i(TAG, "上传临时密码开门日志" + "---logDoor=" + logDoor.toString());
             list.add(logDoor);
@@ -706,7 +711,7 @@ public class MainService extends Service {
             logDoor.setPhone("");
             logDoor.setState(-1);
             logDoor.setMima(tempKey);
-            logDoor.setKaimenshijian(StringUtils.transferLongToDate("yyyy-MM-dd HH:mm:ss",System.currentTimeMillis()));
+            logDoor.setKaimenshijian(StringUtils.transferLongToDate("yyyy-MM-dd HH:mm:ss", System.currentTimeMillis()));
             logDoor.setKaimenfangshi(6);
             Log.i(TAG, "上传临时密码开门日志" + "---logDoor=" + logDoor.toString());
             list.add(logDoor);
@@ -731,7 +736,8 @@ public class MainService extends Service {
                 logDoor.setMima(tempKey);
                 logDoor.setKaimenjietu(imageUrl == null ? "" : imageUrl);
                 logDoor.setPhone("");
-                logDoor.setKaimenshijian(StringUtils.transferLongToDate("yyyy-MM-dd HH:mm:ss",System.currentTimeMillis()));
+                logDoor.setKaimenshijian(StringUtils.transferLongToDate("yyyy-MM-dd HH:mm:ss", System
+                        .currentTimeMillis()));
                 logDoor.setKaimenfangshi(5);
                 Log.i(TAG, "上传离线密码开门成功日志" + "---logDoor=" + logDoor.toString());
                 list.add(logDoor);
@@ -747,7 +753,8 @@ public class MainService extends Service {
                 logDoor.setMima(tempKey);
                 logDoor.setKaimenjietu(imageUrl == null ? "" : imageUrl);
                 logDoor.setPhone("");
-                logDoor.setKaimenshijian(StringUtils.transferLongToDate("yyyy-MM-dd HH:mm:ss",System.currentTimeMillis()));
+                logDoor.setKaimenshijian(StringUtils.transferLongToDate("yyyy-MM-dd HH:mm:ss", System
+                        .currentTimeMillis()));
                 logDoor.setKaimenfangshi(5);
                 Log.i(TAG, "上传离线密码开门失败日志" + "---logDoor=" + logDoor.toString());
                 list.add(logDoor);
@@ -795,16 +802,18 @@ public class MainService extends Service {
                                 }
                                 Log.i(TAG, "心跳--服务器返回的心跳时间（秒）" + (long) (deviceBean.getXintiao_shijian() * 1000));
                                 if (0L != ((long) (deviceBean.getXintiao_shijian()))) {
-                                    SPUtil.put(MainService.this, Constant.SP_XINTIAO_TIME, (long) (deviceBean.getXintiao_shijian() * 1000));
+                                    SPUtil.put(MainService.this, Constant.SP_XINTIAO_TIME, (long) (deviceBean
+                                            .getXintiao_shijian() * 1000));
                                 } else {
                                     SPUtil.put(MainService.this, Constant.SP_XINTIAO_TIME, (long) (60000));
                                 }
                                 if (StringUtils.isNoEmpty(banbenBean.getKa())) {
                                     long kaVision = (long) SPUtil.get(MainService.this, Constant.SP_VISION_KA, 0L);
-                                    Log.i(TAG, "心跳--当前卡版本：" + kaVision + "   服务器卡版本：" + Long.parseLong(banbenBean.getKa()));
+                                    Log.i(TAG, "心跳--当前卡版本：" + kaVision + "   服务器卡版本：" + Long.parseLong(banbenBean
+                                            .getKa()));
                                     if (Long.parseLong(banbenBean.getKa()) > kaVision) {
                                         Log.i(TAG, "心跳中有卡信息更新");
-                                       getCardInfo(Long.parseLong(banbenBean.getKa()));
+                                        getCardInfo(Long.parseLong(banbenBean.getKa()));
                                     }
                                 }
                                 if (StringUtils.isNoEmpty(banbenBean.getLian())) {
@@ -879,9 +888,9 @@ public class MainService extends Service {
                                 }
                                 //查询数据库中是否有离线照片
                                 List<ImgFile> imgFiles = DbUtils.getInstans().quaryImg();
-                                if (imgFiles!=null&&imgFiles.size()>0){
-                                    Log.i(TAG, "存在"+imgFiles.size()+"张离线照片");
-                                    sendMessageToMainAcitivity(MSG_UPLOAD_LIXIAN_IMG,imgFiles);
+                                if (imgFiles != null && imgFiles.size() > 0) {
+                                    Log.i(TAG, "存在" + imgFiles.size() + "张离线照片");
+                                    sendMessageToMainAcitivity(MSG_UPLOAD_LIXIAN_IMG, imgFiles);
                                 }
                             }
                         } else {
@@ -896,16 +905,16 @@ public class MainService extends Service {
                         if (code.equals("0")) {
 
                             *//**
-                             * {"id":1,"ka":"1","ka_gx":"2018-05-09 17:20:50","lian":"1",
-                             * "lian_gx":"2018-05-09
-                             * 17:20:42","guanggaopic":"1","guanggaovideo":"",
-                             * "guanggao_gx":"2018-05-09 17:56:49",
-                             * "tonggao":"1","tonggao_gx":"2018-05-09 17:20:46",
-                             * "mac":"44:2c:05:e6:9c:c5",
-                             * "xiangmu_id":346,"xdoor":null,"xintiao_time":300,
-                             * "fuwuqi_time":"1526610665487",
-                             * "lixian_mima":"123465","version":"1.00","token":null}
-                             *//*
+                     * {"id":1,"ka":"1","ka_gx":"2018-05-09 17:20:50","lian":"1",
+                     * "lian_gx":"2018-05-09
+                     * 17:20:42","guanggaopic":"1","guanggaovideo":"",
+                     * "guanggao_gx":"2018-05-09 17:56:49",
+                     * "tonggao":"1","tonggao_gx":"2018-05-09 17:20:46",
+                     * "mac":"44:2c:05:e6:9c:c5",
+                     * "xiangmu_id":346,"xdoor":null,"xintiao_time":300,
+                     * "fuwuqi_time":"1526610665487",
+                     * "lixian_mima":"123465","version":"1.00","token":null}
+                     *//*
                             String result = JsonUtil.getResult(response);
                             ConnectReportBean connectReportBean = JsonUtil.parseJsonToBean(result, ConnectReportBean
                                     .class);
@@ -1150,7 +1159,7 @@ public class MainService extends Service {
                         new Thread(new Runnable() {
                             @Override
                             public void run() {
-                                 downloadApp(address, fileName);
+                                downloadApp(address, fileName);
                             }
                         }).start();
                     } else {
@@ -1331,7 +1340,7 @@ public class MainService extends Service {
                             String list = JsonUtil.getFieldValue(result, "lian");//服务器字段命名错误
                             faceUrlList = (ArrayList<FaceUrlBean>) JsonUtil.parseJsonToList(list, new
                                     TypeToken<List<FaceUrlBean>>() {
-                            }.getType());
+                                    }.getType());
 
                             //通知MainActivity开始人脸录入流程
                             sendMessageToMainAcitivity(MSG_FACE_INFO, null);
@@ -1395,8 +1404,8 @@ public class MainService extends Service {
 // "" + "" + "" + "" + ""
 //                                        + ".com/uploads/allimg/120727/201995-120HG1030762.jpg");
 //                                guangGaoBeen.add(guangGaoBeen1);
-                                    if (guangGaoBeen==null||guangGaoBeen.size()<1){
-                                        sendMessageToMainAcitivity(MSG_ADVERTISE_REFRESH,guangGaoBeen);
+                                    if (guangGaoBeen == null || guangGaoBeen.size() < 1) {
+                                        sendMessageToMainAcitivity(MSG_ADVERTISE_REFRESH, guangGaoBeen);
                                         syncCallBack("5", v);//同步视频
                                         adInfoStatus = 0;//重置广告视频下载状态
                                         return;
@@ -1966,7 +1975,7 @@ public class MainService extends Service {
                         String result = JsonUtil.getResult(response);
                         DeviceBean deviceBean = JsonUtil.parseJsonToBean(result, DeviceBean.class);
                         httpServerToken = deviceBean.getToken();
-                        mac_id = deviceBean.getDoor().getId()+"";
+                        mac_id = deviceBean.getDoor().getId() + "";
                         Log.e(TAG, deviceBean.toString());
                         //重置广告，图片，通知版本为0，登录时重新加载
                         saveVisionInfo();
@@ -2270,7 +2279,7 @@ public class MainService extends Service {
             Log.i(TAG, "登陆状态 ,result=" + result);
             if (result == RtcConst.CallCode_Success) { //注销也存在此处
                 Log.e(TAG, "-----------登陆成功-------------key=" + key + "------------");
-            } else if (result == RtcConst.NoNetwork|| result == RtcConst.CallCode_Network) {
+            } else if (result == RtcConst.NoNetwork || result == RtcConst.CallCode_Network) {
                 onNoNetWork();
                 Log.i(TAG, "断网销毁，自动重连接");
             } else if (result == RtcConst.ChangeNetwork) {
@@ -2281,19 +2290,19 @@ public class MainService extends Service {
                 Log.i(TAG, " 网络原因导致多次登陆不成功，由用户选择是否继续，如想继续尝试，可以重建device");
             } else if (result == RtcConst.DeviceEvt_KickedOff) {
                 Log.i(TAG, "被另外一个终端踢下线，由用户选择是否继续，如果再次登录，需要重新获取token，重建device");
-                isRtcInit=false;
+                isRtcInit = false;
                 initTYSDK();
             } else if (result == RtcConst.DeviceEvt_MultiLogin) {
             } else if (result == RtcConst.CallCode_Forbidden) {
                 Log.i(TAG, "密码错误 重新登陆啦 result=" + result);
-                isRtcInit=false;
+                isRtcInit = false;
                 initTYSDK();
             } else if (result == RtcConst.CallCode_NotFound) {
                 Log.i(TAG, "被叫号码从未获取token登录过 result=" + result);
-            } else if (result == RtcConst.CallCode_Timeout){
-                isRtcInit=false;
+            } else if (result == RtcConst.CallCode_Timeout) {
+                isRtcInit = false;
                 initTYSDK();
-            }else {
+            } else {
                 Log.i(TAG, "登陆失败 result=" + result);
             }
         }
@@ -2305,7 +2314,7 @@ public class MainService extends Service {
             if (callConnection != null) {
                 callConnection.disconnect();
                 callConnection = null;
-                sendMessageToMainAcitivity(MSG_RTC_DISCONNECT,"");
+                sendMessageToMainAcitivity(MSG_RTC_DISCONNECT, "");
             }
         }
 
@@ -2390,7 +2399,7 @@ public class MainService extends Service {
             Log.e(TAG, "进行开门操作 开门开门");
             openLock(2);
             //分为手机开门和视屏开门 1和2 进行区分 上传日志统一传2；
-            if (logDoor.getKaimenfangshi()==1) {
+            if (logDoor.getKaimenfangshi() == 1) {
                 logDoor.setKaimenfangshi(2);
                 //一键开门拍照
                 if (StringUtils.isFastClick()) {
@@ -2403,7 +2412,7 @@ public class MainService extends Service {
             List<LogDoor> list = new ArrayList<>();
             //拼接图片地址
             logDoor.setKaimenjietu(logDoor.getKaimenjietu());
-            logDoor.setKaimenshijian(StringUtils.transferLongToDate("yyyy-MM-dd HH:mm:ss",System.currentTimeMillis()));
+            logDoor.setKaimenshijian(StringUtils.transferLongToDate("yyyy-MM-dd HH:mm:ss", System.currentTimeMillis()));
             Log.e(TAG, "图片imageUrl" + logDoor.getKaimenjietu());
             list.add(logDoor);
             //上传日志
@@ -3270,6 +3279,7 @@ public class MainService extends Service {
     private void openAexLock(int type) {
         int result = aexUtil.openLock();
         if (result > 0) {
+            DLLog.e(TAG, "人脸截图 开门完成 显示图片");
             sendMessageToMainAcitivity(MSG_LOCK_OPENED, type);//开锁
             SoundPoolUtil.getSoundPoolUtil().loadVoice(getBaseContext(), 011111);
         }
