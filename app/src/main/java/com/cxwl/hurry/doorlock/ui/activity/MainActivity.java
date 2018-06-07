@@ -352,8 +352,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         isTongGaoThreadStart = false;//每次初始化都重启一次通告更新线程
         isPicThreadStart = false;//每次初始化都重启一次通告更新线程
 
-        String ethMac = MacUtils.getEthMac();
-        DLLog.e(TAG, "ethMac eth地址 " + ethMac);
     }
 
     //测试自动关广告
@@ -853,6 +851,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                 });
                             }
                         };
+                        // TODO: 2018/6/7 循环??
                         timer.schedule(task, 2000, 5000);
                         break;
                     case MSG_INVALID_CARD:
@@ -3403,7 +3402,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
 //                Log.v("人脸识别", "fit Score:" + max + ", NAME:" + name);
                 if (max > 0.68f) {//匹配度的值高于设定值,发出消息,开门
-                    if (null != name && !cardRecord.checkLastCard(name)) {//判断距离上次刷脸时间是否超过2秒
+                    if (null != name && !cardRecord.checkLastCardNew(name)) {//判断距离上次刷脸时间是否超过2秒
                         //fr success.
                         //final float max_score = max;
                         //Log.v(FACE_TAG, "置信度：" + (float) ((int) (max_score * 1000)) / 1000.0);
@@ -3426,7 +3425,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                 parameters[1] = "";
                             }
                             DLLog.e(TAG, "人脸 图片处理完成（异步处理）,重置状态  状态值PRINTSCREEN_STATE 为1 发送消息准备上传日志和开门");
-                            DeviceConfig.PRINTSCREEN_STATE = 0;//图片处理完成（异步处理）,重置状态
+
                             sendMainMessager(MSG_FACE_OPENLOCK, parameters);
                             file = null;
                             bmp = null;

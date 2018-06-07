@@ -3277,6 +3277,7 @@ public class MainService extends Service {
     }
 
     private void openAexLock(int type) {
+        DeviceConfig.PRINTSCREEN_STATE = 0;//人脸开门图片处理完成（异步处理）,重置状态
         int result = aexUtil.openLock();
         if (result > 0) {
             DLLog.e(TAG, "人脸截图 开门完成 显示图片");
