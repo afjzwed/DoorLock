@@ -378,33 +378,35 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     /*************************************************初始化一些基本东西start
      *
      /**************************图片轮播***************/
-    private void  startPicTread(){
+    private void startPicTread() {
         if (null != picThread) {
             picThread.interrupt();
             picThread = null;
         }
-            picThread=new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    try {
+        picThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    setPicInfo();
+                    while (!Thread.interrupted()) {
+                        sleep(10000);
                         setPicInfo();
-                        while (!Thread.interrupted()){
-                            sleep(10000);
-                            setPicInfo();
-                        }
-
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
                     }
+
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
-            });
+            }
+        });
         picThread.start();
     }
-    private  List<GuangGaoBean> picList;
+
+    private List<GuangGaoBean> picList;
     private GuangGaoBean currentGuangGaoBean;
-    private int picIndex=0;
+    private int picIndex = 0;
     private long picStartTime;
     private long picEndTime;
+
     private void setPicInfo() {
         if (isPicStart()) {
             if (null != picList && picList.size() > 0) {//通告列表有数据
@@ -415,12 +417,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     picIndex = 0;
                 }
             } else {//通告列表无数据
-               // 没有图片
-               // currentNoticeBean = defaultNotice;
+                // 没有图片
+                // currentNoticeBean = defaultNotice;
                 handler.post(new Runnable() {
                     @Override
                     public void run() {
-                    imgBanner.setBackgroundResource(R.mipmap.bg_banner);
+                        imgBanner.setBackgroundResource(R.mipmap.bg_banner);
                     }
                 });
                 return;
@@ -428,7 +430,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             Log.e(TAG, "设置通告 currentNoticeBean" + currentGuangGaoBean.toString());
             Log.e(TAG, "设置通告 过期时间 " + currentGuangGaoBean.getShixiao_shijian() + " 当前时间 " +
                     StringUtils.transferLongToDate("yyyy-MM-dd HH:mm:ss", System.currentTimeMillis()));
-            Log.e(TAG, "设置通告 过期时间 " + StringUtils.transferDateToLong(currentGuangGaoBean.getShixiao_shijian()) + " 当前时间" +
+            Log.e(TAG, "设置通告 过期时间 " + StringUtils.transferDateToLong(currentGuangGaoBean.getShixiao_shijian()) + " " +
+                    "当前时间" +
                     " " +
                     System.currentTimeMillis());
             if (Long.parseLong(StringUtils.transferDateToLong(currentGuangGaoBean.getShixiao_shijian())) > System
@@ -457,7 +460,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             mAdTongJiBean.setMac(MacUtils.getMac());
                             mTongJiBeanList.add(mAdTongJiBean);
                             sendMainMessager(MSG_TONGJI_PIC, mTongJiBeanList);
-                            picStartTime=picEndTime;
+                            picStartTime = picEndTime;
 
 
                         }
@@ -481,7 +484,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             handler.post(new Runnable() {
                 @Override
                 public void run() {
-                  //设置默认图片
+                    //设置默认图片
                     handler.post(new Runnable() {
                         @Override
                         public void run() {
@@ -492,6 +495,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             });
         }
     }
+
     private boolean isPicStart() {
         Log.e(TAG, "开始图片广告判断");
         boolean b = false;
@@ -526,7 +530,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     setTongGaoInfo();
                     while (!isInterrupted()) {//检测线程是否已经中断
                         sleep(1000 * 60);//间隔时间
-                        isTongGaoFrist= false;
+                        isTongGaoFrist = false;
                         setTongGaoInfo();
                     }
                 } catch (InterruptedException e) {
@@ -677,7 +681,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      */
     protected void initVoiceVolume(AudioManager audioManager, int type, int value) {
         int thisValue = audioManager.getStreamMaxVolume(type);//得到最大音量
-           thisValue = thisValue * value / 10;//具体音量值
+        thisValue = thisValue * value / 10;//具体音量值
         audioManager.setStreamVolume(type, thisValue, AudioManager.FLAG_PLAY_SOUND);//调整音量时播放声音
     }
 
@@ -742,7 +746,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         imgBanner = (ImageView) findViewById(R.id.img_banner);//图片轮播替换banner
         tv_gonggao_title = (TextView) findViewById(R.id.gonggao_title);
         tv_gonggao = (TextView) findViewById(R.id.gonggao);
-        as = (AutoScrollView)findViewById(R.id.as);
+        as = (AutoScrollView) findViewById(R.id.as);
 
         //getBgBanners();// 网络获得轮播背景图片数据
         rl_nfc = (RelativeLayout) findViewById(R.id.rl_nfc);//删除脸信息布局(原录卡布局)
@@ -880,8 +884,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         break;
                     case MSG_ADVERTISE_REFRESH_PIC://刷新广告图片
                         Log.i(TAG, "刷新广告图片");
-                      //  onAdvertiseRefreshPic((ArrayList<GuangGaoBean>) msg.obj);
-                        picStartTime=System.currentTimeMillis();
+                        //  onAdvertiseRefreshPic((ArrayList<GuangGaoBean>) msg.obj);
+                        picStartTime = System.currentTimeMillis();
                         picList = (ArrayList<GuangGaoBean>) msg.obj;
                         picIndex = 0;
                         if (!isPicThreadStart) {//线程未开启
@@ -1017,7 +1021,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 mAdTongJiBean.setAd_id(obj1.get(i).getId());
                 mAdTongJiBean.setMac(MacUtils.getMac());
                 mTongJiBeanList.add(mAdTongJiBean);
-                   sendMainMessager(MSG_TONGJI_PIC, mTongJiBeanList);
+                sendMainMessager(MSG_TONGJI_PIC, mTongJiBeanList);
                 //设置下一张图片开始播放时间
                 startTime = endTime;
                 //判断图片是否过期
@@ -2289,7 +2293,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                                             @Override
                                                             public void complete(String key, ResponseInfo info,
                                                                                  JSONObject
-                                                                    response) {
+                                                                                         response) {
                                                                 if (info.isOK()) {
                                                                     Log.e(TAG, "七牛上传图片成功 删除本地图片");
                                                                     if (file != null) {
@@ -2692,13 +2696,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            setTextView(R.id.gonggao_title, currentNoticeBean.getBiaoti());
 //                            setTextView(R.id.gonggao, currentNoticeBean.getNeirong());
+                            tv_gonggao_title.setText(currentNoticeBean.getBiaoti());
+                            tv_gonggao.setText(currentNoticeBean.getNeirong());
                             as.setScrolled(false);//关闭自动滚动
                             as.change();//位置重置
                             as.setScrolled(true);//打开自动滚动
                             as.autoScroll(isTongGaoFrist);//开启自动滚动
-                            tv_gonggao.setText(currentNoticeBean.getNeirong());
+//                            tv_gonggao.setText(currentNoticeBean.getNeirong());
                         }
                     });
                 } else {//开始时间大于当前时间，跳过，直接显示下一条
@@ -2718,13 +2723,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         } else {
             currentNoticeBean = defaultNotice;
-            handler.post(new Runnable() {
+            runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    setTextView(R.id.gonggao_title, currentNoticeBean.getBiaoti());
+                    tv_gonggao_title.setText(currentNoticeBean.getBiaoti());
+                    tv_gonggao.setText(currentNoticeBean.getNeirong());
+//                    setTextView(R.id.gonggao_title, currentNoticeBean.getBiaoti());
+//                    setTextView(R.id.gonggao, currentNoticeBean.getNeirong());
                     as.setScrolled(false);//关闭自动滚动
                     as.change();//位置重置
-                    setTextView(R.id.gonggao, currentNoticeBean.getNeirong());
                 }
             });
         }
@@ -3578,7 +3585,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             mFRAbsLoop.shutdown();
         }
 
-        if (as!=null) {
+        if (as != null) {
             as.removeRunnable();
         }
 

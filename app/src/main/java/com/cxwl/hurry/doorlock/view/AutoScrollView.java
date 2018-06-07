@@ -12,7 +12,7 @@ import android.widget.ScrollView;
  */
 
 public class AutoScrollView extends ScrollView {
-    private Handler handler = new Handler();
+    private Handler autoScrollhandler = new Handler();
     private long duration = 200;
     private boolean isScrolled = false;
     private int currentIndex = 0;
@@ -105,15 +105,15 @@ public class AutoScrollView extends ScrollView {
 
     public void autoScroll(boolean isFrist) {
         if (isFrist) {
-            handler.postDelayed(runnable, period);
+            autoScrollhandler.postDelayed(runnable, period);
         } else {
             removeRunnable();
-            handler.postDelayed(runnable, period);
+            autoScrollhandler.postDelayed(runnable, period);
         }
     }
 
     public void removeRunnable(){
-        handler.removeCallbacks(runnable);
+        autoScrollhandler.removeCallbacks(runnable);
     }
 
     private Runnable runnable = new Runnable() {
@@ -125,12 +125,12 @@ public class AutoScrollView extends ScrollView {
                     currentIndex = 0;
                     currentY = -1;
                     scrollTo(0, 0);
-                    handler.postDelayed(this, period);
+                    autoScrollhandler.postDelayed(this, period);
                 } else {
                     currentY = getScrollY();
                     currentIndex++;
                     scrollTo(0, currentIndex * 1);//往上滑1像素
-                    handler.postDelayed(this, duration);
+                    autoScrollhandler.postDelayed(this, duration);
                 }
             } else {
                 currentIndex = 0;
