@@ -453,7 +453,14 @@
             android:background="@mipmap/bg_banner"
             app:banner_default_image="@mipmap/bg_banner"
             app:delay_time="10000"
+            android:visibility="gone"
             />
+        <ImageView
+            android:id="@+id/img_banner"
+            android:scaleType="fitXY"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@mipmap/bg_banner"/>
 
 
     </RelativeLayout>
