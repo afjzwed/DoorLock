@@ -8,8 +8,8 @@ android {
         applicationId "com.cxwl.hurry.doorlock"
         minSdkVersion 19
         targetSdkVersion 26
-        versionCode 5
-        versionName "1.0.4"
+        versionCode 7
+        versionName "1.0.6"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
     buildTypes {

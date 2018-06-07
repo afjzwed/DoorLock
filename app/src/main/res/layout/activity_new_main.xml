@@ -416,6 +416,7 @@
                 android:background="@color/num_red"
                 android:gravity="center"
                 android:maxLines="2"
+                android:minLines="2"
                 android:text=""
                 android:textColor="@android:color/white"
                 android:textSize="25sp"/>

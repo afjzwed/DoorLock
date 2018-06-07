@@ -2,6 +2,7 @@ package com.cxwl.hurry.doorlock.utils;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 
@@ -31,16 +32,29 @@ public class MacUtils {
 
     @SuppressLint("WifiManagerLeak")
     public static String getWifiMac() {
-        String mac = null;
-        WifiManager wifi = (WifiManager) MainApplication.getApplication().getSystemService(Context.WIFI_SERVICE);
-        WifiInfo info = wifi.getConnectionInfo();
-        mac = info.getMacAddress();
-        if (mac != null) {
-            //saveMacToLocal(mac);
+        String mac = getMacFromLocal();
+        if (mac == null) {
+            WifiManager wifi = (WifiManager) MainApplication.getApplication().getSystemService(Context.WIFI_SERVICE);
+            WifiInfo info = wifi.getConnectionInfo();
+            mac = info.getMacAddress();
+            if (mac != null) {
+                saveMacToLocal(mac);
+            }
         }
         return mac;
     }
+    private static void saveMacToLocal(String mac) {
+        SharedPreferences sharedPref = MainApplication.getApplication().getSharedPreferences("residential", Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPref.edit();
+        editor.putString("wifi_mac_address", mac);
+        editor.commit();
+    }
 
+    private static String getMacFromLocal() {
+        SharedPreferences sharedPref = MainApplication.getApplication().getSharedPreferences("residential", Context.MODE_PRIVATE);
+        String mac = sharedPref.getString("wifi_mac_address", null);
+        return mac;
+    }
     public static String getEthMac() {
         byte[] mac = null;
         StringBuffer sb = new StringBuffer();

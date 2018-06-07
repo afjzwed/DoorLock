@@ -412,12 +412,18 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
         } catch (IllegalStateException e) {
             Log.d("AdvertiseHandler", "UpdateAdvertise: onDestroy error=" + e.toString());
         }
-        Log.e("AdvertiseHandler", "停止播放");
-        if (videoView != null && imageView != null) {
-            videoView.setVisibility(View.GONE);
-            imageView.setVisibility(View.VISIBLE);
+        finally {
             Log.e("AdvertiseHandler", "显示背景图");
+            if (videoView != null && imageView != null) {
+                mediaPlayer =null;
+                voicePlayer = null;
+                videoView.setVisibility(View.GONE);
+                imageView.setVisibility(View.VISIBLE);
+                Log.e("AdvertiseHandler", "停止播放");
+            }
         }
+
+
 
     }
 
