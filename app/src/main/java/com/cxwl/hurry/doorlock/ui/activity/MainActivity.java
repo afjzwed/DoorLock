@@ -90,11 +90,13 @@ import com.cxwl.hurry.doorlock.utils.DbUtils;
 import com.cxwl.hurry.doorlock.utils.DialogUtil;
 import com.cxwl.hurry.doorlock.utils.HttpApi;
 import com.cxwl.hurry.doorlock.utils.HttpUtils;
+import com.cxwl.hurry.doorlock.utils.InstallUtil;
 import com.cxwl.hurry.doorlock.utils.Intenet;
 import com.cxwl.hurry.doorlock.utils.JsonUtil;
 import com.cxwl.hurry.doorlock.utils.MacUtils;
 import com.cxwl.hurry.doorlock.utils.NetWorkUtils;
 import com.cxwl.hurry.doorlock.utils.NfcReader;
+import com.cxwl.hurry.doorlock.utils.ShellUtils;
 import com.cxwl.hurry.doorlock.utils.StringUtils;
 import com.cxwl.hurry.doorlock.view.AutoScrollView;
 import com.google.gson.reflect.TypeToken;
@@ -349,6 +351,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         isTongGaoThreadStart = false;//每次初始化都重启一次通告更新线程
         isPicThreadStart = false;//每次初始化都重启一次通告更新线程
+
+        String ethMac = MacUtils.getEthMac();
+        DLLog.e(TAG, "ethMac eth地址 " + ethMac);
     }
 
     //测试自动关广告
@@ -1265,16 +1270,31 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 public void run() {
                     Calendar c = HttpApi.getInstance().loadTime();
                     if (c != null) {
-                        if (checkTime(c)) {
-                            SimpleDateFormat d = new SimpleDateFormat("yyyyMMdd.HHmmss");
-                            String cmd = "date -s '[_update_time]'";
-                            String time = d.format(c.getTime());
-                            cmd = cmd.replace("[_update_time]", time);
-                            // TODO: 2018/5/9 这里的校时要用到工控相关hwservice,暂时不注释,之后解决
-                            HttpApi.e("走了吗" + cmd.toString());
+//                        if (checkTime(c)) {
+//                            SimpleDateFormat d = new SimpleDateFormat("yyyyMMdd.HHmmss");
+//                            String cmd = "date -s '[_update_time]'";
+//                            String time = d.format(c.getTime());
+//                            cmd = cmd.replace("[_update_time]", time);
+//                            // TODO: 2018/5/9 这里的校时要用到工控相关hwservice,暂时不注释,之后解决
+//                            HttpApi.e("走了吗" + cmd.toString());
 //                            if (hwservice != null && isNetworkAvailable(MainActivity.this)) {
 //                                hwservice.execRootCommand(cmd);
 //                            }
+//                            HttpApi.e("时间更新：" + time);
+//                        } else {
+//                            HttpApi.e("系统与服务器时间差小，不更新");
+//                        }
+                        if (checkTime(c)) {
+                            SimpleDateFormat d = new SimpleDateFormat("yyyyMMdd.HHmmss");
+                            final String time = d.format(c.getTime());
+                            new Thread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    String cmd = "date -s '[_update_time]'";
+                                    cmd = cmd.replace("[_update_time]", time);
+                                    ShellUtils.CommandResult result = InstallUtil.executeCmd(cmd);
+                                }
+                            }).start();
                             HttpApi.e("时间更新：" + time);
                         } else {
                             HttpApi.e("系统与服务器时间差小，不更新");
@@ -2916,7 +2936,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 switch (item.getItemId()) {
                     case R.id.action_settings1:
 //                        LogDoor.e(TAG,"menu 系統設置");
-
                         Intent intent = new Intent(Settings.ACTION_SETTINGS);//跳轉到系統設置
                         intent.putExtra("back", true);
                         startActivityForResult(intent, INPUT_SYSTEMSET_REQUESTCODE);
