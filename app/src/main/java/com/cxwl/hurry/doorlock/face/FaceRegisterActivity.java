@@ -407,8 +407,7 @@ public class FaceRegisterActivity extends AppCompatActivity implements SurfaceHo
                                                 mEditText1.requestFocus();
                                                 mEditText1.requestFocusFromTouch();
                                             }
-                                        } else if (keyCode == DeviceConfig.DEVICE_KEYCODE_POUND)
-                                        {//确认键
+                                        } else if (keyCode == DeviceConfig.DEVICE_KEYCODE_POUND) {//确认键
                                             if (focus) {
                                                 if (TextUtils.isEmpty(houseNumber)) {
                                                     Toast.makeText(FaceRegisterActivity.this,

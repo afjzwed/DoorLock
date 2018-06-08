@@ -32,7 +32,7 @@ public class CardRecord {
         boolean result = false;
         if (this.card.equals(name)) {
             long offset = new Date().getTime() - this.creDate.getTime();
-            if (offset > 3000) {
+            if (offset > 1000*10) {
                 this.card = name;
                 this.creDate = new Date();
             } else {
