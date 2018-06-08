@@ -514,6 +514,14 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
             errorCallBack.ErrorAdver();
         }
     }
+
+    public List<GuangGaoBean> getList() {
+        return list;
+    }
+
+    public void setList(List<GuangGaoBean> list) {
+        this.list = list;
+    }
 }
 
 class ImageDisplayThread extends Thread {

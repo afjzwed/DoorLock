@@ -277,8 +277,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private Thread noticeThread = null;//通告更新线程
     private Thread picThread = null;//图片更新线程
+    private Thread videoThread = null;//视频更新线程
     private boolean isTongGaoThreadStart = false;//通告更新线程是否开启的标志
     private boolean isPicThreadStart = false;//通告更新线程是否开启的标志
+    private boolean isVideoThreadStart = false;//通告更新线程是否开启的标志
     private ArrayList<NoticeBean> noticeBeanList = new ArrayList<>();//通告集合
     private NoticeBean currentNoticeBean = null;//当前显示通告
     private NoticeBean defaultNotice = null;//默认通告
@@ -351,6 +353,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         isTongGaoThreadStart = false;//每次初始化都重启一次通告更新线程
         isPicThreadStart = false;//每次初始化都重启一次通告更新线程
+        isVideoThreadStart = false;//每次初始化都重启一次通告更新线程
 
     }
 
@@ -376,8 +379,126 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     /*************************************************初始化一些基本东西start
-     *
-     /**************************图片轮播***************/
+     /*************************视频定时播放**********************/
+    private List<GuangGaoBean> videoList;
+    private List<GuangGaoBean> isPlayingList = new ArrayList<>();
+
+    private void startVedioThread() {
+        if (null != videoThread) {
+            videoThread.interrupt();
+            videoThread = null;
+        }
+        videoThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    setVideoInfo();
+                    while (!Thread.interrupted()) {
+                        sleep(30000);
+                        setVideoInfo();
+                    }
+
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+        videoThread.start();
+    }
+
+    private void setVideoInfo() {
+        if (isVideoStart()) {
+            isPlayingList.clear();
+            //有开始播放的视频
+            for (int i = 0; i < videoList.size(); i++) {
+                if (Long.parseLong(StringUtils.transferDateToLong(videoList.get(i).getShixiao_shijian())) > System
+                        .currentTimeMillis()) {//过期时间大于当前时间
+                    Log.e(TAG, "设置通告 有数据");
+                    if (Long.parseLong(StringUtils.transferDateToLong(videoList.get(i).getKaishi_shijian())) < System
+                            .currentTimeMillis()) {//开始时间小于当前时间，可以显示
+                        isPlayingList.add(videoList.get(i));
+
+                    }
+                }
+            }
+            //已过过期时间全部失效
+            if (isPlayingList.size() == 0) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        advertiseHandler.onDestroy();
+                    }
+                });
+                return;
+            }
+            //之前未播放 有新数据播放
+            if (isPlayingList.size() > 0 && advertiseHandler.getList().size() == 0) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        advertiseHandler.initData(isPlayingList, mainMessage, (currentStatus == ONVIDEO_MODE),
+                                adverErrorCallBack, adverTongJiCallBack);
+                    }
+                });
+                return;
+            }
+            //正在播放 有新数据更新
+            if (isSaveOrUpdate(advertiseHandler.getList(), isPlayingList)) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        advertiseHandler.initData(isPlayingList, mainMessage, (currentStatus == ONVIDEO_MODE),
+                                adverErrorCallBack, adverTongJiCallBack);
+                    }
+                });
+            }
+        } else {
+            //没有开始播放的视频
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    advertiseHandler.onDestroy();
+                }
+            });
+
+        }
+
+    }
+
+    public boolean isSaveOrUpdate(List<GuangGaoBean> oldList, List<GuangGaoBean> newList) {
+        if (oldList.size() != newList.size()) {
+            return true;
+        } else {
+            for (GuangGaoBean o : oldList) {
+                if (!newList.contains(o)) {
+                    return true;
+                }
+            }
+            for (GuangGaoBean o : newList) {
+                if (!oldList.contains(o)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean isVideoStart() {
+        Log.e(TAG, "开始视频广告判断");
+        boolean b = false;
+        if (null != videoList && videoList.size() > 0) {
+            for (GuangGaoBean noticeBean : videoList) {
+                if (Long.parseLong(StringUtils.transferDateToLong(noticeBean.getKaishi_shijian())) < System
+                        .currentTimeMillis()) {
+                    b = true;
+                    break;
+                }
+            }
+        }
+        return b;
+    }
+
+    /**************************图片轮播***************/
     private void startPicTread() {
         if (null != picThread) {
             picThread.interrupt();
@@ -431,8 +552,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             Log.e(TAG, "设置通告 currentNoticeBean" + currentGuangGaoBean.toString());
             Log.e(TAG, "设置通告 过期时间 " + currentGuangGaoBean.getShixiao_shijian() + " 当前时间 " + StringUtils
                     .transferLongToDate("yyyy-MM-dd HH:mm:ss", System.currentTimeMillis()));
-            Log.e(TAG, "设置通告 过期时间 " + StringUtils.transferDateToLong(currentGuangGaoBean.getShixiao_shijian()) + " " +
-                    "当前时间" + " " + System.currentTimeMillis());
+            Log.e(TAG, "设置通告 过期时间 " + StringUtils.transferDateToLong(currentGuangGaoBean.getShixiao_shijian()) + " "
+                    + "当前时间" + " " + System.currentTimeMillis());
             if (Long.parseLong(StringUtils.transferDateToLong(currentGuangGaoBean.getShixiao_shijian())) > System
                     .currentTimeMillis()) {//过期时间大于当前时间
                 Log.e(TAG, "设置通告 有数据");
@@ -868,8 +989,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         }
                         break;
                     case MSG_ADVERTISE_REFRESH://刷新广告
-                        Log.i(TAG, "刷新广告");
-                        onAdvertiseRefresh(msg.obj);
+                        Log.i(TAG, "刷新广告视频");
+                        // onAdvertiseRefresh(msg.obj);
+                        videoList = (List<GuangGaoBean>) msg.obj;
+                        if (!isVideoThreadStart) {//线程未开启
+                            isVideoThreadStart = !isVideoThreadStart;
+                            startVedioThread();//开启线程
+                        }
+
                         break;
                     case MSG_ADVERTISE_REFRESH_PIC://刷新广告图片
                         Log.i(TAG, "刷新广告图片");
