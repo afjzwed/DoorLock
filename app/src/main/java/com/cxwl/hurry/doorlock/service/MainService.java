@@ -501,6 +501,7 @@ public class MainService extends Service {
                         createAccessLog(list);
                         DLLog.e(TAG, "人脸截图 开始开门");
                         openLock(3);
+                        DeviceConfig.PRINTSCREEN_STATE = 0;//人脸开门图片处理完成（异步处理）,重置状态
 //                        }
                         break;
                     }
@@ -1985,17 +1986,6 @@ public class MainService extends Service {
                         message.obj = deviceBean.getDoor();
                         mHandler.sendMessage(message);
 
-                       /* NewDoorBean doorBean = JsonUtil.parseJsonToBean(result, NewDoorBean.class);
-                        httpServerToken = doorBean.getToken();
-                        mac_id = doorBean.getXdoor().getId() + "";//MacID从xdoor中取，不从door里取
-                        Log.e(TAG, doorBean.toString());
-                        //重置广告，图片，通知版本为0，登录时重新加载
-                        saveVisionInfo();
-                        //保存返回数据，通知主线程继续下一步逻辑
-                        Message message = mHandler.obtainMessage();
-                        message.what = MSG_LOGIN;
-                        message.obj = doorBean.getXdoor();
-                        mHandler.sendMessage(message);*/
                     }
                 } else {
 //                    服务器异常或没有网络
@@ -3277,7 +3267,7 @@ public class MainService extends Service {
     }
 
     private void openAexLock(int type) {
-        DeviceConfig.PRINTSCREEN_STATE = 0;//人脸开门图片处理完成（异步处理）,重置状态
+
         int result = aexUtil.openLock();
         if (result > 0) {
             DLLog.e(TAG, "人脸截图 开门完成 显示图片");
