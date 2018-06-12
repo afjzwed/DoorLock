@@ -186,7 +186,12 @@ public class DbUtils {
             Log.i(TAG, "查询所有离线日志 有"+doors.size()+"条");}
         return doors;
     }
-
+    public List<LogDoor> quaryTenLog() {
+        List<LogDoor> doors = mLogDao.queryBuilder().limit(10).list();
+        if (doors != null) {
+            Log.i(TAG, "查询所有10条离线日志 有"+doors.size()+"条");}
+        return doors;
+    }
     /**
      * 删除所有日志信息
      */
@@ -194,7 +199,16 @@ public class DbUtils {
         mLogDao.deleteAll();
         Log.i(TAG, "删除数据库中日志");
     }
-
+    /**
+     * 删除指定日志信息
+     */
+    public void deleteSomeLog(List<LogDoor> logDoors) {
+        for (int i = 0; i < logDoors.size(); i++) {
+            mLogDao.delete(logDoors.get(i));
+        }
+        //mLogDao.delete();
+        Log.i(TAG, "删除数据库中日志");
+    }
     /**
      * 增加所有统计信息
      */
@@ -217,12 +231,25 @@ public class DbUtils {
         }
         return doors;
     }
-
+    public List<AdTongJiBean> quaryTenTongji() {
+        List<AdTongJiBean> doors = mAdTongJiBeanDao.queryBuilder().limit(10).list();
+        if (doors != null) {
+            Log.i(TAG, "查询所有离线统计信息 有"+doors.size()+"条");
+        }
+        return doors;
+    }
     /**
      * 删除所有统计信息
      */
     public void deleteAllTongji() {
         mAdTongJiBeanDao.deleteAll();
+        Log.i(TAG, "删除数据库中统计信息");
+    }
+    public void deleteSomeTongji(List<AdTongJiBean> list) {
+        for (int i = 0; i < list.size(); i++) {
+            mAdTongJiBeanDao.delete(list.get(i));
+        }
+        //  mAdTongJiBeanDao.deleteAll();
         Log.i(TAG, "删除数据库中统计信息");
     }
     /**
