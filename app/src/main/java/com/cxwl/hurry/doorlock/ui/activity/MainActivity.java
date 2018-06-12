@@ -288,8 +288,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private boolean isTongGaoFrist = true;//通告是否是第一次滚动
 
     Timer timer = new Timer();
-    private boolean mCamerarelease = true; //判断照相机是否释放
 
+    private boolean mCamerarelease = true; //判断照相机是否释放
     private Handler cameraHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
@@ -721,9 +721,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 sendMainMessager(MSG_TONGJI_VEDIO, list);
             }
         };
-//        advertiseHandler.initData(rows, dialMessenger, (currentStatus == ONVIDEO_MODE),
-//                adverErrorCallBack);
-
     }
 
     /**
@@ -857,7 +854,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         tv_gonggao_title = (TextView) findViewById(R.id.gonggao_title);
         tv_gonggao = (TextView) findViewById(R.id.gonggao);
         as = (AutoScrollView) findViewById(R.id.as);
-
         //getBgBanners();// 网络获得轮播背景图片数据
         rl_nfc = (RelativeLayout) findViewById(R.id.rl_nfc);//删除脸信息布局(原录卡布局)
         et_unitno = (EditText) findViewById(R.id.et_unitno);//删除脸信息的手机号(录卡时房屋编号)
@@ -989,7 +985,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         }
                         break;
                     case MSG_ADVERTISE_REFRESH://刷新广告
-                        Log.i(TAG, "刷新广告视频");
                         // onAdvertiseRefresh(msg.obj);
                         videoList = (List<GuangGaoBean>) msg.obj;
                         if (!isVideoThreadStart) {//线程未开启
@@ -1011,7 +1006,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         break;
                     case MSG_ADVERTISE_IMAGE:
                         onAdvertiseImageChange(msg.obj);
-
                         break;
                     case MSG_DELETE_FACE:
                         boolean delete = (boolean) msg.obj;
@@ -1179,7 +1173,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         banner.start();
 
     }
-
 
     /**
      * 开门 :1卡2手机3人脸4邀请码5离线密码6临时密码'
@@ -1577,8 +1570,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private void onKeyDown(int keyCode) {
         Log.i(TAG, "默认按键key=" + keyCode);
         if (nfcFlag) {
-            //  inputCardInfo(keyCode);//录入卡片信息
             deleteFaceInfo(keyCode);//删除人脸信息
+            //  inputCardInfo(keyCode);//录入卡片信息
         } else {
             int key = convertKeyCode(keyCode);
             Log.i(TAG, "按键key=" + key + "模式currentStatus" + currentStatus);
@@ -1589,7 +1582,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 if (keyCode == DEVICE_KEYCODE_POUND) {//确认键
                     if ("".equals(str)) {//输入框没值走切换模式
                         if (currentStatus == CALL_MODE) {//呼叫模式下，按确认键切换成密码模式
-
                             //密码模式
                             tv_input_text.setFilters(new InputFilter[]{new InputFilter.LengthFilter(6)});
                             initPasswordStatus();
@@ -1877,8 +1869,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         if (faceHandler != null) {
             faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_PAUSE, 0);
         }
-
-
         takePicture(thisPassword, false, this);
     }
 
@@ -1995,7 +1985,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 /*********************************密码房号等输入状态相关end*******************************************/
-
 
     /****************************天翼rtc********************/
     public void onRtcDisconnect() {
@@ -2122,7 +2111,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     protected void takePicture1(final String imgUrl) {
         Log.v("MainActivity", "开始启动拍照");
-
         //启动人脸识别
         if (faceHandler != null) {
             faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_PAUSE, 0);
@@ -2331,11 +2319,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-
     private synchronized void doTakePicture(final String thisValue, final String curUrl, final boolean isCall, final
     String uuid, final TakePictureCallback callback) {
         mCamerarelease = false;
-
         try {
             camera = Camera.open();
             Log.e(TAG, "打开照相机 1");
@@ -2425,6 +2411,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                                         }
                                                         clearImageUuidAvaible(uuid);
                                                         Log.v(TAG, "正常清除" + uuid);
+                                                        Log.e(TAG, "七牛info" + info.toString());
                                                     }
                                                 }, null);
                                             }
@@ -2589,7 +2576,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         if (faceHandler != null) {
             faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_PAUSE, 0);
         }
-
 
         Log.i(TAG, "拍摄访客照片 并进行呼叫" + blockNo);
         setCurrentStatus(CALLING_MODE);
@@ -3240,13 +3226,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      */
     @Override
     public Camera setupCamera() {
-//        LogDoor.e(TAG, "相机" + "setupCamera");
-
-
+//        Log.e(TAG, "相机" + "setupCamera");
         mCamera = Camera.open();
         try {//这里其实不用捕捉错误
-
-
             Camera.Parameters parameters = mCamera.getParameters();
 //            parameters.setPreviewSize(800, 600);//设置尺寸
             parameters.setPreviewFormat(ImageFormat.NV21);//指定图像的格式
@@ -3400,10 +3382,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         List<FaceRegist> mResgist = ArcsoftManager.getInstance().mFaceDB.mRegister;
 //        List<Lian> mFaceList = new ArrayList<>();
 
-
 //        List<ASAE_FSDKFace> face1 = new ArrayList<>();
 //        List<ASGE_FSDKFace> face2 = new ArrayList<>();
-
 
         private final Object lock = new Object();
         private boolean pause = false;
@@ -3468,7 +3448,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 if (null != bmp) {
                     file = BitmapUtils.saveBitmap(MainActivity.this, bmp);//本地截图文件地址
                 }
-
                 if (null != file && !TextUtils.isEmpty(file.getPath())) {
                     uploadToQiNiu(file, 1);//这里做上传到七牛的操作，不返回图片URL
                 } else {
@@ -3480,7 +3459,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 bmp = null;
                 data = null;
             }
-
 
             if (mImageNV21 != null && identification) {//摄像头检测到人脸信息且处于人脸识别状态
                 long time = System.currentTimeMillis();
@@ -3542,7 +3520,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                 parameters[1] = "";
                             }
                             DLLog.e(TAG, "人脸 图片处理完成（异步处理）,重置状态  状态值PRINTSCREEN_STATE 为1 发送消息准备上传日志和开门");
-
                             sendMainMessager(MSG_FACE_OPENLOCK, parameters);
                             file = null;
                             bmp = null;
@@ -3704,7 +3681,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         if (faceHandler != null) {
             faceHandler.removeCallbacksAndMessages(null);
         }
-
 
         OkHttpUtils.getInstance().cancelTag(MainService.class);//取消网络请求
 
