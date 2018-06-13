@@ -116,6 +116,11 @@ public class AutoScrollView extends ScrollView {
         autoScrollhandler.removeCallbacks(runnable);
     }
 
+    public void removeAll() {
+        autoScrollhandler.removeCallbacksAndMessages(null);//在onDestroy里调用
+        //        autoScrollhandler.removeMessage(0)会把所有可执行任务都移除掉
+    }
+
     private Runnable runnable = new Runnable() {
         @Override
         public void run() {

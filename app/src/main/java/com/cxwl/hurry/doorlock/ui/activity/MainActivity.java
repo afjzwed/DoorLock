@@ -1212,11 +1212,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
 
         Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
-        identification = false;
-        if (faceHandler != null) {
-            faceHandler.removeMessages(MSG_FACE_DETECT_CHECK);
-            faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_CHECK, 10 * 1000);
-        }
+//        identification = false;
+//        if (faceHandler != null) {
+//            faceHandler.removeMessages(MSG_FACE_DETECT_CHECK);
+//            faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_CHECK, 10 * 1000);
+//        }
     }
 
     /**
@@ -3436,7 +3436,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 onPause();
             }
             try {
-                sleep(1 * 1000);//一秒一次
+                Thread.sleep(1 * 1000);//一秒一次
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -3462,7 +3462,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
 
             if (mImageNV21 != null && identification) {//摄像头检测到人脸信息且处于人脸识别状态
-                long time = System.currentTimeMillis();
+//                long time = System.currentTimeMillis();
                 //检测输入图像中的人脸特征信息，输出结果保存在 AFR_FSDKFace feature
                 //data 输入的图像数据,width 图像宽度,height 图像高度,format 图像格式,face 已检测到的脸框,ori 已检测到的脸角度,
                 // feature 检测到的人脸特征信息
@@ -3498,13 +3498,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
 //                Log.v("人脸识别", "fit Score:" + max + ", NAME:" + name);
                 if (max > 0.68f) {//匹配度的值高于设定值,发出消息,开门
-                    if (null != name && !cardRecord.checkLastCardNew(name)) {//判断距离上次刷脸时间是否超过2秒
+                    if (null != name && !cardRecord.checkLastCardNew(name)) {//判断距离上次刷脸时间是否超过10秒
                         //fr success.
                         //final float max_score = max;
                         //Log.v(FACE_TAG, "置信度：" + (float) ((int) (max_score * 1000)) / 1000.0);
                         if (DeviceConfig.PRINTSCREEN_STATE == 0) {//开启截图、上传图片、开门、上传日志流程
                             DeviceConfig.PRINTSCREEN_STATE = 1;//开启截图、上传图片、开门、上传日志流程
-                            DLLog.e(TAG, "人脸 开启截图、上传图片、开门、上传日志流程  状态值PRINTSCREEN_STATE 为1");
+//                            DLLog.e(TAG, "人脸 开启截图、上传图片、开门、上传日志流程  状态值PRINTSCREEN_STATE 为1");
                             //将byte数组转成bitmap再转成图片文件
                             byte[] data = mImageNV21;
                             Bitmap bmp = BitmapUtils.byteToFile(data, mWidth, mHeight);
@@ -3520,7 +3520,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             } else {
                                 parameters[1] = "";
                             }
-                            DLLog.e(TAG, "人脸 图片处理完成（异步处理）,重置状态  状态值PRINTSCREEN_STATE 为1 发送消息准备上传日志和开门");
                             sendMainMessager(MSG_FACE_OPENLOCK, parameters);
                             file = null;
                             bmp = null;
@@ -3674,7 +3673,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
 
         if (as != null) {
-            as.removeRunnable();
+            as.removeAll();
         }
 
         AFT_FSDKError err = engine.AFT_FSDK_UninitialFaceEngine();
