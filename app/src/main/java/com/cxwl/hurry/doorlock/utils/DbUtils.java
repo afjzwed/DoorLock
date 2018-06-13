@@ -232,7 +232,7 @@ public class DbUtils {
         return doors;
     }
     public List<AdTongJiBean> quaryTenTongji() {
-        List<AdTongJiBean> doors = mAdTongJiBeanDao.queryBuilder().limit(10).list();
+        List<AdTongJiBean> doors = mAdTongJiBeanDao.queryBuilder().limit(20).list();
         if (doors != null) {
             Log.i(TAG, "查询所有离线统计信息 有"+doors.size()+"条");
         }

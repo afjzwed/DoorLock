@@ -344,7 +344,8 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
         mAdTongJiBean.setAd_id(list.get(listIndex).getId());
         mAdTongJiBean.setMac(MacUtils.getMac());
         mTongJiBeanList.add(mAdTongJiBean);
-          mAdverTongJiCallBack.sendTj(mTongJiBeanList);
+        DbUtils.getInstans().addAllTongji(mTongJiBeanList);
+        //  mAdverTongJiCallBack.sendTj(mTongJiBeanList);
         if (Long.parseLong(StringUtils.transferDateToLong(list.get(listIndex).getShixiao_shijian())) < System
                 .currentTimeMillis()) {
             //视频已失效

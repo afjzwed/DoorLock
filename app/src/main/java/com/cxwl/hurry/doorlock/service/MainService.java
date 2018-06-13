@@ -899,6 +899,15 @@ public class MainService extends Service {
                                     Log.i(TAG, "存在" + imgFiles.size() + "张离线照片");
                                     sendMessageToMainAcitivity(MSG_UPLOAD_LIXIAN_IMG, imgFiles);
                                 }
+                                //// TODO: 2018/6/13  上传离线统计日志
+                                List<AdTongJiBean> adTongJiBeen = DbUtils.getInstans().quaryTongji();
+                                if (adTongJiBeen!=null&&adTongJiBeen.size() > 0&&adTongJiBeen.size()<=20) {
+                                    Log.i(TAG, "本地数据库中--存在--视频的统计信息 开始上传离线");
+                                    lixianTongji(adTongJiBeen);
+                                }else if(adTongJiBeen!=null&&adTongJiBeen.size()>20) {
+                                    adTongJiBeen=DbUtils.getInstans().quaryTenTongji();
+                                    lixianTongji(adTongJiBeen);
+                                }
                             }
                         } else {
                             //服务器异常或没有网络

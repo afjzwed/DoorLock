@@ -576,7 +576,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     mAdTongJiBean.setAd_id(currentGuangGaoBean.getId());
                     mAdTongJiBean.setMac(mac);
                     mTongJiBeanList.add(mAdTongJiBean);
-                    sendMainMessager(MSG_TONGJI_PIC, mTongJiBeanList);
+                    DbUtils.getInstans().addAllTongji(mTongJiBeanList);
+                    //   sendMainMessager(MSG_TONGJI_PIC, mTongJiBeanList);
                     picStartTime = picEndTime;
 
 
