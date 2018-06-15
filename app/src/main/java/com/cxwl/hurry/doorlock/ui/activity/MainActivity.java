@@ -266,12 +266,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private AFT_FSDKEngine engine = new AFT_FSDKEngine();//这个类具体实现了人脸跟踪的功能
     private List<AFT_FSDKFace> result = new ArrayList<>();//摄像头检测到的人脸信息集合
     private byte[] mImageNV21 = null;//人脸图像数据
-    private byte[] picData = null;
+    private byte[] picData = null;//刷卡时的图像数据
     private AFT_FSDKFace mAFT_FSDKFace = null;//这个类用来保存检测到的人脸信息
     private Handler faceHandler;//人脸识别handler
     private boolean identification = false;//人脸识别可以开始对比的标识
     private FRAbsLoop mFRAbsLoop = null;//人脸对比线程
-    private boolean hasFaceInfo = false;//是否有本地脸数据的标识
+    //    private boolean hasFaceInfo = false;//是否有本地脸数据的标识
     private String phone_face = "";
     protected CardRecord cardRecord = new CardRecord();
 
@@ -978,7 +978,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         String value = (String) msg.obj;
                         noticeBeanList = (ArrayList<NoticeBean>) JsonUtil.parseJsonToList(value, new
                                 TypeToken<List<NoticeBean>>() {
-                        }.getType());
+                                }.getType());
                         tongGaoIndex = 0;
                         if (!isTongGaoThreadStart) {//线程未开启
                             isTongGaoThreadStart = !isTongGaoThreadStart;
@@ -1179,7 +1179,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      * 开门 :1卡2手机3人脸4邀请码5离线密码6临时密码'
      */
     private void onLockOpened(int typy) {
-        DLLog.e(TAG, " 开门完成 开锁了");
         blockNo = "";
         setDialValue("");
         setTempkeyValue("");
@@ -1212,6 +1211,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
 
         Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
+        // TODO: 2018/6/13 通过延时发送限制人脸开门频率无用
 //        identification = false;
 //        if (faceHandler != null) {
 //            faceHandler.removeMessages(MSG_FACE_DETECT_CHECK);
@@ -2196,19 +2196,20 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                                                     uploadManager.put(file.getPath(), imgUrl, token, new
                                                             UpCompletionHandler() {
-                                                        @Override
-                                                        public void complete(String key, ResponseInfo info,
-                                                                             JSONObject response) {
-                                                            if (info.isOK()) {
-                                                                Log.e(TAG, "手机一键开门七牛上传图片成功 +图片地址" + curUrl + "删除本地图片");
-                                                                file.delete();
-                                                            } else {
-                                                                Log.e(TAG, "手机一键开门七牛上传图片失败 保存照片信息到数据库");
-                                                                DbUtils.getInstans().insertOneImg(imgFile);
-                                                            }
-                                                            Log.e("七牛", "七牛info" + info.toString());
-                                                        }
-                                                    }, null);
+                                                                @Override
+                                                                public void complete(String key, ResponseInfo info,
+                                                                                     JSONObject response) {
+                                                                    if (info.isOK()) {
+                                                                        Log.e(TAG, "手机一键开门七牛上传图片成功 +图片地址" + curUrl +
+                                                                                "删除本地图片");
+                                                                        file.delete();
+                                                                    } else {
+                                                                        Log.e(TAG, "手机一键开门七牛上传图片失败 保存照片信息到数据库");
+                                                                        DbUtils.getInstans().insertOneImg(imgFile);
+                                                                    }
+                                                                    Log.e("七牛", "七牛info" + info.toString());
+                                                                }
+                                                            }, null);
                                                 }
                                             }.start();
                                         }
@@ -2392,29 +2393,32 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                                                 uploadManager.put(file.getPath(), curUrl, token, new
                                                         UpCompletionHandler() {
-                                                    @Override
-                                                    public void complete(String key, ResponseInfo info, JSONObject
-                                                            response) {
-                                                        if (info.isOK()) {
-                                                            Log.e(TAG, "七牛上传图片成功 删除本地图片");
-                                                            if (file != null) {
-                                                                file.delete();
+                                                            @Override
+                                                            public void complete(String key, ResponseInfo info,
+                                                                                 JSONObject
+                                                                    response) {
+                                                                if (info.isOK()) {
+                                                                    Log.e(TAG, "七牛上传图片成功 删除本地图片");
+                                                                    if (file != null) {
+                                                                        file.delete();
+                                                                    }
+                                                                } else {
+                                                                    Log.e(TAG, "七牛上传图片失败 保存照片信息到数据库");
+                                                                    DbUtils.getInstans().insertOneImg(imgFile);
+                                                                }
+                                                                if (checkTakePictureAvailable(uuid) && info.isOK() &&
+                                                                        isCall) {
+                                                                    Log.i(TAG, "开始发送图片到手机显示照片");
+                                                                    callback.afterTakePickture(thisValue, curUrl,
+                                                                            isCall, uuid);
+                                                                } else {
+                                                                    Log.v("MainActivity", "上传照片成功不发送到手机,但已取消");
+                                                                }
+                                                                clearImageUuidAvaible(uuid);
+                                                                Log.v(TAG, "正常清除" + uuid);
+                                                                Log.e(TAG, "七牛info" + info.toString());
                                                             }
-                                                        } else {
-                                                            Log.e(TAG, "七牛上传图片失败 保存照片信息到数据库");
-                                                            DbUtils.getInstans().insertOneImg(imgFile);
-                                                        }
-                                                        if (checkTakePictureAvailable(uuid) && info.isOK() && isCall) {
-                                                            Log.i(TAG, "开始发送图片到手机显示照片");
-                                                            callback.afterTakePickture(thisValue, curUrl, isCall, uuid);
-                                                        } else {
-                                                            Log.v("MainActivity", "上传照片成功不发送到手机,但已取消");
-                                                        }
-                                                        clearImageUuidAvaible(uuid);
-                                                        Log.v(TAG, "正常清除" + uuid);
-                                                        Log.e(TAG, "七牛info" + info.toString());
-                                                    }
-                                                }, null);
+                                                        }, null);
                                             }
                                         }.start();
                                     }
@@ -3194,11 +3198,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //                        mProgressDialog.cancel();
                         if (ArcsoftManager.getInstance().mFaceDB.mRegister.isEmpty()) {
                             Log.v("人脸识别", "initFaceDetect-->" + 333);
-                            hasFaceInfo = false;
+//                            hasFaceInfo = false;
                             Utils.DisplayToast(MainActivity.this, "没有注册人脸，请先注册");
                             return;
                         }
-                        hasFaceInfo = true;//有注册人脸
+//                        hasFaceInfo = true;//有注册人脸
                         identification = true;
                         Utils.DisplayToast(MainActivity.this, "人脸数据加载完成");
                     }
@@ -3327,7 +3331,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
 
         if (data != null) {
-            picData = data.clone();
+            picData = data.clone();//保存图像数据
         }
 
         //保存人脸框数组
@@ -3461,48 +3465,48 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 data = null;
             }
 
-            if (mImageNV21 != null && identification) {//摄像头检测到人脸信息且处于人脸识别状态
+            if (DeviceConfig.PRINTSCREEN_STATE == 0) {//开启截图、上传图片、开门、上传日志流程
+                if (mImageNV21 != null && identification) {//摄像头检测到人脸信息且处于人脸识别状态
 //                long time = System.currentTimeMillis();
-                //检测输入图像中的人脸特征信息，输出结果保存在 AFR_FSDKFace feature
-                //data 输入的图像数据,width 图像宽度,height 图像高度,format 图像格式,face 已检测到的脸框,ori 已检测到的脸角度,
-                // feature 检测到的人脸特征信息
-                AFR_FSDKError error = engine.AFR_FSDK_ExtractFRFeature(mImageNV21, mWidth, mHeight, AFR_FSDKEngine
-                        .CP_PAF_NV21, mAFT_FSDKFace.getRect(), mAFT_FSDKFace.getDegree(), result);
+                    //检测输入图像中的人脸特征信息，输出结果保存在 AFR_FSDKFace feature
+                    //data 输入的图像数据,width 图像宽度,height 图像高度,format 图像格式,face 已检测到的脸框,ori 已检测到的脸角度,
+                    // feature 检测到的人脸特征信息
+                    AFR_FSDKError error = engine.AFR_FSDK_ExtractFRFeature(mImageNV21, mWidth, mHeight, AFR_FSDKEngine
+                            .CP_PAF_NV21, mAFT_FSDKFace.getRect(), mAFT_FSDKFace.getDegree(), result);
 //                Log.d(TAG, "AFR_FSDK_ExtractFRFeature cost :" + (System.currentTimeMillis() -time) + "ms");
-                Log.d(TAG, "Face=" + result.getFeatureData()[0] + "," + result.getFeatureData()[1] + "," + result
-                        .getFeatureData()[2] + "," + error.getCode());
-                AFR_FSDKMatching score = new AFR_FSDKMatching();//这个类用来保存特征信息匹配度
-                float max = 0.0f;//匹配度的值
-                String name = null;
+                    Log.d(TAG, "Face=" + result.getFeatureData()[0] + "," + result.getFeatureData()[1] + "," + result
+                            .getFeatureData()[2] + "," + error.getCode());
+                    AFR_FSDKMatching score = new AFR_FSDKMatching();//这个类用来保存特征信息匹配度
+                    float max = 0.0f;//匹配度的值
+                    String name = null;
 
-                //遍历本地信息表
-                for (FaceRegist fr : mResgist) {
-                    Log.v("人脸识别", "loop:" + mResgist.size() + "/" + fr.mFaceList.size());
-                    if (fr.mName.length() > 11) {
-                        continue;
-                    }
-                    for (AFR_FSDKFace face : fr.mFaceList) {
-                        //比较两份人脸特征信息的匹配度(result 脸部特征信息对象,face 脸部特征信息对象,score 匹配度对象)
-                        Log.e("人脸识别 比较值 ", "result " + result.toString() + " face " + face.toString());
-                        error = engine.AFR_FSDK_FacePairMatching(result, face, score);
-                        Log.d("人脸识别", "Score:" + score.getScore() + " error " + error.getCode());
-                        if (max < score.getScore()) {
-                            max = score.getScore();//匹配度赋值
-                            name = fr.mName;
-                            if (max > 0.68f) {//匹配度的值高于设定值,退出循环
-                                break;
+                    //遍历本地信息表
+                    for (FaceRegist fr : mResgist) {
+                        Log.v("人脸识别", "loop:" + mResgist.size() + "/" + fr.mFaceList.size());
+                        if (fr.mName.length() > 11) {
+                            continue;
+                        }
+                        for (AFR_FSDKFace face : fr.mFaceList) {
+                            //比较两份人脸特征信息的匹配度(result 脸部特征信息对象,face 脸部特征信息对象,score 匹配度对象)
+                            Log.e("人脸识别 比较值 ", "result " + result.toString() + " face " + face.toString());
+                            error = engine.AFR_FSDK_FacePairMatching(result, face, score);
+                            Log.d("人脸识别", "Score:" + score.getScore() + " error " + error.getCode());
+                            if (max < score.getScore()) {
+                                max = score.getScore();//匹配度赋值
+                                name = fr.mName;
+                                if (max > 0.68f) {//匹配度的值高于设定值,退出循环
+                                    break;
+                                }
                             }
                         }
                     }
-                }
 
 //                Log.v("人脸识别", "fit Score:" + max + ", NAME:" + name);
-                if (max > 0.68f) {//匹配度的值高于设定值,发出消息,开门
-                    if (null != name && !cardRecord.checkLastCardNew(name)) {//判断距离上次刷脸时间是否超过10秒
-                        //fr success.
-                        //final float max_score = max;
-                        //Log.v(FACE_TAG, "置信度：" + (float) ((int) (max_score * 1000)) / 1000.0);
-                        if (DeviceConfig.PRINTSCREEN_STATE == 0) {//开启截图、上传图片、开门、上传日志流程
+                    if (max > 0.68f) {//匹配度的值高于设定值,发出消息,开门
+                        if (null != name && !cardRecord.checkLastCardNew(name)) {//判断距离上次刷脸时间是否超过10秒
+                            //fr success.
+                            //Log.v(FACE_TAG, "置信度：" + (float) ((int) (max * 1000)) / 1000.0);
+//                        if (DeviceConfig.PRINTSCREEN_STATE == 0) {//开启截图、上传图片、开门、上传日志流程
                             DeviceConfig.PRINTSCREEN_STATE = 1;//开启截图、上传图片、开门、上传日志流程
 //                            DLLog.e(TAG, "人脸 开启截图、上传图片、开门、上传日志流程  状态值PRINTSCREEN_STATE 为1");
                             //将byte数组转成bitmap再转成图片文件
@@ -3521,14 +3525,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                 parameters[1] = "";
                             }
                             sendMainMessager(MSG_FACE_OPENLOCK, parameters);
+                            DeviceConfig.PRINTSCREEN_STATE = 0;//人脸开门图片处理完成（异步处理）,重置状态
                             file = null;
                             bmp = null;
                             data = null;
+//                        }
                         }
                     }
+                    name = null;
+                    mImageNV21 = null;
                 }
-                name = null;
-                mImageNV21 = null;
             }
         }
 
