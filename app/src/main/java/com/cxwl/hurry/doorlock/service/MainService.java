@@ -90,6 +90,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import jni.http.HttpManager;
 import jni.http.HttpResult;
@@ -247,6 +250,7 @@ public class MainService extends Service {
             MainService.this.startActivity(i);
         }
     };
+    private ThreadPoolExecutor mThreadPoolExecutor;
 
     @Override
     public void onCreate() {
@@ -254,9 +258,12 @@ public class MainService extends Service {
         Log.i(TAG, "service启动");
         audioManager = (AudioManager) getSystemService(Service.AUDIO_SERVICE);
         initHandler();
-        // TODO: 2018/5/14 放在MainActivity中  initDB();
+        initThreadPool();
         initMacKey();
-        //testTJ();
+    }
+
+    private void initThreadPool() {
+        mThreadPoolExecutor = new ThreadPoolExecutor(3, 5, 1, TimeUnit.SECONDS, new LinkedBlockingDeque<Runnable>());
     }
 
     /**
@@ -280,14 +287,8 @@ public class MainService extends Service {
                 Log.e(TAG, "onResponse" + response);
                 if ("0".equals(JsonUtil.getFieldValue(response, "code"))) {
                     Log.i(TAG, "onResponse统计广告视频信息统计接口 上传统计信息成功");
-                    List<AdTongJiBean> adTongJiBeen = DbUtils.getInstans().quaryTongji();
-                    if (adTongJiBeen!=null&&adTongJiBeen.size() > 0&&adTongJiBeen.size()<=10) {
-                        Log.i(TAG, "本地数据库中--存在--视频的统计信息 开始上传离线");
-                        lixianTongji(adTongJiBeen);
-                    }else if (adTongJiBeen!=null&&adTongJiBeen.size() >10){
-                        adTongJiBeen=DbUtils.getInstans().quaryTenTongji();
-                        lixianTongji(adTongJiBeen);
-                    }
+                    lixianTongji();
+
                 } else {
                     Log.i(TAG, "上传广告视频统计信息失败  保存信息到数据库");
                     DbUtils.getInstans().addAllTongji(list);
@@ -318,14 +319,8 @@ public class MainService extends Service {
                 Log.e(TAG, "onResponse 广告图片" + response);
                 if ("0".equals(JsonUtil.getFieldValue(response, "code"))) {
                     Log.i(TAG, "onResponse上传广告图片统计信息成功 检查是否存在离线信息");
-                    List<AdTongJiBean> adTongJiBeen = DbUtils.getInstans().quaryTongji();
-                    if (adTongJiBeen!=null&&adTongJiBeen.size() > 0&&adTongJiBeen.size()<=10) {
-                        Log.i(TAG, "本地数据库中--存在--图片的统计信息 开始上传离线");
-                        lixianTongji(adTongJiBeen);
-                    }else if (adTongJiBeen!=null&&adTongJiBeen.size() >10) {
-                        adTongJiBeen=DbUtils.getInstans().quaryTenTongji();
-                        lixianTongji(adTongJiBeen);
-                    }
+                    lixianTongji();
+
                 } else {
                     Log.i(TAG, "onResponse上传广告图片统计信息失败  保存信息到数据库");
                     DbUtils.getInstans().addAllTongji(list);
@@ -337,31 +332,45 @@ public class MainService extends Service {
     /**
      * 离线统计信息上传
      *
-     * @param list
      */
-    private void lixianTongji(final List<AdTongJiBean> list) {
-        String json = JsonUtil.parseListToJson(list);
-        Log.e(TAG, "上传离线视频图片统计请求 json " + json);
-        OkHttpUtils.postString().url(API.ADV_TONGJI).content(json).mediaType(MediaType.parse("application/json; " +
-                "charset=utf-8")).tag(this).build().execute(new StringCallback() {
+    private void lixianTongji() {
+        Runnable run = new Runnable() {
             @Override
-            public void onError(Call call, Exception e, int id) {
-                Log.e(TAG, "er");
-                Log.e(TAG, "onError统计广告图片信息统计接口 上传离线统计信息失败 " + e.toString());
-            }
+            public void run() {
+                try {
+                    List<AdTongJiBean> list = DbUtils.getInstans().quaryTongji();
+                    Log.e(TAG, "数据库中离线统计日志 size" + list.size());
+                    if (list != null && list.size() > 0 && list.size() <= 10) {
+                    } else if (list != null && list.size() > 10) {
+                        list = DbUtils.getInstans().quaryTenTongji();
+                    }
+                    if (list == null || list.size() <= 0) {
+                        return;
+                    }
+                    String json = JsonUtil.parseListToJson(list);
+                    Log.e(TAG, "上传离线统计日志请求 json " + json);
+                    Response execute = OkHttpUtils.postString().url(API.ADV_TONGJI).content(json).mediaType(MediaType
+                            .parse("application/json; " + "charset=utf-8")).tag(this).build().execute();
+                    if (null != execute) {
+                        String response = execute.body().string();
+                        if (null != response && !"".equals(response)) {
+                            Log.e(TAG, "离线统计 onResponse" + response);
+                            if ("0".equals(JsonUtil.getFieldValue(response, "code"))) {
+                                Log.i(TAG, "上传离线统计成功 删除保存本地的信息");
+                                DbUtils.getInstans().deleteSomeTongji(list);
 
-            @Override
-            public void onResponse(String response, int id) {
-                Log.e(TAG, "onResponse" + response);
-                if ("0".equals(JsonUtil.getFieldValue(response, "code"))) {
-                    Log.i(TAG, "onResponse上传离线视频广告统计信息成功 删除保存本地的信息");
-                    DbUtils.getInstans().deleteSomeTongji(list);
-
-                } else {
-                    Log.i(TAG, "onResponse 上传离线统计信息失败  保存信息到数据库");
+                            } else {
+                                Log.i(TAG, "onResponse 离线统计  保存信息到数据库");
+                            }
+                        }
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
             }
-        });
+        };
+
+        mThreadPoolExecutor.execute(run);
 
     }
 
@@ -857,10 +866,9 @@ public class MainService extends Service {
                                 if (StringUtils.isNoEmpty(deviceBean.getVersion())) {
                                     String appVision = (String) SPUtil.get(MainService.this, Constant.SP_VISION_APP,
                                             getVersionName());
-                                    Log.i(TAG, "心跳--当前app版本：" + appVision + "   服务器app版本：" + (deviceBean
-                                            .getVersion()));
-                                    if (Integer.parseInt(deviceBean.getVersion()) > Integer
-                                            .parseInt(appVision.replace(".", ""))) {
+                                    Log.i(TAG, "心跳--当前app版本：" + appVision + "   服务器app版本：" + (deviceBean.getVersion()));
+                                    if (Integer.parseInt(deviceBean.getVersion()) > Integer.parseInt(appVision
+                                            .replace(".", ""))) {
                                         Log.i(TAG, "心跳中有APP信息更新");
                                         if (lastVersionStatus.equals("D")) {//正在下载最新包
                                             //不获取地址
@@ -884,8 +892,8 @@ public class MainService extends Service {
                                     }
                                 }
                                 if (StringUtils.isNoEmpty(banbenBean.getTonggao())) {
-                                    long tonggaoVision = (long) SPUtil.get(MainService.this, Constant.SP_VISION_TONGGAO,
-                                            0L);
+                                    long tonggaoVision = (long) SPUtil.get(MainService.this, Constant
+                                            .SP_VISION_TONGGAO, 0L);
                                     if (Long.parseLong(banbenBean.getTonggao()) > tonggaoVision) {
                                         Log.i(TAG, "心跳中有通告信息更新");
                                         if (noticesStatus == 0) {//判断是否正在下载
@@ -900,14 +908,8 @@ public class MainService extends Service {
                                     sendMessageToMainAcitivity(MSG_UPLOAD_LIXIAN_IMG, imgFiles);
                                 }
                                 //// TODO: 2018/6/13  上传离线统计日志
-                                List<AdTongJiBean> adTongJiBeen = DbUtils.getInstans().quaryTongji();
-                                if (adTongJiBeen!=null&&adTongJiBeen.size() > 0&&adTongJiBeen.size()<=20) {
-                                    Log.i(TAG, "本地数据库中--存在--视频的统计信息 开始上传离线");
-                                    lixianTongji(adTongJiBeen);
-                                }else if(adTongJiBeen!=null&&adTongJiBeen.size()>20) {
-                                    adTongJiBeen=DbUtils.getInstans().quaryTenTongji();
-                                    lixianTongji(adTongJiBeen);
-                                }
+                                    lixianTongji();
+
                             }
                         } else {
                             //服务器异常或没有网络
@@ -1356,7 +1358,7 @@ public class MainService extends Service {
                             String list = JsonUtil.getFieldValue(result, "lian");//服务器字段命名错误
                             faceUrlList = (ArrayList<FaceUrlBean>) JsonUtil.parseJsonToList(list, new
                                     TypeToken<List<FaceUrlBean>>() {
-                                    }.getType());
+                            }.getType());
 
                             //通知MainActivity开始人脸录入流程
                             sendMessageToMainAcitivity(MSG_FACE_INFO, null);
@@ -2507,16 +2509,7 @@ public class MainService extends Service {
                     String code = JsonUtil.getFieldValue(response, "code");
                     if ("0".equals(code)) {
                         Log.i(TAG, "日志上传成功 查询离线日志");
-                        List<LogDoor> doors = DbUtils.getInstans().quaryLog();
-                        if (doors!=null&&doors.size() > 0&&doors.size()<=10) {
-                            //有离线日志 上传离线日志
-                            Log.i(TAG, "有离线日志" + doors.size() + "条" + " 开始上传 " + doors.toString());
-                            createAccessLogLixian(doors);
-                        }else if (doors!=null&&doors.size()>10){
-                            doors=DbUtils.getInstans().quaryTenLog();
-                            if (doors!=null&&doors.size()>0){
-                                createAccessLogLixian(doors);}
-                        }
+                        createAccessLogLixian();
                     } else {
                         Log.e(TAG, "上传日志失败 保存日志信息到数据库");
                         DbUtils.getInstans().addAllLog(data);
@@ -2533,44 +2526,57 @@ public class MainService extends Service {
     /**
      * 离线日志上传
      * 开门方式:1卡2手机3人脸4邀请码5离线密码6临时密码
-     *
-     * @param data
      */
-    protected void createAccessLogLixian(final List<LogDoor> data) {
-        Log.e(TAG, "开门离线日志上传" + data.toString());
-        String url = API.LOG;
-        LogListBean logListBean = new LogListBean();
-        logListBean.setMac(mac);
-        logListBean.setXdoorOneOpenDtos(data);
-        String json = JsonUtil.parseBeanToJson(logListBean);
-        Log.e(TAG, "开门离线日志上传 参数" + json);
-        OkHttpUtils.postString().url(url).content(json).mediaType(MediaType.parse("application/json;" + "" + "" + " "
-                + "charset=utf-8")).addHeader("Authorization", httpServerToken).tag(this).build().execute(new StringCallback() {
+    protected void createAccessLogLixian() {
+        Runnable run = new Runnable() {
             @Override
-            public void onError(Call call, Exception e, int id) {
-                Log.e(TAG, "onError rtc上传日志接口createAccessLog oner " + e.toString());
-                Log.e(TAG, "上传离线日志失败 不做保存操作");
-
-            }
-
-            @Override
-            public void onResponse(String response, int id) {
-                Log.e("wh response", response);
-                Log.e(TAG, "onResponse rtc上传日志接口createAccessLog response" + response);
-                if (null != response) {
-                    String code = JsonUtil.getFieldValue(response, "code");
-                    if ("0".equals(code)) {
-                        Log.i(TAG, "离线日志上传成功 删除离线日志");
-                        DbUtils.getInstans().deleteSomeLog(data);
-                    } else {
-                        Log.e(TAG, "上传离线日志失败不保存信息到数据库");
+            public void run() {
+                try {
+                    List<LogDoor> data = DbUtils.getInstans().quaryLog();
+                    if (data != null) {
+                        Log.i(TAG, "离线开门日志 size" + data.size() + "条");
                     }
-                } else {
-                    //服务器异常或没有网络
-                    Log.e(TAG, "上传离线日志失败 不保存信息到数据库");
+                    if (data != null && data.size() > 0 && data.size() <= 10) {
+
+                    } else if (data != null && data.size() > 10) {
+                        data = DbUtils.getInstans().quaryTenLog();
+                    }
+                    if (data == null || data.size() <= 0) {
+                        return;
+                    }
+                    String url = API.LOG;
+                    LogListBean logListBean = new LogListBean();
+                    logListBean.setMac(mac);
+                    logListBean.setXdoorOneOpenDtos(data);
+                    String json = JsonUtil.parseBeanToJson(logListBean);
+                    Log.e(TAG, "离线开门日志上传 参数" + json);
+                    Response execute = OkHttpUtils.postString().url(url).content(json).mediaType(MediaType.parse
+                            ("application/json;" + "" + "" + " " + "charset=utf-8")).addHeader("Authorization",
+                            httpServerToken).tag(this).build().execute();
+                    if (null != execute) {
+                        String response = execute.body().string();
+                        if (null != response) {
+                            String code = JsonUtil.getFieldValue(response, "code");
+                            if ("0".equals(code)) {
+                                Log.i(TAG, "离线开门日志上传成功 删除离线日志");
+                                DbUtils.getInstans().deleteSomeLog(data);
+                            } else {
+                                Log.e(TAG, "上传离线开门日志失败 不做保存操作");
+                            }
+                        } else {
+                            //服务器异常或没有网络
+                            Log.e(TAG, "上传离线日志失败 不做保存操作");
+                        }
+                    } else {
+                        Log.e(TAG, "上传离线日志失败 不做保存操作");
+                    }
+                } catch (IOException e) {
+                    Log.e(TAG, "上传离线日志失败 不做保存操作");
+                    e.printStackTrace();
                 }
             }
-        });
+        };
+        mThreadPoolExecutor.execute(run);
     }
 
     /**
@@ -3158,8 +3164,8 @@ public class MainService extends Service {
                     result_afr);
             Log.d("com.arcsoft", "Face=" + result_afr.getFeatureData()[0] + "," + result_afr.getFeatureData()[1] + "," +
                     "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + "" + ""
-                    + "result_afr" + result_afr.toString() + "  " + "" + result_afr.getFeatureData()[2] + "," +
-                    err_afr.getCode());
+                    + "" + "" + "" + "result_afr" + result_afr.toString() + "  " + "" + result_afr.getFeatureData()
+                    [2] + "," + err_afr.getCode());
             if (err_afr.getCode() == err_afr.MOK) {//人脸特征检测成功
                 mAFR_FSDKFace = result_afr.clone();
                 // TODO: 2018/5/15 保存mAFR_FSDKFace人脸信息，操作数据库
