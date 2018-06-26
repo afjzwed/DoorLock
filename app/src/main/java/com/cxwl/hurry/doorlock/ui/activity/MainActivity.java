@@ -71,12 +71,11 @@ import com.cxwl.hurry.doorlock.callback.GlideImagerBannerLoader;
 import com.cxwl.hurry.doorlock.config.DeviceConfig;
 import com.cxwl.hurry.doorlock.db.AdTongJiBean;
 import com.cxwl.hurry.doorlock.db.ImgFile;
+import com.cxwl.hurry.doorlock.entity.FaceRegist;
 import com.cxwl.hurry.doorlock.entity.GuangGaoBean;
 import com.cxwl.hurry.doorlock.entity.NoticeBean;
 import com.cxwl.hurry.doorlock.entity.ResponseBean;
-import com.cxwl.hurry.doorlock.entity.XdoorBean;
 import com.cxwl.hurry.doorlock.face.ArcsoftManager;
-import com.cxwl.hurry.doorlock.entity.FaceRegist;
 import com.cxwl.hurry.doorlock.face.PhotographActivity2;
 import com.cxwl.hurry.doorlock.http.API;
 import com.cxwl.hurry.doorlock.interfac.TakePictureCallback;
@@ -85,7 +84,6 @@ import com.cxwl.hurry.doorlock.service.MainService;
 import com.cxwl.hurry.doorlock.utils.AdvertiseHandler;
 import com.cxwl.hurry.doorlock.utils.BitmapUtils;
 import com.cxwl.hurry.doorlock.utils.CardRecord;
-import com.cxwl.hurry.doorlock.utils.DLLog;
 import com.cxwl.hurry.doorlock.utils.DbUtils;
 import com.cxwl.hurry.doorlock.utils.DialogUtil;
 import com.cxwl.hurry.doorlock.utils.HttpApi;
@@ -153,6 +151,7 @@ import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_DETECT_CONTRAST;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_DETECT_INPUT;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_DETECT_PAUSE;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_INFO;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_INFO_FINISH;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_OPENLOCK;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_GET_NOTICE;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_ID_CARD_DETECT_INPUT;
@@ -186,7 +185,6 @@ import static com.cxwl.hurry.doorlock.utils.NetWorkUtils.NETWOKR_TYPE_ETHERNET;
 import static com.cxwl.hurry.doorlock.utils.NetWorkUtils.NETWOKR_TYPE_MOBILE;
 import static com.cxwl.hurry.doorlock.utils.NetWorkUtils.NETWORK_TYPE_NONE;
 import static com.cxwl.hurry.doorlock.utils.NetWorkUtils.NETWORK_TYPE_WIFI;
-import static com.cxwl.hurry.doorlock.utils.NetWorkUtils.isNetworkAvailable;
 import static com.cxwl.hurry.doorlock.utils.NfcReader.ACTION_NFC_CARDINFO;
 import static java.lang.Thread.sleep;
 
@@ -940,13 +938,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         Log.i(TAG, "验证离线验证密码后");
                         onCheckLixianPasswordAfter(msg.obj == null ? null : (boolean) msg.obj);
                         break;
-                    case MSG_FACE_INFO:
-                        //人脸识别录入
+                    case MSG_FACE_INFO://人脸识别暂停
                         faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_PAUSE, 100);
-                        faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_INPUT, 100);
+                        // TODO: 2018/6/19   sendMainMessager(MSG_FACE_DOWNLOAD, null);
+                        // TODO: 2018/6/19    faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_INPUT, 100);
                         break;
-                    case MSG_LOCK_OPENED:
-                        //开锁
+                    case MSG_FACE_INFO_FINISH://人脸录入完成，重新开始人脸识别
+                        faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_CONTRAST, 1000);
+                        break;
+                    case MSG_LOCK_OPENED://开锁
                         // TODO: 2018/5/16   //做UI显示，并开启其他的任务
                         Log.i(TAG, "开锁");
                         onLockOpened((int) msg.obj);
@@ -1307,27 +1307,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
             sendMainMessager(MainService.REGISTER_ACTIVITY_DIAL, null);//开始心跳包
         }
-        // TODO: 2018/6/3 注释
-        /*if (msg.obj != null) {
-            XdoorBean result = (XdoorBean) msg.obj;
-            sendMainMessager(MSG_RTC_REGISTER, null);
-            //初始化社区信息
-            setCommunityName(result.getXiangmu_name() == null ? "欣社区" : result.getXiangmu_name());
-            setLockName(MainService.lockName);
-            if ("C".equals(DeviceConfig.DEVICE_TYPE)) {//判断是否社区大门
-                setDialStatus("请输入楼栋编号");
-            }
-
-            Log.e(TAG, "可以读卡");
-            enableReaderMode();//登录成功后开启读卡
-
-            //人脸识别开始
-            if (faceHandler != null) {
-                faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_CONTRAST, 1000);
-            }
-
-            sendMainMessager(MainService.REGISTER_ACTIVITY_DIAL, null);//开始心跳包
-        }*/
 //                else if (code == 1) { //登录失败,MAC地址不存在服务器
 //                    //显示MAC地址并提示添加
 //                    showMacaddress(result.getString("mac"));
@@ -2396,7 +2375,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                                             @Override
                                                             public void complete(String key, ResponseInfo info,
                                                                                  JSONObject
-                                                                    response) {
+                                                                                         response) {
                                                                 if (info.isOK()) {
                                                                     Log.e(TAG, "七牛上传图片成功 删除本地图片");
                                                                     if (file != null) {
@@ -3374,7 +3353,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      */
     private void faceDetectInput() {
         startActivity(new Intent(this, PhotographActivity2.class));
-//        sendMainMessager(MSG_FACE_DOWNLOAD, null);
+        // TODO: 2018/6/19 sendMainMessager(MSG_FACE_DOWNLOAD, null);
     }
 
     class FRAbsLoop extends AbsLoop {
@@ -3406,7 +3385,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         void resumeThread() {
             pause = false;
             synchronized (lock) {
-                lock.notifyAll();
+                lock.notifyAll();//唤醒所有正在等待该对象的线程
             }
         }
 
@@ -3532,7 +3511,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //                        }
                         }
                     }
-                    name = null;
                     mImageNV21 = null;
                 }
             }
