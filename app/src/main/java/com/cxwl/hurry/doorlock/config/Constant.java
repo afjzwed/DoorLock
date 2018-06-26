@@ -27,10 +27,10 @@ public class Constant {
 
     public static final int MSG_FACE_INFO = 11106;//获取人脸照片URL
     public static final int MSG_FACE_DOWNLOAD = 11107;//下载照片并录入人脸
+    public static final int MSG_FACE_INFO_FINISH = 11108;//获取人脸照片信息录入完成
+    public static final int MSG_DELETE_FACE = 11109;//删除人脸信息
 
     public static final int MSG_FACE_OPENLOCK = 40000;//人脸开门
-
-    public static final int MSG_DELETE_FACE = 111108;//删除人脸信息
     /********************虹软相关*********************/
 
     /********************天翼RTC相关******************/

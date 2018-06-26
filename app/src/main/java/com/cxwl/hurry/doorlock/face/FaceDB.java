@@ -33,7 +33,7 @@ public class FaceDB {
 
 
     String mDBPath;
-    public List<FaceRegist> mRegister;
+    public List<FaceRegist> mRegister;//已注册的集合（用text文件保存）
     AFR_FSDKEngine mFREngine;
     AFR_FSDKVersion mFRVersion;
     boolean mUpgrade;
@@ -228,7 +228,7 @@ public class FaceDB {
                 bos.close();
                 fs.close();
 
-                //save new feature
+                //save new feature 单独保存人脸数据
                 fs = new FileOutputStream(mDBPath + "/" + name + ".data", true);
                 bos = new ExtOutputStream(fs);
                 bos.writeBytes(face.getFeatureData());

@@ -11,6 +11,12 @@ android {
         versionCode 8
         versionName "1.0.7"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+
+//        renderscriptTargetApi 19
+//        renderscriptSupportModeEnabled true
+
+        renderscriptTargetApi 19
+        renderscriptSupportModeEnabled true
     }
     buildTypes {
         release {
@@ -81,5 +87,6 @@ dependencies {
     compile 'com.github.bumptech.glide:glide:3.7.0'
     //腾讯buggly
     compile 'com.tencent.bugly:crashreport:2.2.0'
-
+    //图片压缩、格式转换
+    compile 'io.github.silvaren:easyrs:0.5.3'
 }

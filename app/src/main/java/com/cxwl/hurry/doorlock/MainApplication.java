@@ -24,10 +24,11 @@ import okhttp3.OkHttpClient;
  * Created by William on 2018/4/26.
  */
 
-public class MainApplication extends Application  {
+public class MainApplication extends Application {
 
     private static MainApplication application;
     PendingIntent restartIntent;
+
     @Override
     public void onCreate() {
         application = this;
@@ -43,7 +44,8 @@ public class MainApplication extends Application  {
                 .connectTimeout(10000L, TimeUnit.MILLISECONDS).readTimeout(10000L, TimeUnit.MILLISECONDS)
                 //其他配置
                 .build();
-        OkHttpUtils.initClient(okHttpClient);}
+        OkHttpUtils.initClient(okHttpClient);
+    }
 //        Intent intent = new Intent();
 //        // 参数1：包名，参数2：程序入口的activity
 //        intent.setClassName("com.cxwl.hurry.doorlock", "com.cxwl.hurry.doorlock.ui.activity.MainActivity");

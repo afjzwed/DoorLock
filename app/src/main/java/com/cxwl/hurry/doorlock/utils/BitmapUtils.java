@@ -9,18 +9,20 @@ import android.graphics.Rect;
 import android.graphics.YuvImage;
 import android.media.ExifInterface;
 import android.os.Environment;
+import android.support.v8.renderscript.RenderScript;
 import android.util.Log;
 
+import com.cxwl.hurry.doorlock.MainApplication;
 import com.cxwl.hurry.doorlock.config.DeviceConfig;
-import com.cxwl.hurry.doorlock.ui.activity.MainActivity;
 import com.guo.android_extend.java.ExtByteArrayOutputStream;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.UUID;
 
-import static com.cxwl.hurry.doorlock.config.DeviceConfig.LOCAL_IMG_PATH;
+import io.github.silvaren.easyrs.tools.Nv21Image;
 
 /**
  * Created by William on 2018/5/15.
@@ -96,7 +98,6 @@ public class BitmapUtils {
     }
 
 
-
     /**
      * 保存bitmap到本地
      *
@@ -141,21 +142,28 @@ public class BitmapUtils {
      * @return
      */
     public static Bitmap byteToFile(byte[] data, int width, int height) {
-        YuvImage yuv = new YuvImage(data, ImageFormat.NV21, width, height, null);
-        ExtByteArrayOutputStream ops = new ExtByteArrayOutputStream();
-        yuv.compressToJpeg(new Rect(0, 0, width, height), 80, ops);
-        Bitmap bmp = BitmapFactory.decodeByteArray(ops.getByteArray(), 0, ops.getByteArray().length);
-        try {
-            ops.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        yuv = null;
-        return bmp;
-//                ByteArrayOutputStream stream =newByteArrayOutputStream();
-//                image.compressToJpeg(newRect(0,0, Width, Height),80, stream);
-////Bitmap bmp = BitmapFactory.decodeByteArray(stream.toByteArray(), 0, stream.size());
-//                bmp = BitmapFactory.decodeByteArray(stream.toByteArray(),0, stream.size());
+        //防止厂商没有优化YuvImage.compressToJpeg方法导致native层内存溢出，用以下的方法压缩转换图片
+        RenderScript rs = RenderScript.create(MainApplication.getApplication()); // where context can be your
+// activity, application, etc.
+        Bitmap outputBitmap = Nv21Image.nv21ToBitmap(rs, data, width, height); // where nv21ByteArray contains the
+// NV21 image data
+        return outputBitmap;
+
+//        YuvImage yuv = new YuvImage(data, ImageFormat.NV21, width, height, null);
+//        ExtByteArrayOutputStream ops = new ExtByteArrayOutputStream();
+//        yuv.compressToJpeg(new Rect(0, 0, width, height), 80, ops);
+//        Bitmap bmp = BitmapFactory.decodeByteArray(ops.getByteArray(), 0, ops.getByteArray().length);
+//        try {
+//            ops.close();
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//        yuv = null;
+//        return bmp;
+
+//        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+//        bmp.compress(Bitmap.CompressFormat.PNG, 100, stream);
+//        byte[] byteArray = stream.toByteArray();
     }
 
     /**
@@ -224,8 +232,7 @@ public class BitmapUtils {
         Matrix matrix = new Matrix();
         matrix.reset();
         matrix.setRotate(degrees);
-        return tmpBitmap =
-                Bitmap.createBitmap(tmpBitmap, 0, 0, tmpBitmap.getWidth(), tmpBitmap.getHeight(), matrix,
-                        true);
+        return tmpBitmap = Bitmap.createBitmap(tmpBitmap, 0, 0, tmpBitmap.getWidth(), tmpBitmap.getHeight(), matrix,
+                true);
     }
 }
