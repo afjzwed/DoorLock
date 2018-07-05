@@ -21,6 +21,10 @@ public class FaceUrlBean {
      * lianUrl : uploadan/1529637685929.bin
      */
 
+    private Object lianYezhuid;
+    private String lianBinUrl;//脸地址
+    private Object xdoorName;
+
     private int xdoorId;
     private String chiyouren;//持有人
     private int xdoorLianId;
@@ -33,10 +37,34 @@ public class FaceUrlBean {
     private String xiangmuName;
     private String gongsiName;
     private String lianName;
-    private String lianUrl;//脸地址
+    private String lianUrl;
 
     private String fileName;//文件名
     private String path;//本地路径
+
+    public Object getLianYezhuid() {
+        return lianYezhuid;
+    }
+
+    public void setLianYezhuid(Object lianYezhuid) {
+        this.lianYezhuid = lianYezhuid;
+    }
+
+    public String getLianBinUrl() {
+        return lianBinUrl;
+    }
+
+    public void setLianBinUrl(String lianBinUrl) {
+        this.lianBinUrl = lianBinUrl;
+    }
+
+    public Object getXdoorName() {
+        return xdoorName;
+    }
+
+    public void setXdoorName(Object xdoorName) {
+        this.xdoorName = xdoorName;
+    }
 
     public int getXdoorId() {
         return xdoorId;
@@ -161,7 +189,10 @@ public class FaceUrlBean {
     @Override
     public String toString() {
         return "FaceUrlBean{" +
-                "xdoorId=" + xdoorId +
+                "lianYezhuid=" + lianYezhuid +
+                ", lianBinUrl='" + lianBinUrl + '\'' +
+                ", xdoorName=" + xdoorName +
+                ", xdoorId=" + xdoorId +
                 ", chiyouren='" + chiyouren + '\'' +
                 ", xdoorLianId=" + xdoorLianId +
                 ", yezhuId=" + yezhuId +

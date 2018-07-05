@@ -65,4 +65,14 @@ public class AdTongJiBean {
         this.id = id;
     }
 
+    @Override
+    public String toString() {
+        return "AdTongJiBean{" +
+                "id=" + id +
+                ", ad_id=" + ad_id +
+                ", start_time='" + start_time + '\'' +
+                ", end_time='" + end_time + '\'' +
+                ", mac='" + mac + '\'' +
+                '}';
+    }
 }

@@ -1,20 +1,18 @@
 package com.cxwl.hurry.doorlock.utils;
 
-import android.nfc.Tag;
 import android.util.Log;
 
+import com.cxwl.hurry.doorlock.MainApplication;
 import com.cxwl.hurry.doorlock.db.AdTongJiBean;
 import com.cxwl.hurry.doorlock.db.AdTongJiBeanDao;
+import com.cxwl.hurry.doorlock.db.DaoSession;
 import com.cxwl.hurry.doorlock.db.ImgFile;
 import com.cxwl.hurry.doorlock.db.ImgFileDao;
-import com.cxwl.hurry.doorlock.db.KaDao;
-import com.cxwl.hurry.doorlock.db.LogDoor;
-
-import com.cxwl.hurry.doorlock.MainApplication;
-import com.cxwl.hurry.doorlock.db.DaoSession;
 import com.cxwl.hurry.doorlock.db.Ka;
+import com.cxwl.hurry.doorlock.db.KaDao;
 import com.cxwl.hurry.doorlock.db.Lian;
 import com.cxwl.hurry.doorlock.db.LianDao;
+import com.cxwl.hurry.doorlock.db.LogDoor;
 import com.cxwl.hurry.doorlock.db.LogDoorDao;
 
 import java.util.List;
@@ -71,9 +69,10 @@ public class DbUtils {
     public void addAllKa(List<Ka> ka) {
         //先删除所有卡信息
         deleteAllKa();
-        for (int i = 0; i < ka.size(); i++) {
-            mKaDao.insert(ka.get(i));
-        }
+//        for (int i = 0; i < ka.size(); i++) {
+//            mKaDao.insert(ka.get(i));
+//        }
+        mKaDao.insertInTx(ka);//批量插入
         android.util.Log.i(TAG, "增加所有卡信息成功");
     }
 
@@ -169,9 +168,10 @@ public class DbUtils {
      * 增加所有日志信息
      */
     public void addAllLog(List<LogDoor> logDoor) {
-        for (int i = 0; i < logDoor.size(); i++) {
-            mLogDao.insert(logDoor.get(i));
-        }
+//        for (int i = 0; i < logDoor.size(); i++) {
+//            mLogDao.insert(logDoor.get(i));
+//        }
+        mLogDao.insertInTx(logDoor);
         Log.i(TAG, "离线日志保存到数据库成功");
     }
 
@@ -183,15 +183,19 @@ public class DbUtils {
     public List<LogDoor> quaryLog() {
         List<LogDoor> doors = mLogDao.queryBuilder().list();
         if (doors != null) {
-            Log.i(TAG, "查询所有离线日志 有"+doors.size()+"条");}
+            Log.i(TAG, "查询所有离线日志 有" + doors.size() + "条");
+        }
         return doors;
     }
+
     public List<LogDoor> quaryTenLog() {
-        List<LogDoor> doors = mLogDao.queryBuilder().limit(10).list();
+        List<LogDoor> doors = mLogDao.queryBuilder().limit(300).list();
         if (doors != null) {
-            Log.i(TAG, "查询所有10条离线日志 有"+doors.size()+"条");}
+            Log.i(TAG, "查询所有10条离线日志 有" + doors.size() + "条");
+        }
         return doors;
     }
+
     /**
      * 删除所有日志信息
      */
@@ -199,6 +203,7 @@ public class DbUtils {
         mLogDao.deleteAll();
         Log.i(TAG, "删除数据库中日志");
     }
+
     /**
      * 删除指定日志信息
      */
@@ -209,13 +214,15 @@ public class DbUtils {
         //mLogDao.delete();
         Log.i(TAG, "删除数据库中日志");
     }
+
     /**
      * 增加所有统计信息
      */
     public void addAllTongji(List<AdTongJiBean> logDoor) {
-        for (int i = 0; i < logDoor.size(); i++) {
-            mAdTongJiBeanDao.insert(logDoor.get(i));
-        }
+//        for (int i = 0; i < logDoor.size(); i++) {
+//            mAdTongJiBeanDao.insert(logDoor.get(i));
+//        }
+        mAdTongJiBeanDao.insertInTx(logDoor);
         Log.i(TAG, "离线统计信息保存到数据库成功");
     }
 
@@ -227,17 +234,19 @@ public class DbUtils {
     public List<AdTongJiBean> quaryTongji() {
         List<AdTongJiBean> doors = mAdTongJiBeanDao.queryBuilder().list();
         if (doors != null) {
-            Log.i(TAG, "查询所有离线统计信息 有"+doors.size()+"条");
+            Log.i(TAG, "查询所有离线统计信息 有" + doors.size() + "条");
         }
         return doors;
     }
+
     public List<AdTongJiBean> quaryTenTongji() {
-        List<AdTongJiBean> doors = mAdTongJiBeanDao.queryBuilder().limit(20).list();
+        List<AdTongJiBean> doors = mAdTongJiBeanDao.queryBuilder().limit(300).list();
         if (doors != null) {
-            Log.i(TAG, "查询所有离线统计信息 有"+doors.size()+"条");
+            Log.i(TAG, "查询所有离线统计信息 有" + doors.size() + "条");
         }
         return doors;
     }
+
     /**
      * 删除所有统计信息
      */
@@ -245,6 +254,7 @@ public class DbUtils {
         mAdTongJiBeanDao.deleteAll();
         Log.i(TAG, "删除数据库中统计信息");
     }
+
     public void deleteSomeTongji(List<AdTongJiBean> list) {
         for (int i = 0; i < list.size(); i++) {
             mAdTongJiBeanDao.delete(list.get(i));
@@ -252,6 +262,7 @@ public class DbUtils {
         //  mAdTongJiBeanDao.deleteAll();
         Log.i(TAG, "删除数据库中统计信息");
     }
+
     /**
      * 删除一张照片
      */
@@ -259,6 +270,7 @@ public class DbUtils {
         mImgFileDao.delete(imgFile);
         Log.i(TAG, "删除数据库中一张照片信息");
     }
+
     /**
      * 添加一张照片
      */
@@ -273,7 +285,7 @@ public class DbUtils {
     public List<ImgFile> quaryImg() {
         List<ImgFile> list = mImgFileDao.queryBuilder().list();
         if (list != null) {
-            Log.i(TAG, "查询所有离线照片信息 有"+list.size()+"条");
+            Log.i(TAG, "查询所有离线照片信息 有" + list.size() + "条");
         }
         return list;
     }

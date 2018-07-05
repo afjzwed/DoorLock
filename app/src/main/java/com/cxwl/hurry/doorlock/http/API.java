@@ -35,5 +35,7 @@ public interface API {
 
     String QINIU_IMG = HTTP_HOST + "/qiniu/getQiniuToken";//获取七牛图片路径
 
+    String NEW_TONGJI = HTTP_HOST + "/xdoor/device/tongjiPlSave";//新统计接口
+
     String PIC = "http://img0.hnchxwl.com/";//七牛图片访问地址
 }

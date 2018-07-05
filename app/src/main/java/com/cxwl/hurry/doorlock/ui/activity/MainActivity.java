@@ -84,6 +84,7 @@ import com.cxwl.hurry.doorlock.service.MainService;
 import com.cxwl.hurry.doorlock.utils.AdvertiseHandler;
 import com.cxwl.hurry.doorlock.utils.BitmapUtils;
 import com.cxwl.hurry.doorlock.utils.CardRecord;
+import com.cxwl.hurry.doorlock.utils.DLLog;
 import com.cxwl.hurry.doorlock.utils.DbUtils;
 import com.cxwl.hurry.doorlock.utils.DialogUtil;
 import com.cxwl.hurry.doorlock.utils.HttpApi;
@@ -409,13 +410,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             isPlayingList.clear();
             //有开始播放的视频
             for (int i = 0; i < videoList.size(); i++) {
-                if (Long.parseLong(StringUtils.transferDateToLong(videoList.get(i).getShixiao_shijian())) > System
-                        .currentTimeMillis()) {//过期时间大于当前时间
-                    Log.e(TAG, "设置通告 有数据");
-                    if (Long.parseLong(StringUtils.transferDateToLong(videoList.get(i).getKaishi_shijian())) < System
-                            .currentTimeMillis()) {//开始时间小于当前时间，可以显示
-                        isPlayingList.add(videoList.get(i));
-
+                if (!TextUtils.isEmpty(videoList.get(i).getShixiao_shijian())&&!TextUtils.isEmpty(videoList.get(i).getKaishi_shijian())) {
+                    if (Long.parseLong(StringUtils.transferDateToLong(videoList.get(i).getShixiao_shijian())) > System
+                            .currentTimeMillis()) {//过期时间大于当前时间
+                        Log.e(TAG, "设置通告 有数据");
+                        if (Long.parseLong(StringUtils.transferDateToLong(videoList.get(i).getKaishi_shijian())) < System
+                                .currentTimeMillis()) {//开始时间小于当前时间，可以显示
+                            isPlayingList.add(videoList.get(i));
+                        }
                     }
                 }
             }
@@ -547,14 +549,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 });
                 return;
             }
-            Log.e(TAG, "设置通告 currentNoticeBean" + currentGuangGaoBean.toString());
-            Log.e(TAG, "设置通告 过期时间 " + currentGuangGaoBean.getShixiao_shijian() + " 当前时间 " + StringUtils
+            Log.e(TAG, "设置广告图片 currentNoticeBean" + currentGuangGaoBean.toString());
+            Log.e(TAG, "设置广告图片 过期时间 " + currentGuangGaoBean.getShixiao_shijian() + " 当前时间 " + StringUtils
                     .transferLongToDate("yyyy-MM-dd HH:mm:ss", System.currentTimeMillis()));
-            Log.e(TAG, "设置通告 过期时间 " + StringUtils.transferDateToLong(currentGuangGaoBean.getShixiao_shijian()) + " "
+            Log.e(TAG, "设置广告图片 过期时间 " + StringUtils.transferDateToLong(currentGuangGaoBean.getShixiao_shijian()) + " "
                     + "当前时间" + " " + System.currentTimeMillis());
             if (Long.parseLong(StringUtils.transferDateToLong(currentGuangGaoBean.getShixiao_shijian())) > System
                     .currentTimeMillis()) {//过期时间大于当前时间
-                Log.e(TAG, "设置通告 有数据");
+                Log.e(TAG, "设置广告图片 有数据");
                 if (Long.parseLong(StringUtils.transferDateToLong(currentGuangGaoBean.getKaishi_shijian())) < System
                         .currentTimeMillis()) {//开始时间小于当前时间，可以显示
                     //设置图片信息
@@ -585,11 +587,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             } else {
                 picIndex--;
                 if (picIndex == -1) {
-                    Log.e(TAG, "通告清零");
+                    Log.e(TAG, "广告图片清零");
                     picList.clear();
                     picList = null;
                 } else {
-                    Log.e(TAG, "移除一条通告");
+                    Log.e(TAG, "移除一条广告图片");
                     picList.remove(picIndex);
                 }
                 setPicInfo();
@@ -2856,7 +2858,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     @Override
     public void onAccountReceived(String acc) {
-        String account = reverseNum(acc);
+        String account = StringUtils.reverseNum(acc);
 
         //这里接收到刷卡后获得的卡ID
         cardId = account;
@@ -2876,16 +2878,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //            message.obj = account;
 //            handler.sendMessage(message);
         }
-    }
-
-    /**
-     * 反转卡号（高低位颠倒）
-     *
-     * @param acc
-     */
-    private String reverseNum(String acc) {
-        String s = acc.substring(6, 8) + acc.substring(4, 6) + acc.substring(2, 4) + acc.substring(0, 2);
-        return s.toLowerCase();
     }
 
     /****************************设置一些状态end************************/
@@ -3446,6 +3438,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
             if (DeviceConfig.PRINTSCREEN_STATE == 0) {//开启截图、上传图片、开门、上传日志流程
                 if (mImageNV21 != null && identification) {//摄像头检测到人脸信息且处于人脸识别状态
+                    DLLog.e("人脸识别", "开始");
 //                long time = System.currentTimeMillis();
                     //检测输入图像中的人脸特征信息，输出结果保存在 AFR_FSDKFace feature
                     //data 输入的图像数据,width 图像宽度,height 图像高度,format 图像格式,face 已检测到的脸框,ori 已检测到的脸角度,
@@ -3474,6 +3467,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                 max = score.getScore();//匹配度赋值
                                 name = fr.mName;
                                 if (max > 0.68f) {//匹配度的值高于设定值,退出循环
+                                    DLLog.e("人脸识别", "匹配度的值高于设定值");
                                     break;
                                 }
                             }
@@ -3503,6 +3497,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             } else {
                                 parameters[1] = "";
                             }
+                            DLLog.e("人脸识别", "发出消息");
                             sendMainMessager(MSG_FACE_OPENLOCK, parameters);
                             DeviceConfig.PRINTSCREEN_STATE = 0;//人脸开门图片处理完成（异步处理）,重置状态
                             file = null;
