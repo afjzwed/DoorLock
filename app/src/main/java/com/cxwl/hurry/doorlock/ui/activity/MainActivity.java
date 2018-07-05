@@ -3467,7 +3467,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                 max = score.getScore();//匹配度赋值
                                 name = fr.mName;
                                 if (max > 0.68f) {//匹配度的值高于设定值,退出循环
-                                    DLLog.e("人脸识别", "匹配度的值高于设定值");
+                                    DLLog.e("人脸识别", "匹配度的值高于设定值 "+max);
                                     break;
                                 }
                             }

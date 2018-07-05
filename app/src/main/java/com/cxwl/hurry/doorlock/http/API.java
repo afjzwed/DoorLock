@@ -5,7 +5,8 @@ package com.cxwl.hurry.doorlock.http;
  */
 
 public interface API {
-    String HTTP_HOST = "http://192.168.8.132:80";
+//    String HTTP_HOST = "http://192.168.8.132:80";
+    String HTTP_HOST = "http://119.23.139.180:8080/wygl_door";
 //    String HTTP_HOST = "http://192.168.8.141:80";
 //    String HTTP_HOST = "http://120.79.212.90:80";
 
