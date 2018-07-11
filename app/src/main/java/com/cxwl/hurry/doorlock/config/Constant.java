@@ -81,14 +81,14 @@ public class Constant {
     /********************卡相关*******************/
 
     /*******************sp保存的心跳信息****************/
-    public static final String SP_VISION_KA = "ka_vison";
-    public static final String SP_VISION_LIAN = "lian_vison";
-    public static final String SP_VISION_GUANGGAO = "guanggao_vison";
-    public static final String SP_VISION_GUANGGAO_VIDEO = "guanggao_vison_video";
-    public static final String SP_VISION_TONGGAO = "tonggao_vison";
-    public static final String SP_VISION_APP = "app_vison";
-    public static final String SP_LIXIAN_MIMA = "lixian_mima";
-    public static final String SP_XINTIAO_TIME = "xintiao_time";
+    public static final String SP_VISION_KA = "ka_vison";//卡版本
+    public static final String SP_VISION_LIAN = "lian_vison";//脸版本
+    public static final String SP_VISION_GUANGGAO = "guanggao_vison";//图片广告版本
+    public static final String SP_VISION_GUANGGAO_VIDEO = "guanggao_vison_video";//视频广告版本
+    public static final String SP_VISION_TONGGAO = "tonggao_vison";//通告版本
+    public static final String SP_VISION_APP = "app_vison";//应用版本
+    public static final String SP_LIXIAN_MIMA = "lixian_mima";//离线密码
+    public static final String SP_XINTIAO_TIME = "xintiao_time";//心跳间隔时间
     /*******************sp保存的心跳信息****************/
 
     public static final int MSG_LOADLOCAL_DATA = 20030;//离线模式

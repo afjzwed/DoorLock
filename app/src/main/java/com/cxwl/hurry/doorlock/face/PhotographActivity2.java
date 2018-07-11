@@ -264,7 +264,8 @@ public class PhotographActivity2 extends AppCompatActivity implements Camera.Pic
         mCamera = Camera.open();//打开硬件摄像头，这里导包得时候一定要注意是android.hardware.Camera
         try {
             Camera.Parameters parameters = mCamera.getParameters();
-            parameters.setPreviewSize(800, 600);
+//            parameters.setPreviewSize(800, 600);
+            parameters.setPreviewSize(640, 480);
             parameters.setPreviewFormat(ImageFormat.NV21);
 
             for (Camera.Size size : parameters.getSupportedPreviewSizes()) {

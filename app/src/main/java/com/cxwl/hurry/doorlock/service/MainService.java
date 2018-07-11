@@ -194,7 +194,6 @@ public class MainService extends Service {
     //天翼登陆参数
     private String token;//天翼登陆所需的token；
     private Device device;//天翼登陆连接成功 发消息的类
-    private DbUtils mDbUtils;//数据库操作
     private Hashtable<String, String> currentAdvertisementFiles = new Hashtable<String, String>(); //广告数据地址
     //    private Hashtable<String, String> currentFaceFiles = new Hashtable<String, String>(); //人脸数据地址
     private AudioManager audioManager;//音频管理器
@@ -546,6 +545,7 @@ public class MainService extends Service {
                         list.add(data);
                         createAccessLog(list);
                         DLLog.e("人脸识别", "日志上传，准备开门");
+                        DeviceConfig.PRINTSCREEN_STATE = 0;//人脸开门图片处理完成（异步处理）,重置状态
                         openLock(3);
                         break;
                     }
@@ -1376,7 +1376,7 @@ public class MainService extends Service {
                         File file = files[i];
                         file.delete();
                     }
-                } else {
+                } else if (b == 1){
                     Log.e(TAG, "人脸更新 删除多余的临时文件");
                     //遍历本地文件,如果有临时文件或多余文件,删除
                     for (int i = 0; i < files.length; i++) {
@@ -1899,12 +1899,10 @@ public class MainService extends Service {
      * 重置广告，图片，通知版本为0，下次登录时重新加载
      */
     private void saveVisionInfo() {
-//// TODO: 2018/5/28 清除版本 暂时先把卡版本也清除
-        SPUtil.put(MainService.this, Constant.SP_VISION_KA, 0L);
+//        SPUtil.put(MainService.this, Constant.SP_VISION_KA, 0L);//卡版本不应该清除
         SPUtil.put(MainService.this, Constant.SP_VISION_GUANGGAO, 0L);
         SPUtil.put(MainService.this, Constant.SP_VISION_GUANGGAO_VIDEO, 0L);
         SPUtil.put(MainService.this, Constant.SP_VISION_TONGGAO, 0L);
-
 //        Log.e(TAG, "广告，图片，通知版本" + SPUtil.get(MainService.this, Constant.SP_VISION_GUANGGAO, 0f));
     }
 
@@ -1924,13 +1922,11 @@ public class MainService extends Service {
     }
 
     protected void init() {
-
         initAexUtil(); //安卓工控设备控制器初始化
         Log.i("MainService", "init AEX");
         // TODO: 2018/5/8  initSqlUtil();  初始化卡相关数据库工具类
         Log.i("MainService", "init SQL");
         initCheckTopActivity();//检查最上层界面
-
         //xiaozd add
         if (netWorkstate) {
             initWhenConnected(); //开始在线版本
@@ -2020,10 +2016,6 @@ public class MainService extends Service {
         }
     }
 
-    private void initDB() {
-        mDbUtils = DbUtils.getInstans();
-    }
-
     /**
      * 获取WIFI mac地址和密码
      */
@@ -2069,8 +2061,6 @@ public class MainService extends Service {
                 }
             }
         }.start();
-
-//        getClientInfo();
     }
 
     /**
@@ -2109,10 +2099,9 @@ public class MainService extends Service {
                         message.what = MSG_LOGIN;
                         message.obj = deviceBean.getDoor();
                         mHandler.sendMessage(message);
-
                     }
                 } else {
-//                    服务器异常或没有网络
+                    //服务器异常或没有网络
                     HttpApi.e("getClientInfo()->服务器无响应");
                 }
             }

@@ -969,7 +969,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         break;
                     case MSG_INVALID_CARD:
                         //无效房卡
-                        Utils.DisplayToast(MainActivity.this, "无效房卡");
+                        Utils.DisplayToast(MainActivity.this, "无效卡号");
                         break;
                     case MSG_LOADLOCAL_DATA://离线模式
                         //加载本地数据显示到界面
@@ -3154,7 +3154,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mFRAbsLoop = new FRAbsLoop();
         mFRAbsLoop.start();
 
-
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -3207,8 +3206,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         try {//这里其实不用捕捉错误
             Camera.Parameters parameters = mCamera.getParameters();
 //            parameters.setPreviewSize(800, 600);//设置尺寸
-            parameters.setPreviewFormat(ImageFormat.NV21);//指定图像的格式
-            // (NV21：是一种YUV420SP格式，紧跟Y平面的是VU交替的平面)
+            if (null != parameters) {
+                parameters.setPreviewSize(640, 480);//设置尺寸
+                mCamera.setParameters(parameters);
+            }
+            Camera.Parameters parameters1 = mCamera.getParameters();
+            if (null != parameters1) {
+                parameters1.setPreviewFormat(ImageFormat.NV21);//指定图像的格式
+                // (NV21：是一种YUV420SP格式，紧跟Y平面的是VU交替的平面)
+                mCamera.setParameters(parameters1);
+            }
 
 //            for (Camera.Size size : parameters.getSupportedPreviewSizes()) {
 //                LogDoor.v(TAG, "SIZE:" + size.width + "x" + size.height);
@@ -3231,7 +3238,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             //parmeters.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
             //parameters.setSceneMode(Camera.Parameters.SCENE_MODE_AUTO);
             //parameters.setColorEffect(Camera.Parameters.EFFECT_NONE);
-            mCamera.setParameters(parameters);
         } catch (Exception e) {
             e.printStackTrace();
 //            Log.v(TAG, "setupCamera-->" + e.getMessage());
@@ -3419,21 +3425,23 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             if (DeviceConfig.PRINTSCREEN_STATE == 2) {
                 //将byte数组转成bitmap再转成图片文件
                 byte[] data = picData;
-                Bitmap bmp = BitmapUtils.byteToFile(data, mWidth, mHeight);
-                File file = null;
-                if (null != bmp) {
-                    file = BitmapUtils.saveBitmap(MainActivity.this, bmp);//本地截图文件地址
+                if (data != null && data.length > 0) {
+                    Bitmap bmp = BitmapUtils.byteToFile(data, mWidth, mHeight);
+                    File file = null;
+                    if (null != bmp) {
+                        file = BitmapUtils.saveBitmap(MainActivity.this, bmp);//本地截图文件地址
+                    }
+                    if (null != file && !TextUtils.isEmpty(file.getPath())) {
+                        uploadToQiNiu(file, 1);//这里做上传到七牛的操作，不返回图片URL
+                    } else {
+                        faceOpenUrl = "";
+                    }
+                    DeviceConfig.PRINTSCREEN_STATE = 0;//图片处理完成,重置状态
+                    sendMainMessager(MSG_CARD_OPENLOCK, faceOpenUrl);
+                    file = null;
+                    bmp = null;
+                    data = null;
                 }
-                if (null != file && !TextUtils.isEmpty(file.getPath())) {
-                    uploadToQiNiu(file, 1);//这里做上传到七牛的操作，不返回图片URL
-                } else {
-                    faceOpenUrl = "";
-                }
-                DeviceConfig.PRINTSCREEN_STATE = 0;//图片处理完成,重置状态
-                sendMainMessager(MSG_CARD_OPENLOCK, faceOpenUrl);
-                file = null;
-                bmp = null;
-                data = null;
             }
 
             if (DeviceConfig.PRINTSCREEN_STATE == 0) {//开启截图、上传图片、开门、上传日志流程
@@ -3466,7 +3474,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             if (max < score.getScore()) {
                                 max = score.getScore();//匹配度赋值
                                 name = fr.mName;
-                                if (max > 0.68f) {//匹配度的值高于设定值,退出循环
+                                if (max > 0.6f) {//匹配度的值高于设定值,退出循环
                                     DLLog.e("人脸识别", "匹配度的值高于设定值 "+max);
                                     break;
                                 }
@@ -3475,7 +3483,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     }
 
 //                Log.v("人脸识别", "fit Score:" + max + ", NAME:" + name);
-                    if (max > 0.68f) {//匹配度的值高于设定值,发出消息,开门
+                    if (max > 0.6f) {//匹配度的值高于设定值,发出消息,开门
                         if (null != name && !cardRecord.checkLastCardNew(name)) {//判断距离上次刷脸时间是否超过10秒
                             //fr success.
                             //Log.v(FACE_TAG, "置信度：" + (float) ((int) (max * 1000)) / 1000.0);
@@ -3484,25 +3492,26 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //                            DLLog.e(TAG, "人脸 开启截图、上传图片、开门、上传日志流程  状态值PRINTSCREEN_STATE 为1");
                             //将byte数组转成bitmap再转成图片文件
                             byte[] data = mImageNV21;
-                            Bitmap bmp = BitmapUtils.byteToFile(data, mWidth, mHeight);
-                            File file = null;
-                            if (null != bmp) {
-                                file = BitmapUtils.saveBitmap(MainActivity.this, bmp);//本地截图文件地址
+                            if (data != null && data.length > 0) {
+                                Bitmap bmp = BitmapUtils.byteToFile(data, mWidth, mHeight);
+                                File file = null;
+                                if (null != bmp) {
+                                    file = BitmapUtils.saveBitmap(MainActivity.this, bmp);//本地截图文件地址
+                                }
+                                String[] parameters = new String[2];
+                                parameters[0] = name;
+                                if (null != file && !TextUtils.isEmpty(file.getPath())) {
+                                    uploadToQiNiu(file, 3);//这里做上传到七牛的操作，不返回图片URL
+                                    parameters[1] = faceOpenUrl;
+                                } else {
+                                    parameters[1] = "";
+                                }
+                                DLLog.e("人脸识别", "发出消息");
+                                sendMainMessager(MSG_FACE_OPENLOCK, parameters);
+                                file = null;
+                                bmp = null;
+                                data = null;
                             }
-                            String[] parameters = new String[2];
-                            parameters[0] = name;
-                            if (null != file && !TextUtils.isEmpty(file.getPath())) {
-                                uploadToQiNiu(file, 3);//这里做上传到七牛的操作，不返回图片URL
-                                parameters[1] = faceOpenUrl;
-                            } else {
-                                parameters[1] = "";
-                            }
-                            DLLog.e("人脸识别", "发出消息");
-                            sendMainMessager(MSG_FACE_OPENLOCK, parameters);
-                            DeviceConfig.PRINTSCREEN_STATE = 0;//人脸开门图片处理完成（异步处理）,重置状态
-                            file = null;
-                            bmp = null;
-                            data = null;
 //                        }
                         }
                     }
