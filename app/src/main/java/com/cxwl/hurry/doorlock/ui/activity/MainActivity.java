@@ -727,7 +727,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     /**
      * 初始化七牛
      */
-
     private void initQiniu() {
         String fileurl = Environment.getExternalStorageDirectory() + "/" + LOCAL_IMG_PATH + "/" + System
                 .currentTimeMillis() + ".jpg";
@@ -953,6 +952,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         Log.i(TAG, "开锁");
                         onLockOpened((int) msg.obj);
                         final Dialog weituoDialog = DialogUtil.showBottomDialog(MainActivity.this);
+                        DLLog.e("人脸识别","开门弹窗显示");
                         final TimerTask task = new TimerTask() {
                             @Override
                             public void run() {
@@ -964,7 +964,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                 });
                             }
                         };
-                        // TODO: 2018/6/7 循环??
+                        // TODO: 2018/6/7 循环?? 有问题 时间太长
                         timer.schedule(task, 2000, 5000);
                         break;
                     case MSG_INVALID_CARD:
@@ -1197,6 +1197,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
             case 3:
                 msg = "刷脸开门成功";
+                DLLog.e("人脸识别","刷脸开门成功吐司显示");
                 break;
             case 4:
                 //二维码暂无
@@ -1377,7 +1378,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //                            HttpApi.e("时间更新：" + time);
 //                        } else {
 //                            HttpApi.e("系统与服务器时间差小，不更新");
-//                        }
+//
                         if (checkTime(c)) {
                             SimpleDateFormat d = new SimpleDateFormat("yyyyMMdd.HHmmss");
                             final String time = d.format(c.getTime());
@@ -3482,7 +3483,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         }
                     }
 
-//                Log.v("人脸识别", "fit Score:" + max + ", NAME:" + name);
+                Log.v("人脸识别", "fit Score:" + max + ", NAME:" + name);
                     if (max > 0.6f) {//匹配度的值高于设定值,发出消息,开门
                         if (null != name && !cardRecord.checkLastCardNew(name)) {//判断距离上次刷脸时间是否超过10秒
                             //fr success.
@@ -3506,7 +3507,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                 } else {
                                     parameters[1] = "";
                                 }
-                                DLLog.e("人脸识别", "发出消息");
+                                DLLog.e("人脸识别", "发出消息 "+name);
                                 sendMainMessager(MSG_FACE_OPENLOCK, parameters);
                                 file = null;
                                 bmp = null;
@@ -3516,6 +3517,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         }
                     }
                     mImageNV21 = null;
+                    name= null;
                 }
             }
         }

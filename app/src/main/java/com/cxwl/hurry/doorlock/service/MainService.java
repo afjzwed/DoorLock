@@ -6,8 +6,6 @@ import android.app.Service;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Bitmap;
-import android.graphics.Rect;
 import android.media.AudioManager;
 import android.os.Environment;
 import android.os.Handler;
@@ -20,14 +18,7 @@ import android.support.annotation.Nullable;
 import android.text.TextUtils;
 import android.util.Log;
 
-import com.arcsoft.facedetection.AFD_FSDKEngine;
-import com.arcsoft.facedetection.AFD_FSDKError;
-import com.arcsoft.facedetection.AFD_FSDKFace;
-import com.arcsoft.facedetection.AFD_FSDKVersion;
-import com.arcsoft.facerecognition.AFR_FSDKEngine;
-import com.arcsoft.facerecognition.AFR_FSDKError;
 import com.arcsoft.facerecognition.AFR_FSDKFace;
-import com.arcsoft.facerecognition.AFR_FSDKVersion;
 import com.cxwl.hurry.doorlock.Bean.BanbenBean;
 import com.cxwl.hurry.doorlock.Bean.DeviceBean;
 import com.cxwl.hurry.doorlock.Bean.NewDoorBean;
@@ -48,8 +39,6 @@ import com.cxwl.hurry.doorlock.face.ArcsoftManager;
 import com.cxwl.hurry.doorlock.http.API;
 import com.cxwl.hurry.doorlock.ui.activity.MainActivity;
 import com.cxwl.hurry.doorlock.utils.AexUtil;
-import com.cxwl.hurry.doorlock.utils.Ajax;
-import com.cxwl.hurry.doorlock.utils.BitmapUtils;
 import com.cxwl.hurry.doorlock.utils.CardRecord;
 import com.cxwl.hurry.doorlock.utils.DLLog;
 import com.cxwl.hurry.doorlock.utils.DbUtils;
@@ -64,7 +53,6 @@ import com.cxwl.hurry.doorlock.utils.ShellUtils;
 import com.cxwl.hurry.doorlock.utils.SoundPoolUtil;
 import com.cxwl.hurry.doorlock.utils.StringUtils;
 import com.google.gson.reflect.TypeToken;
-import com.guo.android_extend.image.ImageConverter;
 import com.zhy.http.okhttp.OkHttpUtils;
 import com.zhy.http.okhttp.callback.StringCallback;
 
@@ -83,7 +71,6 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -152,9 +139,6 @@ import static com.cxwl.hurry.doorlock.config.Constant.RTC_APP_KEY;
 import static com.cxwl.hurry.doorlock.config.Constant.SP_LIXIAN_MIMA;
 import static com.cxwl.hurry.doorlock.config.Constant.SP_VISION_LIAN;
 import static com.cxwl.hurry.doorlock.config.Constant.SP_XINTIAO_TIME;
-import static com.cxwl.hurry.doorlock.config.Constant.arc_appid;
-import static com.cxwl.hurry.doorlock.config.Constant.fd_key;
-import static com.cxwl.hurry.doorlock.config.Constant.fr_key;
 import static com.cxwl.hurry.doorlock.config.DeviceConfig.LOCAL_APK_PATH;
 
 
@@ -285,7 +269,6 @@ public class MainService extends Service {
                 if ("0".equals(JsonUtil.getFieldValue(response, "code"))) {
                     Log.i(TAG, "onResponse统计广告视频信息统计接口 上传统计信息成功");
                     lixianTongji();
-
                 } else {
                     Log.i(TAG, "上传广告视频统计信息失败  保存信息到数据库");
                     DbUtils.getInstans().addAllTongji(list);
@@ -611,45 +594,6 @@ public class MainService extends Service {
             }
         };
         connectReportThread.start();
-    }
-
-    private void startCheckGuestPasswordAppendImage() {
-        new Thread() {
-            @Override
-            public void run() {
-                checkGuestPasswordAppendImage();
-            }
-        }.start();
-    }
-
-    /**
-     * 验证密码是上传图片
-     */
-    private void checkGuestPasswordAppendImage() {
-        try {
-            String url = DeviceConfig.SERVER_URL + "/app/device/appendImage?";
-            if (imageUuid != null) {
-                url = url + "imageUuid=" + URLEncoder.encode(this.imageUuid, "UTF-8");
-            } else {
-                return;
-            }
-            if (imageUrl != null) {
-                url = url + "&imageUrl=" + URLEncoder.encode(this.imageUrl, "UTF-8");
-            } else {
-                return;
-            }
-            try {
-                String result = HttpApi.getInstance().loadHttpforGet(url, httpServerToken);
-                if (result != null) {
-                    HttpApi.i("checkGuestPasswordAppendImage()->" + result);
-                } else {
-                    HttpApi.i("checkGuestPasswordAppendImage()->服务器异常");
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        } catch (Exception e) {
-        }
     }
 
     /**
@@ -1348,7 +1292,6 @@ public class MainService extends Service {
     private void deleteFaceList() {
         Log.e(TAG, "人脸更新" + " deleteFaceList");
         if (null != faceDeleteList && faceDeleteList.size() > 0) {
-            // TODO: 2018/6/22 遍历删除集合，删除人脸信息
             for (FaceUrlBean faceUrlBean : faceDeleteList) {
                 boolean delete = ArcsoftManager.getInstance().mFaceDB.delete(faceUrlBean.getYezhuPhone());//删除
                 Log.e(TAG, "人脸更新 遍历删除集合，删除人脸信息 " + faceUrlBean.getYezhuPhone() + " " + delete);
@@ -1376,7 +1319,7 @@ public class MainService extends Service {
                         File file = files[i];
                         file.delete();
                     }
-                } else if (b == 1){
+                } else if (b == 1) {
                     Log.e(TAG, "人脸更新 删除多余的临时文件");
                     //遍历本地文件,如果有临时文件或多余文件,删除
                     for (int i = 0; i < files.length; i++) {
@@ -1433,23 +1376,11 @@ public class MainService extends Service {
         String localFilePath = Environment.getExternalStorageDirectory() + "/" + DeviceConfig.LOCAL_FACE_PATH;//文件存储路径
         for (FaceUrlBean faceUrlBean : currentFaceList) {//遍历本地人脸文件集合,如果有新的.temp文件，重命名
             File file = new File(localFilePath + "/" + faceUrlBean.getFileName());
-//            File file = new File(faceUrlBean.getPath());
             if (file.exists()) {
                 String localFile = file.getAbsolutePath().substring(0, file
                         .getAbsolutePath().length() - 5);
-//                File file2 = new File(localFile + ".mp4");
-//                Log.e("下载", "file2 " + file2.getAbsolutePath());
                 file.renameTo(new File(localFile + ".bin"));//重命名后原文件被覆盖
-//                faceUrlBean.setFileName();//重置文件名
                 faceUrlBean.setPath(localFile + ".bin");//重置路径（文件名带后缀，此时未改变，还.temp）
-//                String path = file2.getPath();
-//                Log.e("下载", "图片路径" + path);
-//                if (file.exists()) {
-//                    Log.e("下载", "response 存在");
-//                }
-//                if (file2.exists()) {
-//                    Log.e("下载", "file2 存在");
-//                }
             }
         }
     }
@@ -1516,12 +1447,7 @@ public class MainService extends Service {
                                     String guanggao = JsonUtil.getFieldValue(result, "guanggao");
                                     final List<GuangGaoBean> guangGaoBeen = JsonUtil.fromJsonArray(guanggao,
                                             GuangGaoBean.class);
-//                                GuangGaoBean guangGaoBeen1 = new GuangGaoBean();
-//                                guangGaoBeen1.setLeixing("2");
-//                                guangGaoBeen1.setNeirong("http://img.taopic" + "" + "" + "" +
-// "" + "" + "" + "" + ""
-//                                        + ".com/uploads/allimg/120727/201995-120HG1030762.jpg");
-//                                guangGaoBeen.add(guangGaoBeen1);
+
                                     if (guangGaoBeen == null || guangGaoBeen.size() < 1) {
                                         sendMessageToMainAcitivity(MSG_ADVERTISE_REFRESH, guangGaoBeen);
                                         syncCallBack("5", v);//同步视频
@@ -2980,67 +2906,6 @@ public class MainService extends Service {
         }
     }
 
-    protected void pushCallMessage() {
-        String pushList = null;
-        for (int j = 0; j < offlineUserList.size(); j++) {
-            YeZhuBean userObject = offlineUserList.get(j);
-            String username = userObject.getYezhu_dianhua();
-            if (username.length() != 17) {
-                if (pushList == null) {
-                    pushList = username;
-                } else {
-                    pushList = pushList + "," + username;
-                }
-            }
-        }
-        if (pushList != null) {
-            startPushCallMessage(pushList);
-        }
-    }
-
-    protected void startPushCallMessage(final String pushList) {
-        Thread thread = new Thread() {
-            @Override
-            public void run() {
-                try {
-                    onPushCallMessage(pushList);
-                } catch (Exception e) {
-
-                }
-            }
-        };
-        thread.start();
-    }
-
-    /**
-     * 推送消息
-     *
-     * @param pushList
-     * @throws JSONException
-     * @throws IOException
-     */
-    protected void onPushCallMessage(String pushList) throws Exception {
-        JSONObject data = new JSONObject();
-        data.put("pushList", pushList);
-        data.put("from", key);
-        data.put("unitName", communityName + unitNo);
-        String dataStr = data.toString();
-        String url = DeviceConfig.SERVER_URL + "/app/device/pushCallMessage";
-        String result = HttpApi.getInstance().loadHttpforPost(url, data, httpServerToken);
-        if (result != null) {
-            HttpApi.i("onPushCallMessage()->" + result);
-            JSONObject resultObj = Ajax.getJSONObject(result);
-            int code = resultObj.getInt("code");
-            if (code == 0) {
-
-            } else {
-
-            }
-        } else {
-            HttpApi.e("onPushCallMessage()->服务器异常");
-        }
-    }
-
     /****************************呼叫相关********************************/
 
     /**
@@ -3202,16 +3067,18 @@ public class MainService extends Service {
         ds_intent.putExtra("status", status);
         sendBroadcast(ds_intent);
 
-        Intent intent = new Intent();
-        intent.setAction(DoorLock.DoorLockOpenDoor_BLE);
-        sendBroadcast(intent);
+//        Intent intent = new Intent();
+//        intent.setAction(DoorLock.DoorLockOpenDoor_BLE);
+//        sendBroadcast(intent);
     }
 
     private void openAexLock(int type) {
 
         int result = aexUtil.openLock();
         if (result > 0) {
-            DLLog.e("人脸识别", "开门完成");
+            if (type == 3) {
+                DLLog.e("人脸识别", "开门完成");
+            }
             sendMessageToMainAcitivity(MSG_LOCK_OPENED, type);//开锁
             SoundPoolUtil.getSoundPoolUtil().loadVoice(getBaseContext(), 011111);
         }
