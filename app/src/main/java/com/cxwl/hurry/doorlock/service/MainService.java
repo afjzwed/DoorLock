@@ -105,12 +105,16 @@ import static com.cxwl.hurry.doorlock.config.Constant.CALL_VIDEO_CONNECTING;
 import static com.cxwl.hurry.doorlock.config.Constant.CALL_WAITING;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_ADVERTISE_REFRESH;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_ADVERTISE_REFRESH_PIC;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_CALLMEMBER;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_CALLMEMBER_ERROR;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_CALLMEMBER_NO_ONLINE;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_CALLMEMBER_SERVER_ERROR;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_CALLMEMBER_TIMEOUT;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_CANCEL_CALL;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_CARD_INCOME;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_CARD_OPENLOCK;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_CHECK_PASSWORD;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_CHECK_PASSWORD_PICTURE;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_DISCONNECT_VIEDO;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_DOWNLOAD;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_INFO;
@@ -130,8 +134,11 @@ import static com.cxwl.hurry.doorlock.config.Constant.MSG_RTC_DISCONNECT;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_RTC_NEWCALL;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_RTC_ONVIDEO;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_RTC_REGISTER;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_START_DIAL;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_START_DIAL_PICTURE;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_TONGJI_PIC;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_TONGJI_VEDIO;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_UPDATE_NETWORKSTATE;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_UPLOAD_LIXIAN_IMG;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_YIJIANKAIMEN_TAKEPIC;
 import static com.cxwl.hurry.doorlock.config.Constant.RTC_APP_ID;
@@ -152,16 +159,6 @@ public class MainService extends Service {
     private static final String RTCTAG = "RTCTAG";
     public static final int MAIN_ACTIVITY_INIT = 0;
     public static final int REGISTER_ACTIVITY_DIAL = 3;
-    public static final int MSG_CALLMEMBER = 20002;//呼叫成员
-
-    public static final int MSG_START_DIAL = 20005;//开始呼叫
-    public static final int MSG_CHECK_PASSWORD = 20006;//检查密码
-    public static final int MSG_CARD_INCOME = 20008;//刷卡回调
-
-    public static final int MSG_UPDATE_NETWORKSTATE = 20028;//网络状态改变
-
-    public static final int MSG_START_DIAL_PICTURE = 21005;//开始呼叫的访客图片
-    public static final int MSG_CHECK_PASSWORD_PICTURE = 21006;//密码访客图片
 
     public int callConnectState = CALL_WAITING;//视频通话链接状态  默认等待
 
@@ -216,6 +213,8 @@ public class MainService extends Service {
     private int noticesStatus = 0;//门禁卡信息版本状态(默认为0)// 0:不一致（等待下载数据）1:不一致（正在下载数据）
     private int faceStatus = 0;//人脸信息版本状态(默认为0)// 0:不一致（等待下载数据）1:不一致（正在下载数据）
     private int cardInfoStatus = 0;//门禁卡信息版本状态(默认为0)// 0:不一致（等待下载数据）1:不一致（正在下载数据）
+    private int adInfoStatus = 0;//广告视频状态(默认为0) 0:不一致（等待下载数据）1:不一致（正在下载数据）
+    private int adpicInfoStatus = 0;//广告图片状态(默认为0) 0:不一致（等待下载数据）1:不一致（正在下载数据）
     private String lastVersionStatus = "L"; //L: last version N: find new version D：downloading
     // P: pending to install I: installing  版本更新状态
     private int downloadingFlag = 0; //0：not downloading 1:downloading 2:stop download  apk下载状态
@@ -845,8 +844,9 @@ public class MainService extends Service {
                                 }
                                 //// TODO: 2018/5/17 拿app版本信息 去掉点
                                 if (StringUtils.isNoEmpty(deviceBean.getVersion())) {
-                                    String appVision = (String) SPUtil.get(MainService.this, Constant.SP_VISION_APP,
-                                            getVersionName());
+//                                    String appVision = (String) SPUtil.get(MainService.this, Constant.SP_VISION_APP,
+//                                            getVersionName());
+                                    String appVision = getVersionName();
                                     Log.i(TAG, "心跳--当前app版本：" + appVision + "   服务器app版本：" + (deviceBean.getVersion()));
                                     if (Integer.parseInt(deviceBean.getVersion()) > Integer.parseInt(appVision
                                             .replace(".", ""))) {
@@ -888,9 +888,7 @@ public class MainService extends Service {
                                     Log.i(TAG, "存在" + imgFiles.size() + "张离线照片");
                                     sendMessageToMainAcitivity(MSG_UPLOAD_LIXIAN_IMG, imgFiles);
                                 }
-                                //// TODO: 2018/6/13  上传离线统计日志
-                                lixianTongji();
-
+                                lixianTongji();//上传离线统计日志
                             }
                         } else {
                             //服务器异常或没有网络
@@ -910,9 +908,6 @@ public class MainService extends Service {
      *
      * @param v
      */
-
-    private int adpicInfoStatus = 0;
-
     private void getTupian(final long v) {
         if (adpicInfoStatus == 0) {
             adpicInfoStatus = 1;
@@ -987,8 +982,13 @@ public class MainService extends Service {
                     updateApp(fileName);
                 }
             } else {
+                adpicInfoStatus = 0;
+                adInfoStatus = 0;
+                cardInfoStatus = 0;
+                noticesStatus = 0;
+                faceStatus = 0;
+                lastVersionStatus = "L";
                 Log.v("UpdateService", "不会出现这种情况 status is " + lastVersionStatus);
-//                lastVersionStatus = "L";
             }
         } else {
             // TODO: 2018/5/18  下载失败，整理.temp文件  absolutePath为apk存储路径的文件夹
@@ -1000,6 +1000,11 @@ public class MainService extends Service {
                 file.delete();
             }
             lastVersionStatus = "L";//等待下次心跳重新获取URL下载apk文件
+            adpicInfoStatus = 0;
+            adInfoStatus = 0;
+            cardInfoStatus = 0;
+            noticesStatus = 0;
+            faceStatus = 0;
         }
     }
 
@@ -1033,14 +1038,17 @@ public class MainService extends Service {
                         new Thread(new Runnable() {
                             @Override
                             public void run() {
+                                adpicInfoStatus = 1;
+                                adInfoStatus = 1;
+                                cardInfoStatus = 1;
+                                noticesStatus = 1;
+                                faceStatus = 1;
                                 downloadApp(address, fileName);
                             }
                         }).start();
                     } else {
                         lastVersionStatus = "L";//等待下次心跳重新获取URL
-
                     }
-
                 }
             });
 
@@ -1061,15 +1069,19 @@ public class MainService extends Service {
         String fileName = SDCard + "/" + LOCAL_APK_PATH + "/" + lastVersionFile + ".apk";//文件存储路径;
         File file = new File(fileName);
         Log.v(TAG, "UpdateService " + "------>start Update App<------");
-        if (true) {//如果本地版本低于网络版本
-            if (file.exists()) {
-                lastVersionStatus = "I";//版本状态设为正在安装
-                Log.v(TAG, "UpdateService:" + "check update file OK");
-                startInstallApp(fileName);
-                Log.i(TAG, "UpdateService:" + fileName);
-            }
-        } else {
-//            ToastUtil.showToast("版本已是最新");
+        //如果本地版本低于网络版本
+        if (file.exists()) {
+            lastVersionStatus = "I";//版本状态设为正在安装
+            Log.v(TAG, "UpdateService:" + "check update file OK");
+            startInstallApp(fileName);
+            Log.i(TAG, "UpdateService:" + fileName);
+        }else {
+            lastVersionStatus ="L";
+            adpicInfoStatus = 0;
+            adInfoStatus = 0;
+            cardInfoStatus = 0;
+            noticesStatus = 0;
+            faceStatus = 0;
         }
     }
 
@@ -1415,8 +1427,6 @@ public class MainService extends Service {
      *
      * @param v
      */
-    private int adInfoStatus = 0;//广告信息状态(默认为0) 0:不一致（等待下载数据）1:不一致（正在下载数据）
-
     private void getGuanggao(final long v) {
         if (adInfoStatus == 0) {
             adInfoStatus = 1;

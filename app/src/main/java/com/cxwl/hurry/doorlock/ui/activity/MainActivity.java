@@ -144,7 +144,9 @@ import static com.cxwl.hurry.doorlock.config.Constant.MSG_CALLMEMBER_NO_ONLINE;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_CALLMEMBER_SERVER_ERROR;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_CALLMEMBER_TIMEOUT;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_CANCEL_CALL;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_CARD_INCOME;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_CARD_OPENLOCK;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_CHECK_PASSWORD;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_DELETE_FACE;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_DISCONNECT_VIEDO;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_FACE_DETECT_CHECK;
@@ -169,8 +171,11 @@ import static com.cxwl.hurry.doorlock.config.Constant.MSG_RTC_DISCONNECT;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_RTC_NEWCALL;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_RTC_ONVIDEO;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_RTC_REGISTER;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_START_DIAL;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_START_DIAL_PICTURE;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_TONGJI_PIC;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_TONGJI_VEDIO;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_UPDATE_NETWORKSTATE;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_UPLOAD_LIXIAN_IMG;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_YIJIANKAIMEN_TAKEPIC;
 import static com.cxwl.hurry.doorlock.config.Constant.ONVIDEO_MODE;
@@ -252,8 +257,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private Thread passwordTimeoutThread = null;//访客密码线程
     private String guestPassword = "";//访客输入的密码值
-
-    private DbUtils mDbUtils;//数据库操作
 
     private int mWidth, mHeight;//屏幕宽高
     private CameraSurfaceView mSurfaceView;//用于人脸识别（单独使用则渲染直接走系统流程，配合CameraGLSurfaceView
@@ -410,11 +413,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             isPlayingList.clear();
             //有开始播放的视频
             for (int i = 0; i < videoList.size(); i++) {
-                if (!TextUtils.isEmpty(videoList.get(i).getShixiao_shijian())&&!TextUtils.isEmpty(videoList.get(i).getKaishi_shijian())) {
+                if (!TextUtils.isEmpty(videoList.get(i).getShixiao_shijian()) && !TextUtils.isEmpty(videoList.get(i)
+                        .getKaishi_shijian())) {
                     if (Long.parseLong(StringUtils.transferDateToLong(videoList.get(i).getShixiao_shijian())) > System
                             .currentTimeMillis()) {//过期时间大于当前时间
-                        Log.e(TAG, "设置通告 有数据");
-                        if (Long.parseLong(StringUtils.transferDateToLong(videoList.get(i).getKaishi_shijian())) < System
+                        Log.e(TAG, "设置视频 有数据");
+                        if (Long.parseLong(StringUtils.transferDateToLong(videoList.get(i).getKaishi_shijian())) <
+                                System
                                 .currentTimeMillis()) {//开始时间小于当前时间，可以显示
                             isPlayingList.add(videoList.get(i));
                         }
@@ -826,13 +831,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     /**
-     * 初始化数据库
-     */
-    private void initDB() {
-        mDbUtils = DbUtils.getInstans();
-    }
-
-    /**
      * 初始化view
      */
     public void initView() {
@@ -952,7 +950,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         Log.i(TAG, "开锁");
                         onLockOpened((int) msg.obj);
                         final Dialog weituoDialog = DialogUtil.showBottomDialog(MainActivity.this);
-                        DLLog.e("人脸识别","开门弹窗显示");
+                        DLLog.e("人脸识别", "开门弹窗显示");
                         final TimerTask task = new TimerTask() {
                             @Override
                             public void run() {
@@ -1197,7 +1195,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
             case 3:
                 msg = "刷脸开门成功";
-                DLLog.e("人脸识别","刷脸开门成功吐司显示");
+                DLLog.e("人脸识别", "刷脸开门成功吐司显示");
                 break;
             case 4:
                 //二维码暂无
@@ -1334,7 +1332,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     } else {//当前没网，之前有网
                         enableReaderMode(); //打开读卡
                     }
-                    sendMainMessager(MainService.MSG_UPDATE_NETWORKSTATE, s == 1 ? true : false);
+                    sendMainMessager(MSG_UPDATE_NETWORKSTATE, s == 1 ? true : false);
                     netWorkFlag = s;
                     mHandler.post(new Runnable() {
                         @Override
@@ -1708,7 +1706,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     /*********************************密码房号等输入状态相关start*******************************************/
     private void callInput(int key) {
-        if ("C".equals(DeviceConfig.DEVICE_TYPE)) {
+        /*if ("C".equals(DeviceConfig.DEVICE_TYPE)) {
             if (blockId == 0) {
                 if (blockNo.length() < DeviceConfig.BLOCK_LENGTH) {
                     blockNo = blockNo + key;
@@ -1735,7 +1733,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         } else {
             unitNoInput(key);
-        }
+        }*/
     }
 
     /**
@@ -2580,7 +2578,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             String[] parameters = new String[3];
             if (isCall) {
                 setDialValue1("呼叫" + thisValue + "，取消请按删除键");
-                message.what = MainService.MSG_START_DIAL;
+                message.what = MSG_START_DIAL;
                 if (DeviceConfig.DEVICE_TYPE.equals("C")) {
                     parameters[0] = thisValue;
                 } else {
@@ -2589,7 +2587,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             } else {
                 tv_input_text.setFilters(new InputFilter[]{new InputFilter.LengthFilter(20)});
                 setTempkeyValue("准备验证密码" + thisValue + "...");
-                message.what = MainService.MSG_CHECK_PASSWORD;
+                message.what = MSG_CHECK_PASSWORD;
                 parameters[0] = thisValue;
             }
             parameters[1] = fileUrl;
@@ -2618,7 +2616,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
         Message message = Message.obtain();
         if (isCall) {
-            message.what = MainService.MSG_START_DIAL_PICTURE;
+            message.what = MSG_START_DIAL_PICTURE;
         } else {
             // message.what = MainService.MSG_CHECK_PASSWORD_PICTURE;
         }
@@ -2866,7 +2864,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         Log.e(TAG, "onAccountReceived 卡信息 account " + account + " cardId " + cardId);
         if (!nfcFlag) {//非录卡状态（卡信息用于开门）
             Message message = Message.obtain();
-            message.what = MainService.MSG_CARD_INCOME;
+            message.what = MSG_CARD_INCOME;
             message.obj = account;
             try {
                 serviceMessage.send(message);
@@ -3475,16 +3473,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             if (max < score.getScore()) {
                                 max = score.getScore();//匹配度赋值
                                 name = fr.mName;
-                                if (max > 0.6f) {//匹配度的值高于设定值,退出循环
-                                    DLLog.e("人脸识别", "匹配度的值高于设定值 "+max);
+                                if (max > 0.62f) {//匹配度的值高于设定值,退出循环
+                                    DLLog.e("人脸识别", "匹配度的值高于设定值 " + max);
                                     break;
                                 }
                             }
                         }
                     }
 
-                Log.v("人脸识别", "fit Score:" + max + ", NAME:" + name);
-                    if (max > 0.6f) {//匹配度的值高于设定值,发出消息,开门
+                    Log.v("人脸识别", "fit Score:" + max + ", NAME:" + name);
+                    if (max > 0.62f) {//匹配度的值高于设定值,发出消息,开门
                         if (null != name && !cardRecord.checkLastCardNew(name)) {//判断距离上次刷脸时间是否超过10秒
                             //fr success.
                             //Log.v(FACE_TAG, "置信度：" + (float) ((int) (max * 1000)) / 1000.0);
@@ -3507,17 +3505,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                 } else {
                                     parameters[1] = "";
                                 }
-                                DLLog.e("人脸识别", "发出消息 "+name);
+                                DLLog.e("人脸识别", "发出消息 " + name);
                                 sendMainMessager(MSG_FACE_OPENLOCK, parameters);
                                 file = null;
                                 bmp = null;
                                 data = null;
+                                name=null;
                             }
 //                        }
                         }
                     }
                     mImageNV21 = null;
-                    name= null;
                 }
             }
         }

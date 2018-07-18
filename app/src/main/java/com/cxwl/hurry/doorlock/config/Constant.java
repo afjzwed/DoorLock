@@ -15,7 +15,7 @@ public class Constant {
     public static String gender_key = "79kKgHjTgz27bkMMkKA8G6UjHeRAg5TZNJ4u8sPEKj9m";//性别识别
     // (Gender) Key :
 
-//    public static final String PIC_PREFIX = "arcsoft_";//虹软人脸照片文件夹名
+    //    public static final String PIC_PREFIX = "arcsoft_";//虹软人脸照片文件夹名
     public static final int MSG_FACE_DETECT_CONTRAST = 11100;//人脸识别对比
     public static final int MSG_FACE_DETECT_INPUT = 11101;//人脸识别录入
     public static final int MSG_FACE_DETECT_PAUSE = 11102;//人脸识别暂停
@@ -60,6 +60,8 @@ public class Constant {
     public static final int MSG_LOGIN_FAIL = 2000101; //登录失败
     public static final int MSG_LOGIN_AFTER = 20002; //登录成功后,开始rtc登录,人脸识别,读卡开始,心跳包等
     public static final int MSG_RTC_REGISTER = 20003;//rtc登录
+    public static final int MSG_CALLMEMBER = 20004;//呼叫成员
+    public static final int MSG_START_DIAL = 20005;//开始呼叫
     public static final int MSG_CANCEL_CALL = 20010;//取消呼叫
     public static final int MSG_CALLMEMBER_TIMEOUT = 11005;//呼叫成员超时
     public static final int MSG_CALLMEMBER_NO_ONLINE = 12005;//呼叫成员不在线
@@ -70,6 +72,9 @@ public class Constant {
     public static final int MSG_PASSWORD_CHECK = 10003;//验证密码后
     public static final int MSG_TONGJI_VEDIO = 200091;//上传统计视频播放消息
     public static final int MSG_TONGJI_PIC = 200092;//上传统计广告图片播放消息
+
+    public static final int MSG_START_DIAL_PICTURE = 21005;//开始呼叫的访客图片
+    public static final int MSG_CHECK_PASSWORD_PICTURE = 21006;//密码访客图片
     /********************天翼RTC相关******************/
 
     /********************卡相关*******************/
@@ -77,7 +82,7 @@ public class Constant {
     public static final int MSG_INVALID_CARD = 10015;//无效房卡
     public static final int MSG_INPUT_CARDINFO = 0x04;//重复录入卡信息
     public static final int MSG_CARD_OPENLOCK = 10016;//卡开门后截图和上传日志
-
+    public static final int MSG_CARD_INCOME = 20008;//刷卡回调
     /********************卡相关*******************/
 
     /*******************sp保存的心跳信息****************/
@@ -99,5 +104,8 @@ public class Constant {
     public static final int MSG_ADVERTISE_REFRESH_PIC = 10014;//刷新广告图片
     public static final int MSG_YIJIANKAIMEN_TAKEPIC = 10098;//手机一键开门拍照片
     public static final int MSG_UPLOAD_LIXIAN_IMG = 100001;//上传离线img
+
+    public static final int MSG_CHECK_PASSWORD = 20006;//检查密码
+    public static final int MSG_UPDATE_NETWORKSTATE = 20028;//网络状态改变
 
 }

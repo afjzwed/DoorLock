@@ -129,17 +129,6 @@ public class HttpUtils {
         return localFile;
     }
 
-    public static String convertImageUrl(String url) {
-        String newUrl = url;
-        if (url.length() > 4) {
-            String head = url.substring(0, 3).toLowerCase();
-            if (!head.equals("http")) {
-                newUrl = DeviceConfig.SERVER_URL + url;
-            }
-        }
-        return newUrl;
-    }
-
     /**
      * 获取本地存储路径下的所有文件
      *
@@ -159,7 +148,7 @@ public class HttpUtils {
     public static String getLocalFileFromUrl(String url) {
         int lastIndex = url.lastIndexOf("/");
         String fileName = url.substring(lastIndex + 1);
-        //// TODO: 2018/5/18 包含.mp4去掉
+        //去掉后缀名
         if (fileName.contains(".")){
             fileName = fileName.substring(0, fileName.lastIndexOf("."));
             Log.e("filename .", fileName);

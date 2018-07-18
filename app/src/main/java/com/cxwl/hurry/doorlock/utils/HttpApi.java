@@ -18,8 +18,6 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 
-import static com.cxwl.hurry.doorlock.config.DeviceConfig.SERVER_URL;
-
 /**
  * Created by cts on 17/12/25.
  */
