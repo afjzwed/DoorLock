@@ -140,6 +140,7 @@ import static com.cxwl.hurry.doorlock.config.Constant.MSG_TONGJI_PIC;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_TONGJI_VEDIO;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_UPDATE_NETWORKSTATE;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_UPLOAD_LIXIAN_IMG;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_YIJIANKAIMEN_OPENLOCK;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_YIJIANKAIMEN_TAKEPIC;
 import static com.cxwl.hurry.doorlock.config.Constant.RTC_APP_ID;
 import static com.cxwl.hurry.doorlock.config.Constant.RTC_APP_KEY;
@@ -199,6 +200,7 @@ public class MainService extends Service {
     public static int lockId = 0;//锁ID
     public String imageUrl = null;//对应呼叫访客图片地址
     public String imageUuid = null;//图片对应的uuid
+    private LogDoor mLogDoor = null;//开门时上传日志的类
 
     private Thread timeoutCheckThread = null;//自动取消呼叫的定时器
     private Thread connectReportThread = null;//心跳包线程
@@ -557,6 +559,26 @@ public class MainService extends Service {
                         list.add(data);
                         createAccessLog(list);
                         cardId = null;
+                        break;
+                    }
+                    case MSG_YIJIANKAIMEN_OPENLOCK: {
+                        String pic_url = (String) msg.obj;
+                        if (null != mLogDoor) {
+                            mLogDoor.setMac(mac);
+                            mLogDoor.setKaimenfangshi(2);
+                            if (TextUtils.isEmpty(pic_url)) {
+                                mLogDoor.setKaimenjietu("");
+                            } else {
+                                mLogDoor.setKaimenjietu(pic_url);
+                            }
+                            mLogDoor.setKaimenshijian(StringUtils.transferLongToDate("yyyy-MM-dd HH:mm:ss", System
+                                    .currentTimeMillis()));
+                            mLogDoor.setState(1);
+                            List<LogDoor> list = new ArrayList<>();
+                            list.add(mLogDoor);
+                            createAccessLog(list);
+                            mLogDoor= null;
+                        }
                         break;
                     }
                     default:
@@ -2362,26 +2384,35 @@ public class MainService extends Service {
             stopTimeoutCheckThread();
             //开门操作
             Log.e(TAG, "进行开门操作 开门开门");
-            openLock(2);
             //分为手机开门和视屏开门 1和2 进行区分 上传日志统一传2；
             if (logDoor.getKaimenfangshi() == 1) {
                 logDoor.setKaimenfangshi(2);
                 //一键开门拍照
                 if (StringUtils.isFastClick()) {
-                    String imgurl = "door/img/" + System.currentTimeMillis() + ".jpg";
-                    sendMessageToMainAcitivity(MSG_YIJIANKAIMEN_TAKEPIC, imgurl);
-                    logDoor.setKaimenjietu(imgurl);
+                    //开始截图
+                    if (DeviceConfig.PRINTSCREEN_STATE == 0) {
+                        DeviceConfig.PRINTSCREEN_STATE = 3;
+                        Log.e(TAG, "一键开门，开始截图" + DeviceConfig.PRINTSCREEN_STATE);
+                        mLogDoor = logDoor;
+                        openLock(2);
+                    }
+                    //以下为调用摄像头拍照
+//                    String imgurl = "door/img/" + System.currentTimeMillis() + ".jpg";
+//                    sendMessageToMainAcitivity(MSG_YIJIANKAIMEN_TAKEPIC, imgurl);
+//                    logDoor.setKaimenjietu(imgurl);
                 }
+            } else {
+                openLock(2);
+                logDoor.setState(1);
+                List<LogDoor> list = new ArrayList<>();
+                //拼接图片地址
+                logDoor.setKaimenjietu(logDoor.getKaimenjietu());
+                logDoor.setKaimenshijian(StringUtils.transferLongToDate("yyyy-MM-dd HH:mm:ss", System
+                        .currentTimeMillis()));
+                Log.e(TAG, "图片imageUrl" + logDoor.getKaimenjietu());
+                list.add(logDoor);
+                createAccessLog(list);//上传日志
             }
-            logDoor.setState(1);
-            List<LogDoor> list = new ArrayList<>();
-            //拼接图片地址
-            logDoor.setKaimenjietu(logDoor.getKaimenjietu());
-            logDoor.setKaimenshijian(StringUtils.transferLongToDate("yyyy-MM-dd HH:mm:ss", System.currentTimeMillis()));
-            Log.e(TAG, "图片imageUrl" + logDoor.getKaimenjietu());
-            list.add(logDoor);
-            //上传日志
-            createAccessLog(list);
         } else if (content.startsWith("refuse call")) { //拒绝接听
 //            if (!rejectUserList.contains(from)) {
 //                rejectUserList.add(from);

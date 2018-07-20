@@ -142,7 +142,19 @@ public class LogDoor {
     public LogDoor() {
     }
 
-
-
-
+    @Override
+    public String toString() {
+        return "LogDoor{" +
+                "id=" + id +
+                ", ka_id='" + ka_id + '\'' +
+                ", kaimenfangshi=" + kaimenfangshi +
+                ", mac='" + mac + '\'' +
+                ", kaimenshijian='" + kaimenshijian + '\'' +
+                ", phone='" + phone + '\'' +
+                ", uuid='" + uuid + '\'' +
+                ", kaimenjietu='" + kaimenjietu + '\'' +
+                ", mima='" + mima + '\'' +
+                ", state=" + state +
+                '}';
+    }
 }

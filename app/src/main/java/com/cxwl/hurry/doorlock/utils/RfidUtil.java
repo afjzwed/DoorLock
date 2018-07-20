@@ -17,6 +17,8 @@ import java.security.InvalidParameterException;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_CARD_INCOME;
+
 /**
  * rfid卡阅读工具类
  * Created by William on 2018/5/8.
@@ -124,7 +126,7 @@ public class RfidUtil {
     }
     protected void onCardIncome(String card){
         Message message = handler.obtainMessage();
-        message.what = MainService.MSG_CARD_INCOME;
+        message.what = MSG_CARD_INCOME;
         message.obj = card;
         handler.sendMessage(message);
     }

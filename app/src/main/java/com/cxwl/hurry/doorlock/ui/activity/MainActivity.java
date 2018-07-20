@@ -2105,9 +2105,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-
                 mCamerarelease = false;
-
                 try {
                     camera = Camera.open();
                     Log.e(TAG, "打开照相机 1");
@@ -3467,13 +3465,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         }
                         for (AFR_FSDKFace face : fr.mFaceList) {
                             //比较两份人脸特征信息的匹配度(result 脸部特征信息对象,face 脸部特征信息对象,score 匹配度对象)
-                            Log.e("人脸识别 比较值 ", "result " + result.toString() + " face " + face.toString());
+//                            Log.e("人脸识别 比较值 ", "result " + result.toString() + " face " + face.toString());
                             error = engine.AFR_FSDK_FacePairMatching(result, face, score);
-                            Log.d("人脸识别", "Score:" + score.getScore() + " error " + error.getCode());
+//                            Log.d("人脸识别", "Score:" + score.getScore() + " error " + error.getCode());
                             if (max < score.getScore()) {
                                 max = score.getScore();//匹配度赋值
                                 name = fr.mName;
-                                if (max > 0.62f) {//匹配度的值高于设定值,退出循环
+                                if (max > 0.6f) {//匹配度的值高于设定值,退出循环
                                     DLLog.e("人脸识别", "匹配度的值高于设定值 " + max);
                                     break;
                                 }
@@ -3481,8 +3479,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         }
                     }
 
-                    Log.v("人脸识别", "fit Score:" + max + ", NAME:" + name);
-                    if (max > 0.62f) {//匹配度的值高于设定值,发出消息,开门
+//                    Log.v("人脸识别", "fit Score:" + max + ", NAME:" + name);
+                    if (max > 0.6f) {//匹配度的值高于设定值,发出消息,开门
                         if (null != name && !cardRecord.checkLastCardNew(name)) {//判断距离上次刷脸时间是否超过10秒
                             //fr success.
                             //Log.v(FACE_TAG, "置信度：" + (float) ((int) (max * 1000)) / 1000.0);

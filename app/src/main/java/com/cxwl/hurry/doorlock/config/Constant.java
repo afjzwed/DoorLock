@@ -75,6 +75,8 @@ public class Constant {
 
     public static final int MSG_START_DIAL_PICTURE = 21005;//开始呼叫的访客图片
     public static final int MSG_CHECK_PASSWORD_PICTURE = 21006;//密码访客图片
+
+    public static final int MSG_YIJIANKAIMEN_OPENLOCK = 21007;//手机一键开门后截图和上传日志
     /********************天翼RTC相关******************/
 
     /********************卡相关*******************/
