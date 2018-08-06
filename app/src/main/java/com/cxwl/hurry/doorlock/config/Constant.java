@@ -31,6 +31,8 @@ public class Constant {
     public static final int MSG_DELETE_FACE = 11109;//删除人脸信息
 
     public static final int MSG_FACE_OPENLOCK = 40000;//人脸开门
+
+    public static final float FACE_MAX = 0.6f;
     /********************虹软相关*********************/
 
     /********************天翼RTC相关******************/
@@ -109,5 +111,9 @@ public class Constant {
 
     public static final int MSG_CHECK_PASSWORD = 20006;//检查密码
     public static final int MSG_UPDATE_NETWORKSTATE = 20028;//网络状态改变
+
+    public static final int MSG_RESTART_VIDEO1 = 11110;//媒体流的重启
+    public static final int MSG_RESTART_VIDEO = 100002;//媒体流的重启
+    public static  boolean RESTART_PHONE = false;
 
 }

@@ -34,7 +34,7 @@ public class DialogUtil {
         mWindow.setGravity(Gravity.CENTER);
         //mWindow.setWindowAnimations(R.style.dialogAnim);
         mWindow.setAttributes(lp);
-        dialog.show();
+//        dialog.show();
         return dialog;
     }
 

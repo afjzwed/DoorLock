@@ -8,8 +8,8 @@ android {
         applicationId "com.cxwl.hurry.doorlock"
         minSdkVersion 19
         targetSdkVersion 26
-        versionCode 12
-        versionName "1.1.1"
+        versionCode 13
+        versionName "1.1.2"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
 
 //        renderscriptTargetApi 19
@@ -89,4 +89,9 @@ dependencies {
     compile 'com.tencent.bugly:crashreport:2.2.0'
     //图片压缩、格式转换
     compile 'io.github.silvaren:easyrs:0.5.3'
+
+    //在release和test版本中，使用的是LeakCanary的no-op版本，也就是没有实际代码和操作的Wrapper版本，只包含LeakCanary和RefWatcher类的空实现，这样不会对生成的APK包体积和应用性能造成影响
+    debugCompile 'com.squareup.leakcanary:leakcanary-android:1.5'
+    releaseCompile 'com.squareup.leakcanary:leakcanary-android-no-op:1.5'
+    testCompile 'com.squareup.leakcanary:leakcanary-android-no-op:1.5'
 }

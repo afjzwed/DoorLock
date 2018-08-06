@@ -22,6 +22,7 @@ import com.arcsoft.facerecognition.AFR_FSDKFace;
 import com.cxwl.hurry.doorlock.Bean.BanbenBean;
 import com.cxwl.hurry.doorlock.Bean.DeviceBean;
 import com.cxwl.hurry.doorlock.Bean.NewDoorBean;
+import com.cxwl.hurry.doorlock.MainApplication;
 import com.cxwl.hurry.doorlock.config.Constant;
 import com.cxwl.hurry.doorlock.config.DeviceConfig;
 import com.cxwl.hurry.doorlock.db.AdTongJiBean;
@@ -72,6 +73,7 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Hashtable;
@@ -130,6 +132,7 @@ import static com.cxwl.hurry.doorlock.config.Constant.MSG_LOCK_OPENED;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_LOGIN;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_LOGIN_AFTER;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_PASSWORD_CHECK;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_RESTART_VIDEO;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_RTC_DISCONNECT;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_RTC_NEWCALL;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_RTC_ONVIDEO;
@@ -142,6 +145,7 @@ import static com.cxwl.hurry.doorlock.config.Constant.MSG_UPDATE_NETWORKSTATE;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_UPLOAD_LIXIAN_IMG;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_YIJIANKAIMEN_OPENLOCK;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_YIJIANKAIMEN_TAKEPIC;
+import static com.cxwl.hurry.doorlock.config.Constant.RESTART_PHONE;
 import static com.cxwl.hurry.doorlock.config.Constant.RTC_APP_ID;
 import static com.cxwl.hurry.doorlock.config.Constant.RTC_APP_KEY;
 import static com.cxwl.hurry.doorlock.config.Constant.SP_LIXIAN_MIMA;
@@ -237,6 +241,8 @@ public class MainService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+
+
         Log.i(TAG, "service启动");
         audioManager = (AudioManager) getSystemService(Service.AUDIO_SERVICE);
         initHandler();
@@ -577,7 +583,7 @@ public class MainService extends Service {
                             List<LogDoor> list = new ArrayList<>();
                             list.add(mLogDoor);
                             createAccessLog(list);
-                            mLogDoor= null;
+                            mLogDoor = null;
                         }
                         break;
                     }
@@ -910,7 +916,20 @@ public class MainService extends Service {
                                     Log.i(TAG, "存在" + imgFiles.size() + "张离线照片");
                                     sendMessageToMainAcitivity(MSG_UPLOAD_LIXIAN_IMG, imgFiles);
                                 }
+
                                 lixianTongji();//上传离线统计日志
+
+                                Calendar calendar = Calendar.getInstance();
+                                int hour = calendar.get(Calendar.HOUR_OF_DAY);
+                                Log.e(TAG, "当前小时 " + hour + " " + RESTART_PHONE);
+                                if (hour == 14) {
+                                    RESTART_PHONE = true;
+                                } else if (hour == 15) {//每晚凌晨4点时进行一次媒体流的重启
+                                    if (RESTART_PHONE == true) {
+                                        sendMessageToMainAcitivity(MSG_RESTART_VIDEO, imgFiles);
+                                    }
+                                }
+                                calendar = null;
                             }
                         } else {
                             //服务器异常或没有网络
@@ -1097,8 +1116,8 @@ public class MainService extends Service {
             Log.v(TAG, "UpdateService:" + "check update file OK");
             startInstallApp(fileName);
             Log.i(TAG, "UpdateService:" + fileName);
-        }else {
-            lastVersionStatus ="L";
+        } else {
+            lastVersionStatus = "L";
             adpicInfoStatus = 0;
             adInfoStatus = 0;
             cardInfoStatus = 0;
@@ -1373,21 +1392,38 @@ public class MainService extends Service {
      */
     private void restartFace() {
         Log.e(TAG, "人脸更新" + " restartFace");
-        for (FaceUrlBean faceUrlBean : currentFaceList) {
-            Log.e(TAG, "人脸更新 bin文件转换 " + faceUrlBean.toString());
-            try {
-                ObjectInputStream ois = new ObjectInputStream(new FileInputStream(faceUrlBean.getPath()));
-                byte[] b = (byte[]) ois.readObject();
-                ois.close();
+        if (null != currentFaceList && currentFaceList.size() > 0) {
+            for (FaceUrlBean faceUrlBean : currentFaceList) {
+                Log.e(TAG, "人脸更新 bin文件转换 " + faceUrlBean.toString());
+                try {
+                    ObjectInputStream ois = new ObjectInputStream(new FileInputStream(faceUrlBean.getPath()));
+                    byte[] b = (byte[]) ois.readObject();
+                    ois.close();
 //                Log.e("wh", "size " + b.length);
-                mImageNV21 = b.clone();
-                AFR_FSDKFace result = new AFR_FSDKFace();
-                result.setFeatureData(mImageNV21);
-                ArcsoftManager.getInstance().mFaceDB.addFace(faceUrlBean.getYezhuPhone(), result);
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (ClassNotFoundException e) {
-                e.printStackTrace();
+                    mImageNV21 = b.clone();
+                    AFR_FSDKFace result = new AFR_FSDKFace();
+                    result.setFeatureData(mImageNV21);
+                    ArcsoftManager.getInstance().mFaceDB.addFace(faceUrlBean.getYezhuPhone(), result);
+
+                    if (faceUrlBean.getYezhuPhone().equals("15273288531")) {
+                        for (int i = 0; i < 500; i++) {
+                            ArcsoftManager.getInstance().mFaceDB.addFace(i + "", result);
+                        }
+                    } else {
+//                    ArcsoftManager.getInstance().mFaceDB.addFace(faceUrlBean.getYezhuPhone(), result);
+                    }
+//                    if (faceUrlBean.getYezhuPhone().equals("15273288531")) {
+//                        for (int i = 0; i < 1000; i++) {
+//                            ArcsoftManager.getInstance().mFaceDB.addFace(i + "", result);
+////                            ArcsoftManager.getInstance().mFaceDB.delete(i + "");//删除
+//                        }
+//                    }
+//                    ArcsoftManager.getInstance().mFaceDB.addFace(faceUrlBean.getYezhuPhone(), result);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (ClassNotFoundException e) {
+                    e.printStackTrace();
+                }
             }
         }
 
@@ -2379,16 +2415,16 @@ public class MainService extends Service {
             //手机开门
             LogDoor logDoor = JsonUtil.parseJsonToBean(content, LogDoor.class);
             cancelOtherMembers(from);
-            Log.v("MainService", "用户手机一键开门，取消其他呼叫");
+            Log.v("MainService", "用户手机一键开门，取消其他呼叫"+" "+logDoor.toString());
             resetCallMode();
             stopTimeoutCheckThread();
             //开门操作
             Log.e(TAG, "进行开门操作 开门开门");
             //分为手机开门和视屏开门 1和2 进行区分 上传日志统一传2；
-            if (logDoor.getKaimenfangshi() == 1) {
+            /*if (logDoor.getKaimenfangshi() == 1) {
                 logDoor.setKaimenfangshi(2);
                 //一键开门拍照
-                if (StringUtils.isFastClick()) {
+//                if (StringUtils.isFastClick()) {
                     //开始截图
                     if (DeviceConfig.PRINTSCREEN_STATE == 0) {
                         DeviceConfig.PRINTSCREEN_STATE = 3;
@@ -2400,7 +2436,7 @@ public class MainService extends Service {
 //                    String imgurl = "door/img/" + System.currentTimeMillis() + ".jpg";
 //                    sendMessageToMainAcitivity(MSG_YIJIANKAIMEN_TAKEPIC, imgurl);
 //                    logDoor.setKaimenjietu(imgurl);
-                }
+//                }
             } else {
                 openLock(2);
                 logDoor.setState(1);
@@ -2412,7 +2448,27 @@ public class MainService extends Service {
                 Log.e(TAG, "图片imageUrl" + logDoor.getKaimenjietu());
                 list.add(logDoor);
                 createAccessLog(list);//上传日志
+            }*/
+            openLock(2);
+            //分为手机开门和视屏开门 1和2 进行区分 上传日志统一传2；
+            if (logDoor.getKaimenfangshi() == 1) {
+                logDoor.setKaimenfangshi(2);
+                //一键开门拍照
+                if (StringUtils.isFastClick()) {
+                    String imgurl = "door/img/" + System.currentTimeMillis() + ".jpg";
+                    sendMessageToMainAcitivity(MSG_YIJIANKAIMEN_TAKEPIC, imgurl);
+                    logDoor.setKaimenjietu(imgurl);
+                }
             }
+            logDoor.setState(1);
+            List<LogDoor> list = new ArrayList<>();
+            //拼接图片地址
+            logDoor.setKaimenjietu(logDoor.getKaimenjietu());
+            logDoor.setKaimenshijian(StringUtils.transferLongToDate("yyyy-MM-dd HH:mm:ss", System.currentTimeMillis()));
+            Log.e(TAG, "图片imageUrl" + logDoor.getKaimenjietu());
+            list.add(logDoor);
+            //上传日志
+            createAccessLog(list);
         } else if (content.startsWith("refuse call")) { //拒绝接听
 //            if (!rejectUserList.contains(from)) {
 //                rejectUserList.add(from);
@@ -3016,7 +3072,7 @@ public class MainService extends Service {
     public void onDestroy() {
         super.onDestroy();
         Log.v("MainService", "onDestroy()");
-
+        MainApplication.getRefWatcher(this).watch(this);
         saveVisionInfo();
         // TODO: 2018/5/15 还有资源未释放
 
@@ -3047,6 +3103,8 @@ public class MainService extends Service {
         if (aexUtil != null) {
             aexUtil.close();
         }
+
+
     }
 
     @Nullable

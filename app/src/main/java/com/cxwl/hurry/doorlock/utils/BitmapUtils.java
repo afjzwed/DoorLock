@@ -101,11 +101,10 @@ public class BitmapUtils {
     /**
      * 保存bitmap到本地
      *
-     * @param context
      * @param mBitmap
      * @return
      */
-    public static File saveBitmap(Context context, Bitmap mBitmap) {
+    public static File saveBitmap(Bitmap mBitmap) {
         File filePic;
         String savePath;
        /* if (Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {

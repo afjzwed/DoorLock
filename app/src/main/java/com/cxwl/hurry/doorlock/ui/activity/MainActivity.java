@@ -2,6 +2,7 @@ package com.cxwl.hurry.doorlock.ui.activity;
 
 import android.annotation.SuppressLint;
 import android.app.ActionBar;
+import android.app.ActivityManager;
 import android.app.Dialog;
 import android.app.Service;
 import android.content.BroadcastReceiver;
@@ -68,6 +69,7 @@ import com.cxwl.hurry.doorlock.R;
 import com.cxwl.hurry.doorlock.callback.AdverErrorCallBack;
 import com.cxwl.hurry.doorlock.callback.AdverTongJiCallBack;
 import com.cxwl.hurry.doorlock.callback.GlideImagerBannerLoader;
+import com.cxwl.hurry.doorlock.config.Constant;
 import com.cxwl.hurry.doorlock.config.DeviceConfig;
 import com.cxwl.hurry.doorlock.db.AdTongJiBean;
 import com.cxwl.hurry.doorlock.db.ImgFile;
@@ -95,6 +97,7 @@ import com.cxwl.hurry.doorlock.utils.JsonUtil;
 import com.cxwl.hurry.doorlock.utils.MacUtils;
 import com.cxwl.hurry.doorlock.utils.NetWorkUtils;
 import com.cxwl.hurry.doorlock.utils.NfcReader;
+import com.cxwl.hurry.doorlock.utils.SPUtil;
 import com.cxwl.hurry.doorlock.utils.ShellUtils;
 import com.cxwl.hurry.doorlock.utils.StringUtils;
 import com.cxwl.hurry.doorlock.view.AutoScrollView;
@@ -167,6 +170,8 @@ import static com.cxwl.hurry.doorlock.config.Constant.MSG_LOADLOCAL_DATA;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_LOCK_OPENED;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_LOGIN_AFTER;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_PASSWORD_CHECK;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_RESTART_VIDEO;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_RESTART_VIDEO1;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_RTC_DISCONNECT;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_RTC_NEWCALL;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_RTC_ONVIDEO;
@@ -177,10 +182,12 @@ import static com.cxwl.hurry.doorlock.config.Constant.MSG_TONGJI_PIC;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_TONGJI_VEDIO;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_UPDATE_NETWORKSTATE;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_UPLOAD_LIXIAN_IMG;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_YIJIANKAIMEN_OPENLOCK;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_YIJIANKAIMEN_TAKEPIC;
 import static com.cxwl.hurry.doorlock.config.Constant.ONVIDEO_MODE;
 import static com.cxwl.hurry.doorlock.config.Constant.PASSWORD_CHECKING_MODE;
 import static com.cxwl.hurry.doorlock.config.Constant.PASSWORD_MODE;
+import static com.cxwl.hurry.doorlock.config.Constant.RESTART_PHONE;
 import static com.cxwl.hurry.doorlock.config.Constant.arc_appid;
 import static com.cxwl.hurry.doorlock.config.Constant.fr_key;
 import static com.cxwl.hurry.doorlock.config.Constant.ft_key;
@@ -241,6 +248,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private String cardId;//卡ID
     private boolean nfcFlag = false;//录卡页面是否显示(即是否录卡)的标识,默认false
+    private Dialog weituoDialog = null;
 
     private Receive receive; //本地广播
     private int netWorkFlag = -1;//当前网络是否可用标识 有网为1 无网为0
@@ -356,7 +364,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         isTongGaoThreadStart = false;//每次初始化都重启一次通告更新线程
         isPicThreadStart = false;//每次初始化都重启一次通告更新线程
         isVideoThreadStart = false;//每次初始化都重启一次通告更新线程
-
+        clearMemory();
     }
 
     //测试自动关广告
@@ -420,7 +428,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         Log.e(TAG, "设置视频 有数据");
                         if (Long.parseLong(StringUtils.transferDateToLong(videoList.get(i).getKaishi_shijian())) <
                                 System
-                                .currentTimeMillis()) {//开始时间小于当前时间，可以显示
+                                        .currentTimeMillis()) {//开始时间小于当前时间，可以显示
                             isPlayingList.add(videoList.get(i));
                         }
                     }
@@ -793,7 +801,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      */
     protected void initVoiceVolume(AudioManager audioManager, int type, int value) {
         int thisValue = audioManager.getStreamMaxVolume(type);//得到最大音量
-        thisValue = thisValue * value / 10;//具体音量值
+        thisValue = thisValue * value / 30;//具体音量值
         audioManager.setStreamVolume(type, thisValue, AudioManager.FLAG_PLAY_SOUND);//调整音量时播放声音
     }
 
@@ -946,30 +954,43 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_CONTRAST, 1000);
                         break;
                     case MSG_LOCK_OPENED://开锁
-                        // TODO: 2018/5/16   //做UI显示，并开启其他的任务
                         Log.i(TAG, "开锁");
                         onLockOpened((int) msg.obj);
-                        final Dialog weituoDialog = DialogUtil.showBottomDialog(MainActivity.this);
-                        DLLog.e("人脸识别", "开门弹窗显示");
-                        final TimerTask task = new TimerTask() {
-                            @Override
-                            public void run() {
-                                runOnUiThread(new Runnable() {      // UI thread
-                                    @Override
-                                    public void run() {
-                                        weituoDialog.dismiss();
-                                    }
-                                });
-                            }
-                        };
-                        // TODO: 2018/6/7 循环?? 有问题 时间太长
-                        timer.schedule(task, 2000, 5000);
+//                        final Dialog weituoDialog = DialogUtil.showBottomDialog(MainActivity.this);
+//                        DLLog.e("人脸识别", "开门弹窗显示");
+//                        final TimerTask task = new TimerTask() {
+//                            @Override
+//                            public void run() {
+//                                runOnUiThread(new Runnable() {      // UI thread
+//                                    @Override
+//                                    public void run() {
+//                                        weituoDialog.dismiss();
+//                                    }
+//                                });
+//                            }
+//                        };
+//                        // TODO: 2018/6/7 循环?? 有问题 时间太长
+//                        timer.schedule(task, 2000, 5000);
+
+                        if (weituoDialog == null) {
+                            weituoDialog = DialogUtil.showBottomDialog(MainActivity.this);
+                        }
+                        if (!weituoDialog.isShowing()) {
+                            weituoDialog.show();
+                            handler.postDelayed(new Runnable() {
+                                @Override
+                                public void run() {
+                                    weituoDialog.dismiss();
+                                }
+                            }, 1000);
+                        }
                         break;
                     case MSG_INVALID_CARD:
                         //无效房卡
                         Utils.DisplayToast(MainActivity.this, "无效卡号");
                         break;
                     case MSG_LOADLOCAL_DATA://离线模式
+                        SPUtil.put(MainActivity.this, Constant.SP_XINTIAO_TIME, (long) (600 * 1000));//离线模式，改为10分钟一次
                         //加载本地数据显示到界面
                         setCommunityName(MainService.communityName);
                         setLockName(MainService.lockName);
@@ -1026,6 +1047,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         break;
                     case MSG_UPLOAD_LIXIAN_IMG:
                         uploadImgs((List<ImgFile>) msg.obj);
+                        break;
+                    case MSG_RESTART_VIDEO:
+                        if (currentStatus == CALL_MODE || currentStatus == PASSWORD_MODE) {
+                            if (faceHandler != null) {
+                                RESTART_PHONE = false;
+                                faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_PAUSE, 100);
+                                faceHandler.sendEmptyMessageDelayed(MSG_RESTART_VIDEO1, 100);
+                            }
+                        }
                         break;
                     default:
                         break;
@@ -2467,7 +2497,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      *
      * @param reason
      */
-
     protected void onCallMemberError(int reason) {
         blockNo = "";
         setDialValue("");
@@ -2530,6 +2559,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 //人脸识别录入
                 faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_PAUSE, 100);
                 faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_INPUT, 100);
+                return;
+            }
+        }
+
+        if (blockNo.equals("99999998")) {
+            if (faceHandler != null) {
+                //人脸识别录入
+                faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_PAUSE, 100);
+                onReStartVideo();
                 return;
             }
         }
@@ -3037,11 +3075,36 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //                        }
                         break;
                     case R.id.action_settings3://上传日志
+                        clearMemory();
                         Log.e(TAG, "menu 上传日志");
                         break;
                     case R.id.action_settings7://重启
                         Log.e(TAG, "menu 重启");
-                        DoorLock.getInstance().runReboot();
+//                        Process proc = null;
+//                        try {
+//                            proc = Runtime.getRuntime().exec(new String[]{"su", "-c", "reboot "});
+//                            proc.waitFor();
+//                        } catch (Exception e) {
+//                            e.printStackTrace();
+//                        }
+//                        PowerManager manager = (PowerManager) getSystemService(Context.POWER_SERVICE);
+//                        manager.reboot("restart");
+//
+//                        Process proc = null;
+//                        try {
+//                            proc =   Runtime.getRuntime().exec(new String[]{"su","-c","reboot -p"});
+//                            proc.waitFor();
+//                        } catch (Exception e) {
+//                            e.printStackTrace();
+//                        }
+
+                        Intent intent1 = new Intent(Intent.ACTION_REBOOT);
+                        intent1.putExtra("nowait", 1);
+                        intent1.putExtra("interval", 1);
+                        intent1.putExtra("window", 0);
+                        sendBroadcast(intent1);
+
+//                        DoorLock.getInstance().runReboot();
                         break;
                     case R.id.action_settings10://退出
 //                        LogDoor.e(TAG,"menu 退出");
@@ -3059,6 +3122,66 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         });
         popup.show();
     }
+
+    private void clearMemory() {
+        //To change body of implemented methods use File | Settings | File Templates.
+        ActivityManager am = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+        List<ActivityManager.RunningAppProcessInfo> infoList = am.getRunningAppProcesses();
+        List<ActivityManager.RunningServiceInfo> serviceInfos = am.getRunningServices(100);
+
+        long beforeMem = getAvailMemory(MainActivity.this);
+        Log.d("进程", "-----------before memory info : " + beforeMem);
+//        string = string + " " + beforeMem+"\r\n";
+//        tvShow.setText(string);
+        int count = 0;
+        if (infoList != null) {
+            for (int i = 0; i < infoList.size(); ++i) {
+                ActivityManager.RunningAppProcessInfo appProcessInfo = infoList.get(i);
+                Log.d("进程", "process name : " + appProcessInfo.processName);
+                //importance 该进程的重要程度  分为几个级别，数值越低就越重要。
+                Log.d("进程", "importance : " + appProcessInfo.importance);
+//                string = string + " process name : " + appProcessInfo.processName + " 等级 : " + appProcessInfo
+//                        .importance+"\r\n";
+
+                // 一般数值大于RunningAppProcessInfo.IMPORTANCE_SERVICE的进程都长时间没用或者空进程了
+                // 一般数值大于RunningAppProcessInfo.IMPORTANCE_VISIBLE的进程都是非可见进程，也就是在后台运行着
+                if (appProcessInfo.importance > ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE) {
+                    String[] pkgList = appProcessInfo.pkgList;
+                    for (int j = 0; j < pkgList.length; ++j) {//pkgList 得到该进程下运行的包名
+                        Log.d("进程", "It will be killed, package name : " + pkgList[j]);
+//                        string = string + " killed: " + pkgList[j]+"\r\n";
+                        if ("com.cxwl.hurry.doorlock".equals(pkgList[j])) {
+
+                        } else {
+                            am.killBackgroundProcesses(pkgList[j]);
+                        }
+                        count++;
+                    }
+                }
+
+            }
+        }
+//        tvShow.setText(string);
+
+        long afterMem = getAvailMemory(MainActivity.this);
+        Log.d("进程", "----------- after memory info : " + afterMem);
+        Toast.makeText(MainActivity.this, "clear " + count + " process, "
+                + (afterMem - beforeMem) + "M", Toast.LENGTH_LONG).show();
+    }
+
+    //获取可用内存大小
+    private long getAvailMemory(Context context) {
+        // 获取android当前可用内存大小
+        ActivityManager am = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+        ActivityManager.MemoryInfo mi = new ActivityManager.MemoryInfo();
+        am.getMemoryInfo(mi);
+        //mi.availMem; 当前系统的可用内存
+        //return Formatter.formatFileSize(context, mi.availMem);// 将获取的内存大小规格化
+        Log.d("进程", "可用内存---->>>" + mi.availMem / (1024 * 1024));
+//        tvShow1.setText("可用内存---->>>" + mi.availMem / (1024 * 1024));
+        return mi.availMem / (1024 * 1024);
+    }
+
     /****************************点击事件相关end**************************************/
 
     /****************************虹软相关start*********************************************/
@@ -3127,6 +3250,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             mSurfaceView.setVisibility(View.GONE);
                         }
                         break;
+                    case MSG_RESTART_VIDEO1:
+                        onReStartVideo();
+                        break;
                     //身份证的都注释
                     case MSG_ID_CARD_DETECT_RESTART:
 //                        idOperation = true;
@@ -3155,7 +3281,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             @Override
             public void run() {
                 Log.v("人脸识别", "initFaceDetect-->" + 111);
-                ArcsoftManager.getInstance().mFaceDB.loadFaces();
+                boolean b = ArcsoftManager.getInstance().mFaceDB.loadFaces();
+                int a = 0;
+                if (b) {
+                    List<FaceRegist> mResgist = ArcsoftManager.getInstance().mFaceDB.mRegister;
+                    for (FaceRegist regist : mResgist) {
+                        int size = regist.mFaceList.size();
+                        a = a + size;
+                    }
+                    Log.e("人脸识别", "人脸个数 " + a);
+                }
                 MainActivity.this.runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
@@ -3166,12 +3301,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         if (ArcsoftManager.getInstance().mFaceDB.mRegister.isEmpty()) {
                             Log.v("人脸识别", "initFaceDetect-->" + 333);
 //                            hasFaceInfo = false;
-                            Utils.DisplayToast(MainActivity.this, "没有注册人脸，请先注册");
+//                            Utils.DisplayToast(MainActivity.this, "没有注册人脸，请先注册");
                             return;
                         }
 //                        hasFaceInfo = true;//有注册人脸
                         identification = true;
-                        Utils.DisplayToast(MainActivity.this, "人脸数据加载完成");
+//                        Utils.DisplayToast(MainActivity.this, "人脸数据加载完成");
                     }
                 });
             }
@@ -3213,19 +3348,23 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 // (NV21：是一种YUV420SP格式，紧跟Y平面的是VU交替的平面)
                 mCamera.setParameters(parameters1);
             }
-
+//            Camera.Parameters parameters2 = mCamera.getParameters();
+//            if (null != parameters2) {
+//                parameters2.setPreviewFpsRange(15000, 30000);//指定相机预览帧数
+//                mCamera.setParameters(parameters2);
+//            }
 //            for (Camera.Size size : parameters.getSupportedPreviewSizes()) {
 //                LogDoor.v(TAG, "SIZE:" + size.width + "x" + size.height);
 //            }
 //            for (Integer format : parameters.getSupportedPreviewFormats()) {
-//                LogDoor.v(TAG, "FORMAT:" + format);
+//                Log.v(TAG, "相机FORMAT:" + format);
 //            }
-//
+////
 //            List<int[]> fps = parameters.getSupportedPreviewFpsRange();
 //            for (int[] count : fps) {
-//                LogDoor.d(TAG, "T:");
+//                Log.d(TAG, "相机T:");
 //                for (int data : count) {
-//                    LogDoor.d(TAG, "V=" + data);
+//                    Log.d(TAG, "相机V=" + data);
 //                }
 //            }
             //parameters.setPreviewFpsRange(15000, 30000);
@@ -3296,7 +3435,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 ////            Rect(140, 164 - 404, 428),1
 //        }
         if (mImageNV21 == null) {
+//            Log.e(TAG, "人脸识别 " + "开始1");
             if (!result.isEmpty()) {
+                Log.e(TAG, "人脸识别 " + "开始2");
                 mAFT_FSDKFace = result.get(0).clone();//保存集合中第一个人脸信息
                 mImageNV21 = data.clone();//保存图像数据
             } else {
@@ -3304,8 +3445,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         }
 
-        if (data != null) {
-            picData = data.clone();//保存图像数据
+        if (DeviceConfig.PRINTSCREEN_STATE == 2||DeviceConfig.PRINTSCREEN_STATE == 3) {
+            if (data != null) {
+                picData = data.clone();//保存图像数据
+            }
         }
 
         //保存人脸框数组
@@ -3359,6 +3502,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         // TODO: 2018/5/14 这里拿到本地数据库脸信息表
         List<FaceRegist> mResgist = ArcsoftManager.getInstance().mFaceDB.mRegister;
+
 //        List<Lian> mFaceList = new ArrayList<>();
 
 //        List<ASAE_FSDKFace> face1 = new ArrayList<>();
@@ -3399,7 +3543,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         @Override
         public void setup() {
-//            Log.e("人脸识别", "这里走了吗");
             AFR_FSDKError error = engine.AFR_FSDK_InitialEngine(arc_appid, fr_key);
             //Log.v(FACE_TAG, "AFR_FSDK_InitialEngine = " + error.getCode());
             error = engine.AFR_FSDK_GetVersion(version);
@@ -3409,24 +3552,52 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         @Override
         public void loop() {
+//            Log.e("人脸识别", "这里走了吗");
 //            Log.v(FACE_TAG, "loop1:" + mImageNV21 + "/" + identification);
             while (pause) {
                 onPause();
             }
-            try {
-                Thread.sleep(1 * 1000);//一秒一次
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+//            try {
+//                Thread.sleep(1 * 1000);//一秒一次
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
 
             if (DeviceConfig.PRINTSCREEN_STATE == 2) {
+                if (null != picData) {
+                    //将byte数组转成bitmap再转成图片文件
+                    byte[] data = picData.clone();
+                    if (data != null && data.length > 0) {
+                        Bitmap bmp = BitmapUtils.byteToFile(data, mWidth, mHeight);
+                        File file = null;
+                        if (null != bmp) {
+                            file = BitmapUtils.saveBitmap(bmp);//本地截图文件地址
+                        }
+                        if (null != file && !TextUtils.isEmpty(file.getPath())) {
+                            uploadToQiNiu(file, 1);//这里做上传到七牛的操作，不返回图片URL
+                        } else {
+                            faceOpenUrl = "";
+                        }
+                        DeviceConfig.PRINTSCREEN_STATE = 0;//图片处理完成,重置状态
+                        sendMainMessager(MSG_CARD_OPENLOCK, faceOpenUrl);
+                        file = null;
+                        bmp = null;
+                        data = null;
+                    }
+                    picData = null;
+                }
+            }
+
+            if (DeviceConfig.PRINTSCREEN_STATE == 3) {
                 //将byte数组转成bitmap再转成图片文件
                 byte[] data = picData;
                 if (data != null && data.length > 0) {
+                    Log.e("wh", "不会吧");
                     Bitmap bmp = BitmapUtils.byteToFile(data, mWidth, mHeight);
+                    Bitmap bitmap = BitmapUtils.rotateBitmap(bmp);//旋转180度
                     File file = null;
-                    if (null != bmp) {
-                        file = BitmapUtils.saveBitmap(MainActivity.this, bmp);//本地截图文件地址
+                    if (null != bitmap) {
+                        file = BitmapUtils.saveBitmap(bitmap);//本地截图文件地址
                     }
                     if (null != file && !TextUtils.isEmpty(file.getPath())) {
                         uploadToQiNiu(file, 1);//这里做上传到七牛的操作，不返回图片URL
@@ -3434,66 +3605,33 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         faceOpenUrl = "";
                     }
                     DeviceConfig.PRINTSCREEN_STATE = 0;//图片处理完成,重置状态
-                    sendMainMessager(MSG_CARD_OPENLOCK, faceOpenUrl);
+                    sendMainMessager(MSG_YIJIANKAIMEN_OPENLOCK, faceOpenUrl);
                     file = null;
+                    bitmap = null;
                     bmp = null;
                     data = null;
                 }
             }
 
-            if (DeviceConfig.PRINTSCREEN_STATE == 0) {//开启截图、上传图片、开门、上传日志流程
-                if (mImageNV21 != null && identification) {//摄像头检测到人脸信息且处于人脸识别状态
-                    DLLog.e("人脸识别", "开始");
-//                long time = System.currentTimeMillis();
-                    //检测输入图像中的人脸特征信息，输出结果保存在 AFR_FSDKFace feature
-                    //data 输入的图像数据,width 图像宽度,height 图像高度,format 图像格式,face 已检测到的脸框,ori 已检测到的脸角度,
-                    // feature 检测到的人脸特征信息
-                    AFR_FSDKError error = engine.AFR_FSDK_ExtractFRFeature(mImageNV21, mWidth, mHeight, AFR_FSDKEngine
-                            .CP_PAF_NV21, mAFT_FSDKFace.getRect(), mAFT_FSDKFace.getDegree(), result);
-//                Log.d(TAG, "AFR_FSDK_ExtractFRFeature cost :" + (System.currentTimeMillis() -time) + "ms");
-                    Log.d(TAG, "Face=" + result.getFeatureData()[0] + "," + result.getFeatureData()[1] + "," + result
-                            .getFeatureData()[2] + "," + error.getCode());
-                    AFR_FSDKMatching score = new AFR_FSDKMatching();//这个类用来保存特征信息匹配度
-                    float max = 0.0f;//匹配度的值
-                    String name = null;
-
-                    //遍历本地信息表
-                    for (FaceRegist fr : mResgist) {
-                        Log.v("人脸识别", "loop:" + mResgist.size() + "/" + fr.mFaceList.size());
-                        if (fr.mName.length() > 11) {
-                            continue;
-                        }
-                        for (AFR_FSDKFace face : fr.mFaceList) {
-                            //比较两份人脸特征信息的匹配度(result 脸部特征信息对象,face 脸部特征信息对象,score 匹配度对象)
-//                            Log.e("人脸识别 比较值 ", "result " + result.toString() + " face " + face.toString());
-                            error = engine.AFR_FSDK_FacePairMatching(result, face, score);
-//                            Log.d("人脸识别", "Score:" + score.getScore() + " error " + error.getCode());
-                            if (max < score.getScore()) {
-                                max = score.getScore();//匹配度赋值
-                                name = fr.mName;
-                                if (max > 0.6f) {//匹配度的值高于设定值,退出循环
-                                    DLLog.e("人脸识别", "匹配度的值高于设定值 " + max);
-                                    break;
-                                }
-                            }
-                        }
-                    }
-
-//                    Log.v("人脸识别", "fit Score:" + max + ", NAME:" + name);
-                    if (max > 0.6f) {//匹配度的值高于设定值,发出消息,开门
-                        if (null != name && !cardRecord.checkLastCardNew(name)) {//判断距离上次刷脸时间是否超过10秒
-                            //fr success.
-                            //Log.v(FACE_TAG, "置信度：" + (float) ((int) (max * 1000)) / 1000.0);
-//                        if (DeviceConfig.PRINTSCREEN_STATE == 0) {//开启截图、上传图片、开门、上传日志流程
-                            DeviceConfig.PRINTSCREEN_STATE = 1;//开启截图、上传图片、开门、上传日志流程
-//                            DLLog.e(TAG, "人脸 开启截图、上传图片、开门、上传日志流程  状态值PRINTSCREEN_STATE 为1");
-                            //将byte数组转成bitmap再转成图片文件
+            if (DeviceConfig.DEVICE_TYPE.equals("B") && netWorkFlag == 1) {//大门,人脸验证走网络
+                if (DeviceConfig.PRINTSCREEN_STATE == 0) {
+                    if (mImageNV21 != null && identification) {//摄像头检测到人脸信息且处于人脸识别状态
+                        DeviceConfig.PRINTSCREEN_STATE = 1;//开启截图、上传图片、开门、上传日志流程
+                        //检测输入图像中的人脸特征信息
+                        AFR_FSDKError error = engine.AFR_FSDK_ExtractFRFeature(mImageNV21, mWidth, mHeight,
+                                AFR_FSDKEngine.CP_PAF_NV21, mAFT_FSDKFace.getRect(), mAFT_FSDKFace.getDegree(), result);
+                        // TODO: 2018/7/25 1.转换人脸信息(result)为.bin文件存在本地tempface文件夹中
+                        // TODO: 2018/7/25 2.将.bin文件提交给服务器判断(同步或异步提交)
+                        commitData();
+                        // TODO: 2018/7/25 同步start
+                        if (true) {//匹配，开门
                             byte[] data = mImageNV21;
+                            String name = "";
                             if (data != null && data.length > 0) {
                                 Bitmap bmp = BitmapUtils.byteToFile(data, mWidth, mHeight);
                                 File file = null;
                                 if (null != bmp) {
-                                    file = BitmapUtils.saveBitmap(MainActivity.this, bmp);//本地截图文件地址
+                                    file = BitmapUtils.saveBitmap(bmp);//本地截图文件地址
                                 }
                                 String[] parameters = new String[2];
                                 parameters[0] = name;
@@ -3505,17 +3643,103 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                 }
                                 DLLog.e("人脸识别", "发出消息 " + name);
                                 sendMainMessager(MSG_FACE_OPENLOCK, parameters);
+                                // TODO: 2018/7/25 匹配成功后删除tempface文件夹中所有的文件
                                 file = null;
                                 bmp = null;
                                 data = null;
-                                name=null;
+                                name = null;
                             }
-//                        }
+                        } else {//不匹配
+                            DeviceConfig.PRINTSCREEN_STATE = 0;//重置状态
                         }
+                        mAFT_FSDKFace = null;
+                        mImageNV21 = null;
+                        // TODO: 2018/7/25 同步end
+
+                        // TODO: 2018/7/25 异步start
+                        uploadBin();
+                        // TODO: 2018/7/25 异步end
                     }
-                    mImageNV21 = null;
+                }
+            } else {//单元门,人脸验证走本地
+                if (DeviceConfig.PRINTSCREEN_STATE == 0) {//开启截图、上传图片、开门、上传日志流程
+                    if (mImageNV21 != null && identification) {//摄像头检测到人脸信息且处于人脸识别状态
+                        DLLog.e("人脸识别", "开始");
+                        long time = System.currentTimeMillis();
+                        //检测输入图像中的人脸特征信息，输出结果保存在 AFR_FSDKFace feature
+                        //data 输入的图像数据,width 图像宽度,height 图像高度,format 图像格式,face 已检测到的脸框,ori 已检测到的脸角度,
+                        // feature 检测到的人脸特征信息
+                        AFR_FSDKError error = engine.AFR_FSDK_ExtractFRFeature(mImageNV21, mWidth, mHeight,
+                                AFR_FSDKEngine.CP_PAF_NV21, mAFT_FSDKFace.getRect(), mAFT_FSDKFace.getDegree(), result);
+//                        Log.d(TAG, "AFR_FSDK_ExtractFRFeature cost :" + (System.currentTimeMillis() - time) + "ms");
+//                        Log.d(TAG, "Face=" + result.getFeatureData()[0] + "," + result.getFeatureData()[1] + "," +
+//                                result.getFeatureData()[2] + "," + error.getCode());
+                        AFR_FSDKMatching score = new AFR_FSDKMatching();//这个类用来保存特征信息匹配度
+                        float max = 0.0f;//匹配度的值
+                        String name = null;
+
+                        //遍历本地信息表
+                        for (FaceRegist fr : mResgist) {
+                            Log.v("人脸识别", "loop:" + mResgist.size() + "/" + fr.mFaceList.size());
+                            if (fr.mName.length() > 11) {
+                                continue;
+                            }
+                            for (AFR_FSDKFace face : fr.mFaceList) {
+                                //比较两份人脸特征信息的匹配度(result 脸部特征信息对象,face 脸部特征信息对象,score 匹配度对象)
+//                            Log.e("人脸识别 比较值 ", "result " + result.toString() + " face " + face.toString());
+                                error = engine.AFR_FSDK_FacePairMatching(result, face, score);
+                                Log.d("人脸识别", "Score:" + score.getScore() + " error " + error.getCode());
+                                if (max < score.getScore()) {
+                                    max = score.getScore();//匹配度赋值
+                                    name = fr.mName;
+                                    if (max > Constant.FACE_MAX) {//匹配度的值高于设定值,退出循环
+                                        DLLog.e("人脸识别", "匹配度的值高于设定值 " + max);
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        Log.v("人脸识别", "fit Score:" + max + ", NAME:" + name);
+                        if (max > Constant.FACE_MAX) {//匹配度的值高于设定值,发出消息,开门
+                            if (null != name && !cardRecord.checkLastCardNew(name)) {//判断距离上次刷脸时间是否超过10秒
+                                //fr success.
+                                //Log.v(FACE_TAG, "置信度：" + (float) ((int) (max * 1000)) / 1000.0);
+                                DeviceConfig.PRINTSCREEN_STATE = 1;//开启截图、上传图片、开门、上传日志流程
+                                //将byte数组转成bitmap再转成图片文件
+                                byte[] data = mImageNV21;
+                                if (data != null && data.length > 0) {
+                                    Bitmap bmp = BitmapUtils.byteToFile(data, mWidth, mHeight);
+                                    File file = null;
+                                    if (null != bmp) {
+                                        file = BitmapUtils.saveBitmap(bmp);//本地截图文件地址
+                                    }
+                                    String[] parameters = new String[2];
+                                    parameters[0] = name;
+                                    if (null != file && !TextUtils.isEmpty(file.getPath())) {
+                                        uploadToQiNiu(file, 3);//这里做上传到七牛的操作，不返回图片URL
+                                        parameters[1] = faceOpenUrl;
+                                    } else {
+                                        parameters[1] = "";
+                                    }
+                                    DLLog.e("人脸识别", "发出消息 " + name);
+                                    sendMainMessager(MSG_FACE_OPENLOCK, parameters);
+                                    file = null;
+                                    bmp = null;
+                                    data = null;
+                                    name = null;
+                                }
+//                        }
+                            }
+                        }
+//                    result = null;
+//                    result = new AFR_FSDKFace();
+                        mAFT_FSDKFace = null;
+                        mImageNV21 = null;
+                    }
                 }
             }
+
         }
 
         @Override
@@ -3523,6 +3747,63 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             AFR_FSDKError error = engine.AFR_FSDK_UninitialEngine();//销毁引擎，释放内存资源
             //Log.v(FACE_TAG, "AFR_FSDK_UninitialEngine : " + error.getCode());
         }
+    }
+
+    private void commitData() {
+//        OkHttpUtils
+//                .postFile()
+//                .url(url)
+//                .file(file)
+//                .build()
+//                .execute(new Callback() {
+//                    @Override
+//                    public Object parseNetworkResponse(Response response, int id) throws Exception {
+//                        return null;
+//                    }
+//
+//                    @Override
+//                    public void onError(Call call, Exception e, int id) {
+//
+//                    }
+//
+//                    @Override
+//                    public void onResponse(Object response, int id) {
+//
+//                    }
+//                });
+    }
+
+    private void uploadBin() {
+        if (true) {//匹配，开门
+            byte[] data = mImageNV21;
+            String name = "";
+            if (data != null && data.length > 0) {
+                Bitmap bmp = BitmapUtils.byteToFile(data, mWidth, mHeight);
+                File file = null;
+                if (null != bmp) {
+                    file = BitmapUtils.saveBitmap(bmp);//本地截图文件地址
+                }
+                String[] parameters = new String[2];
+                parameters[0] = name;
+                if (null != file && !TextUtils.isEmpty(file.getPath())) {
+                    uploadToQiNiu(file, 3);//这里做上传到七牛的操作，不返回图片URL
+                    parameters[1] = faceOpenUrl;
+                } else {
+                    parameters[1] = "";
+                }
+                DLLog.e("人脸识别", "发出消息 " + name);
+                sendMainMessager(MSG_FACE_OPENLOCK, parameters);
+                // TODO: 2018/7/25 匹配成功后删除tempface文件夹中所有的文件
+                file = null;
+                bmp = null;
+                data = null;
+                name = null;
+            }
+        } else {
+            DeviceConfig.PRINTSCREEN_STATE = 0;//重置状态
+        }
+        mAFT_FSDKFace = null;
+        mImageNV21 = null;
     }
 
     /**
@@ -3580,14 +3861,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         });
     }
 
-
     /****************************虹软相关end*********************************************/
 
     /****************************生命周期start*******************************************/
     @Override
     protected void onStart() {
         super.onStart();
-
+        Log.v(TAG, "MainActivity/onStart-->");
         if (isRestartPlay) {
             isRestartPlay = false;
             advertiseHandler.start(adverErrorCallBack);
@@ -3614,8 +3894,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     protected void onPause() {
         super.onPause();
-
-        advertiseHandler.pause(adverErrorCallBack);
+        Log.v(TAG, "MainActivity/onPause-->");
+        if (null != advertiseHandler) {
+            advertiseHandler.pause(adverErrorCallBack);
+        }
         isRestartPlay = true;
     }
 
@@ -3637,12 +3919,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     protected void onRestart() {
         super.onRestart();
+        Log.v(TAG, "MainActivity/onRestart-->");
         setCurrentStatus(CALL_MODE);
     }
 
     @Override
     protected void onDestroy() {
         Log.i(TAG, "onDestroy");
+
+        MainApplication.getRefWatcher(this).watch(this);
+
         unbindService(serviceConnection);
         unregisterReceiver(receive);
         disableReaderMode();
@@ -3673,6 +3959,58 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         // TODO: 2018/5/15 还有资源未释放，之后再查
 
         super.onDestroy();
+    }
+
+    private void onReStartVideo() {
+        //    MainActivity/onPause-->
+//    MainActivity/onStop-->
+//    MainActivity/onRestart-->
+//    MainActivity/onStart-->
+//    MainActivity/onResume-->
+
+//        onPause();
+//        onStop();
+//        onRestart();
+//        onStart();
+//        onResume();
+
+//        Log.v(TAG, "MainActivity/onPause-->");
+//        if (null != advertiseHandler) {
+//            advertiseHandler.pause(adverErrorCallBack);
+//            isRestartPlay = true;
+//        }
+//        Log.v(TAG, "MainActivity/onStop-->");
+//        if (faceHandler != null) {
+//            faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_PAUSE, 1000);
+//            faceHandler.sendEmptyMessageDelayed(MSG_ID_CARD_DETECT_PAUSE, 1000);
+//        }
+//        if (as.isScrolled()) {
+//            as.setScrolled(false);
+//            as.change();
+//        }
+//        Log.v(TAG, "MainActivity/onRestart-->");
+//        setCurrentStatus(CALL_MODE);
+//        Log.v(TAG, "MainActivity/onStart-->");
+//        if (isRestartPlay) {
+//            isRestartPlay = false;
+//            advertiseHandler.start(adverErrorCallBack);
+//        }
+//        if (!as.isScrolled()) {
+//            as.setScrolled(true);
+//            as.autoScroll(isTongGaoFrist);
+//        }
+//        Log.v(TAG, "MainActivity/onResume-->");
+//        if (faceHandler != null) {
+//            faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_CONTRAST, 3000);
+//            faceHandler.sendEmptyMessageDelayed(MSG_ID_CARD_DETECT_RESTART, 1000);
+//        }
+//        DLLog.e("wh", "进行流媒体的重启");
+//        startActivity(new Intent(this, PhotographActivity.class));
+
+//        String[] arrayRestart = {"su","-c","reboot"};
+        Intent intent = new Intent();
+        intent.setAction("com.androidex.action.reboot");
+        sendBroadcast(intent);
     }
 
     /****************************生命周期end*********************************************/
