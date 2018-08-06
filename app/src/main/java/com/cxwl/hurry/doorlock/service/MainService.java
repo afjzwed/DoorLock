@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.Service;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.media.AudioManager;
@@ -17,6 +18,7 @@ import android.os.RemoteException;
 import android.support.annotation.Nullable;
 import android.text.TextUtils;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.arcsoft.facerecognition.AFR_FSDKFace;
 import com.cxwl.hurry.doorlock.Bean.BanbenBean;
@@ -69,6 +71,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.OutputStream;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -145,6 +149,7 @@ import static com.cxwl.hurry.doorlock.config.Constant.MSG_UPDATE_NETWORKSTATE;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_UPLOAD_LIXIAN_IMG;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_YIJIANKAIMEN_OPENLOCK;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_YIJIANKAIMEN_TAKEPIC;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_YIJIANKAIMEN_TAKEPIC1;
 import static com.cxwl.hurry.doorlock.config.Constant.RESTART_PHONE;
 import static com.cxwl.hurry.doorlock.config.Constant.RTC_APP_ID;
 import static com.cxwl.hurry.doorlock.config.Constant.RTC_APP_KEY;
@@ -922,14 +927,16 @@ public class MainService extends Service {
                                 Calendar calendar = Calendar.getInstance();
                                 int hour = calendar.get(Calendar.HOUR_OF_DAY);
                                 Log.e(TAG, "当前小时 " + hour + " " + RESTART_PHONE);
-                                if (hour == 14) {
+                                if (hour == 3) {
                                     RESTART_PHONE = true;
-                                } else if (hour == 15) {//每晚凌晨4点时进行一次媒体流的重启
+                                } else if (hour == 4) {//每晚凌晨4点时进行一次媒体流的重启
                                     if (RESTART_PHONE == true) {
                                         sendMessageToMainAcitivity(MSG_RESTART_VIDEO, imgFiles);
                                     }
                                 }
                                 calendar = null;
+
+                                clearMemory();
                             }
                         } else {
                             //服务器异常或没有网络
@@ -942,6 +949,83 @@ public class MainService extends Service {
         } catch (JSONException e) {
             e.printStackTrace();
         }
+    }
+
+    private void clearMemory() {
+        //To change body of implemented methods use File | Settings | File Templates.
+        ActivityManager am = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+        List<ActivityManager.RunningAppProcessInfo> infoList = am.getRunningAppProcesses();
+        List<ActivityManager.RunningServiceInfo> serviceInfos = am.getRunningServices(100);
+
+        Method method = null;
+        try {
+            method = Class.forName("android.app.ActivityManager").getMethod("forceStopPackage", String.class);
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+
+        long beforeMem = getAvailMemory(getApplication());
+        Log.d("进程", "-----------before memory info : " + beforeMem);
+//        string = string + " " + beforeMem+"\r\n";
+//        tvShow.setText(string);
+        int count = 0;
+        if (infoList != null) {
+            for (int i = 0; i < infoList.size(); ++i) {
+                ActivityManager.RunningAppProcessInfo appProcessInfo = infoList.get(i);
+                Log.d("进程", "process name : " + appProcessInfo.processName);
+                //importance 该进程的重要程度  分为几个级别，数值越低就越重要。
+                Log.d("进程", "importance : " + appProcessInfo.importance);
+//                string = string + " process name : " + appProcessInfo.processName + " 等级 : " + appProcessInfo
+//                        .importance+"\r\n";
+
+                // 一般数值大于RunningAppProcessInfo.IMPORTANCE_SERVICE的进程都长时间没用或者空进程了
+                // 一般数值大于RunningAppProcessInfo.IMPORTANCE_VISIBLE的进程都是非可见进程，也就是在后台运行着
+                if (appProcessInfo.importance > ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE) {
+                    String[] pkgList = appProcessInfo.pkgList;
+                    for (int j = 0; j < pkgList.length; ++j) {//pkgList 得到该进程下运行的包名
+                        Log.d("进程", "It will be killed, package name : " + pkgList[j]);
+//                        string = string + " killed: " + pkgList[j]+"\r\n";
+                        if ("com.cxwl.hurry.doorlock".equals(pkgList[j])) {
+
+                        } else {
+                            if (null != method) {
+                                try {
+                                    method.invoke(am, pkgList[j]);
+                                } catch (IllegalAccessException e) {
+                                    e.printStackTrace();
+                                } catch (InvocationTargetException e) {
+                                    e.printStackTrace();
+                                }
+                            } else {
+                                am.killBackgroundProcesses(pkgList[j]);
+                            }
+                        }
+                        count++;
+                    }
+                }
+            }
+        }
+//        tvShow.setText(string);
+        long afterMem = getAvailMemory(getApplication());
+        Log.d("进程", "----------- after memory info : " + afterMem);
+        DLLog.e("进程","-----------before memory info : " + beforeMem+" ----------- after memory info : "+ afterMem);
+//        Toast.makeText(MainActivity.this, "clear " + count + " process, "
+//                + (afterMem - beforeMem) + "M", Toast.LENGTH_LONG).show();
+    }
+
+    //获取可用内存大小
+    private long getAvailMemory(Context context) {
+        // 获取android当前可用内存大小
+        ActivityManager am = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+        ActivityManager.MemoryInfo mi = new ActivityManager.MemoryInfo();
+        am.getMemoryInfo(mi);
+        //mi.availMem; 当前系统的可用内存
+        //return Formatter.formatFileSize(context, mi.availMem);// 将获取的内存大小规格化
+        Log.d("进程", "可用内存---->>>" + mi.availMem / (1024 * 1024));
+//        tvShow1.setText("可用内存---->>>" + mi.availMem / (1024 * 1024));
+        return mi.availMem / (1024 * 1024);
     }
 
     /**
@@ -2411,11 +2495,12 @@ public class MainService extends Service {
         } else if (content.equals("refresh all info")) {
         } else if (content.startsWith("reject call")) { //挂断
             Log.v("MainService", "reject call，取消其他呼叫");
+
         } else if (content.startsWith("{")) {
             //手机开门
             LogDoor logDoor = JsonUtil.parseJsonToBean(content, LogDoor.class);
             cancelOtherMembers(from);
-            Log.v("MainService", "用户手机一键开门，取消其他呼叫"+" "+logDoor.toString());
+            Log.v("MainService", "用户手机一键开门，取消其他呼叫" + " " + logDoor.toString());
             resetCallMode();
             stopTimeoutCheckThread();
             //开门操作
@@ -2425,17 +2510,18 @@ public class MainService extends Service {
                 logDoor.setKaimenfangshi(2);
                 //一键开门拍照
 //                if (StringUtils.isFastClick()) {
-                    //开始截图
-                    if (DeviceConfig.PRINTSCREEN_STATE == 0) {
-                        DeviceConfig.PRINTSCREEN_STATE = 3;
-                        Log.e(TAG, "一键开门，开始截图" + DeviceConfig.PRINTSCREEN_STATE);
-                        mLogDoor = logDoor;
-                        openLock(2);
-                    }
-                    //以下为调用摄像头拍照
-//                    String imgurl = "door/img/" + System.currentTimeMillis() + ".jpg";
-//                    sendMessageToMainAcitivity(MSG_YIJIANKAIMEN_TAKEPIC, imgurl);
-//                    logDoor.setKaimenjietu(imgurl);
+                //开始截图
+                if (DeviceConfig.PRINTSCREEN_STATE == 0) {
+                    DeviceConfig.PRINTSCREEN_STATE = 3;
+                    Log.e(TAG, "一键开门，开始截图" + DeviceConfig.PRINTSCREEN_STATE);
+                    mLogDoor = logDoor;
+                    openLock(2);
+                }
+                //以下为调用摄像头拍照
+//                openLock(2);
+//                String imgurl = "door/img/" + System.currentTimeMillis() + ".jpg";
+//                sendMessageToMainAcitivity(MSG_YIJIANKAIMEN_TAKEPIC, imgurl);
+//                logDoor.setKaimenjietu(imgurl);
 //                }
             } else {
                 openLock(2);
@@ -2448,7 +2534,9 @@ public class MainService extends Service {
                 Log.e(TAG, "图片imageUrl" + logDoor.getKaimenjietu());
                 list.add(logDoor);
                 createAccessLog(list);//上传日志
+                sendMessageToMainAcitivity(MSG_YIJIANKAIMEN_TAKEPIC1, null);
             }*/
+
             openLock(2);
             //分为手机开门和视屏开门 1和2 进行区分 上传日志统一传2；
             if (logDoor.getKaimenfangshi() == 1) {
@@ -2459,6 +2547,8 @@ public class MainService extends Service {
                     sendMessageToMainAcitivity(MSG_YIJIANKAIMEN_TAKEPIC, imgurl);
                     logDoor.setKaimenjietu(imgurl);
                 }
+            } else {
+                sendMessageToMainAcitivity(MSG_YIJIANKAIMEN_TAKEPIC1, null);
             }
             logDoor.setState(1);
             List<LogDoor> list = new ArrayList<>();

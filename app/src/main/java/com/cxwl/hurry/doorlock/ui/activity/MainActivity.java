@@ -123,6 +123,8 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -184,6 +186,7 @@ import static com.cxwl.hurry.doorlock.config.Constant.MSG_UPDATE_NETWORKSTATE;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_UPLOAD_LIXIAN_IMG;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_YIJIANKAIMEN_OPENLOCK;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_YIJIANKAIMEN_TAKEPIC;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_YIJIANKAIMEN_TAKEPIC1;
 import static com.cxwl.hurry.doorlock.config.Constant.ONVIDEO_MODE;
 import static com.cxwl.hurry.doorlock.config.Constant.PASSWORD_CHECKING_MODE;
 import static com.cxwl.hurry.doorlock.config.Constant.PASSWORD_MODE;
@@ -364,7 +367,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         isTongGaoThreadStart = false;//每次初始化都重启一次通告更新线程
         isPicThreadStart = false;//每次初始化都重启一次通告更新线程
         isVideoThreadStart = false;//每次初始化都重启一次通告更新线程
-        clearMemory();
+//        clearMemory();
     }
 
     //测试自动关广告
@@ -1055,6 +1058,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                 faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_PAUSE, 100);
                                 faceHandler.sendEmptyMessageDelayed(MSG_RESTART_VIDEO1, 100);
                             }
+                        }
+                        break;
+                    case MSG_YIJIANKAIMEN_TAKEPIC1:
+                        if (faceHandler != null) {
+                            faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_CONTRAST, 1000);
                         }
                         break;
                     default:
@@ -2563,15 +2571,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         }
 
-        if (blockNo.equals("99999998")) {
-            if (faceHandler != null) {
-                //人脸识别录入
-                faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_PAUSE, 100);
-                onReStartVideo();
-                return;
-            }
-        }
-
         if (blockNo.equals(("8888")) || blockNo.equals("88888888")) {
             if (faceHandler != null) {
                 // TODO: 2018/5/28 不暂停人脸识别
@@ -3129,6 +3128,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         List<ActivityManager.RunningAppProcessInfo> infoList = am.getRunningAppProcesses();
         List<ActivityManager.RunningServiceInfo> serviceInfos = am.getRunningServices(100);
 
+        Method method = null;
+        try {
+            method = Class.forName("android.app.ActivityManager").getMethod("forceStopPackage", String.class);
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+
         long beforeMem = getAvailMemory(MainActivity.this);
         Log.d("进程", "-----------before memory info : " + beforeMem);
 //        string = string + " " + beforeMem+"\r\n";
@@ -3137,9 +3145,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         if (infoList != null) {
             for (int i = 0; i < infoList.size(); ++i) {
                 ActivityManager.RunningAppProcessInfo appProcessInfo = infoList.get(i);
-                Log.d("进程", "process name : " + appProcessInfo.processName);
+//                Log.d("进程", "process name : " + appProcessInfo.processName);
                 //importance 该进程的重要程度  分为几个级别，数值越低就越重要。
-                Log.d("进程", "importance : " + appProcessInfo.importance);
+//                Log.d("进程", "importance : " + appProcessInfo.importance);
 //                string = string + " process name : " + appProcessInfo.processName + " 等级 : " + appProcessInfo
 //                        .importance+"\r\n";
 
@@ -3153,18 +3161,26 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         if ("com.cxwl.hurry.doorlock".equals(pkgList[j])) {
 
                         } else {
-                            am.killBackgroundProcesses(pkgList[j]);
+                            if (null != method) {
+                                try {
+                                    method.invoke(am, pkgList[j]);
+                                } catch (IllegalAccessException e) {
+                                    e.printStackTrace();
+                                } catch (InvocationTargetException e) {
+                                    e.printStackTrace();
+                                }
+                            } else {
+                                am.killBackgroundProcesses(pkgList[j]);
+                            }
                         }
                         count++;
                     }
                 }
-
             }
         }
 //        tvShow.setText(string);
-
         long afterMem = getAvailMemory(MainActivity.this);
-        Log.d("进程", "----------- after memory info : " + afterMem);
+//        Log.d("进程", "----------- after memory info : " + afterMem);
         Toast.makeText(MainActivity.this, "clear " + count + " process, "
                 + (afterMem - beforeMem) + "M", Toast.LENGTH_LONG).show();
     }
@@ -3282,15 +3298,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             public void run() {
                 Log.v("人脸识别", "initFaceDetect-->" + 111);
                 boolean b = ArcsoftManager.getInstance().mFaceDB.loadFaces();
-                int a = 0;
-                if (b) {
-                    List<FaceRegist> mResgist = ArcsoftManager.getInstance().mFaceDB.mRegister;
-                    for (FaceRegist regist : mResgist) {
-                        int size = regist.mFaceList.size();
-                        a = a + size;
-                    }
-                    Log.e("人脸识别", "人脸个数 " + a);
-                }
+//                int a = 0;
+//                if (b) {
+//                    List<FaceRegist> mResgist = ArcsoftManager.getInstance().mFaceDB.mRegister;
+//                    for (FaceRegist regist : mResgist) {
+//                        int size = regist.mFaceList.size();
+//                        a = a + size;
+//                    }
+//                    Log.e("人脸识别", "人脸个数 " + a);
+//                }
                 MainActivity.this.runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
@@ -3445,7 +3461,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         }
 
-        if (DeviceConfig.PRINTSCREEN_STATE == 2||DeviceConfig.PRINTSCREEN_STATE == 3) {
+        if (DeviceConfig.PRINTSCREEN_STATE == 2 || DeviceConfig.PRINTSCREEN_STATE == 3) {
             if (data != null) {
                 picData = data.clone();//保存图像数据
             }
