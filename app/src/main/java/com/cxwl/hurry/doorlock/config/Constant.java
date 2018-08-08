@@ -59,7 +59,7 @@ public class Constant {
     public static final int CALL_VIDEO_CONNECTING = 21; //链接中
 
     public static final int MSG_LOGIN = 20001; //登录成功
-    public static final int MSG_LOGIN_FAIL = 2000101; //登录失败
+    public static final int MSG_LOGIN_FAILED = 2000101; //登录失败
     public static final int MSG_LOGIN_AFTER = 20002; //登录成功后,开始rtc登录,人脸识别,读卡开始,心跳包等
     public static final int MSG_RTC_REGISTER = 20003;//rtc登录
     public static final int MSG_CALLMEMBER = 20004;//呼叫成员

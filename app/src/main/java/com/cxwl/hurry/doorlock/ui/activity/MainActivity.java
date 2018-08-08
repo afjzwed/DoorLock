@@ -83,6 +83,7 @@ import com.cxwl.hurry.doorlock.http.API;
 import com.cxwl.hurry.doorlock.interfac.TakePictureCallback;
 import com.cxwl.hurry.doorlock.service.DoorLock;
 import com.cxwl.hurry.doorlock.service.MainService;
+import com.cxwl.hurry.doorlock.service.MonitorService;
 import com.cxwl.hurry.doorlock.utils.AdvertiseHandler;
 import com.cxwl.hurry.doorlock.utils.BitmapUtils;
 import com.cxwl.hurry.doorlock.utils.CardRecord;
@@ -171,6 +172,7 @@ import static com.cxwl.hurry.doorlock.config.Constant.MSG_LIXIAN_PASSWORD_CHECK_
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_LOADLOCAL_DATA;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_LOCK_OPENED;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_LOGIN_AFTER;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_LOGIN_FAILED;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_PASSWORD_CHECK;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_RESTART_VIDEO;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_RESTART_VIDEO1;
@@ -360,14 +362,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         //初始化人脸相关与身份证识别
         initFaceDetectAndIDCard();
-//测试自动关广告
+        //测试自动关广告
         //  textColseAd();
-
 
         isTongGaoThreadStart = false;//每次初始化都重启一次通告更新线程
         isPicThreadStart = false;//每次初始化都重启一次通告更新线程
         isVideoThreadStart = false;//每次初始化都重启一次通告更新线程
-//        clearMemory();
+
     }
 
     //测试自动关广告
@@ -904,6 +905,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         Log.i(TAG, "登陆成功后");
                         onLoginAfter(msg);
                         break;
+                    case MSG_LOGIN_FAILED:
+                        //登陆成功后 设置信息 初始化rtc等
+                        showMacaddress((String) msg.obj);
+                        break;
                     case MSG_RTC_ONVIDEO:
                         //接通视频通话
                         Log.i(TAG, "接通视频通话");
@@ -959,22 +964,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     case MSG_LOCK_OPENED://开锁
                         Log.i(TAG, "开锁");
                         onLockOpened((int) msg.obj);
-//                        final Dialog weituoDialog = DialogUtil.showBottomDialog(MainActivity.this);
-//                        DLLog.e("人脸识别", "开门弹窗显示");
-//                        final TimerTask task = new TimerTask() {
-//                            @Override
-//                            public void run() {
-//                                runOnUiThread(new Runnable() {      // UI thread
-//                                    @Override
-//                                    public void run() {
-//                                        weituoDialog.dismiss();
-//                                    }
-//                                });
-//                            }
-//                        };
-//                        // TODO: 2018/6/7 循环?? 有问题 时间太长
-//                        timer.schedule(task, 2000, 5000);
-
                         if (weituoDialog == null) {
                             weituoDialog = DialogUtil.showBottomDialog(MainActivity.this);
                         }
@@ -1267,6 +1256,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         Intent dlIntent = new Intent(MainActivity.this, DoorLock.class);
         startService(dlIntent);//start方式启动锁Service
+
+        Intent msIntent = new Intent(MainActivity.this, MonitorService.class);
+        startService(msIntent);//start方式启动锁Service
     }
 
     /**
@@ -1743,36 +1735,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     /*********************************密码房号等输入状态相关start*******************************************/
-    private void callInput(int key) {
-        /*if ("C".equals(DeviceConfig.DEVICE_TYPE)) {
-            if (blockId == 0) {
-                if (blockNo.length() < DeviceConfig.BLOCK_LENGTH) {
-                    blockNo = blockNo + key;
-                    setDialValue(blockNo);
-                    Log.i(TAG, "输入的楼栋编号长度不为8 blockNo" + blockNo);
-                    Log.e("blockNo", "1===" + blockNo);
-                }
-                if (blockNo.length() == DeviceConfig.BLOCK_NO_LENGTH) {
-                    // TODO: 2018/5/9  检查楼栋
-//                    setDialValue(blockNo);
-//                    Message message = Message.obtain();
-//                    message.what = MainService.MSG_CHECK_BLOCKNO;
-//                    message.obj = blockNo;
-//                    LogDoor.i(TAG, "输入的楼栋编号满足长度为6 blockNo=" + blockNo);
-//                    LogDoor.e("blockNo", "2===" + blockNo);
-//                    try {
-//                        serviceMessenger.send(message);
-//                    } catch (RemoteException e) {
-//                        e.printStackTrace();
-//                    }
-                }
-            } else {
-                unitNoInput(key);
-            }
-        } else {
-            unitNoInput(key);
-        }*/
-    }
 
     /**
      * 输入的房号或手机号的输入  1
@@ -2091,7 +2053,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    /****************************天翼rtc********************/
+    /****************************天翼rtc****************************/
 
 /****************************拍照相关start************************/
     /**
@@ -3059,8 +3021,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         break;
                     case R.id.action_catVersion:
                         Log.e(TAG, "menu 本机的固件版本");
-//                        Toast.makeText(MainActivity.this, "本机的固件版本：" + hwservice.getSdkVersion(),
-//                                Toast.LENGTH_LONG).show();
+//                        Toast.makeText(MainActivity.this, "本机的固件版本：" + hwservice.getSdkVersion(),Toast.LENGTH_LONG)
+// .show();
                         break;
                     case R.id.action_updateVersion:
                         Log.e(TAG, "menu 更新");
@@ -3096,13 +3058,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //                        } catch (Exception e) {
 //                            e.printStackTrace();
 //                        }
-
                         Intent intent1 = new Intent(Intent.ACTION_REBOOT);
                         intent1.putExtra("nowait", 1);
                         intent1.putExtra("interval", 1);
                         intent1.putExtra("window", 0);
                         sendBroadcast(intent1);
-
 //                        DoorLock.getInstance().runReboot();
                         break;
                     case R.id.action_settings10://退出
@@ -3126,7 +3086,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         //To change body of implemented methods use File | Settings | File Templates.
         ActivityManager am = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
         List<ActivityManager.RunningAppProcessInfo> infoList = am.getRunningAppProcesses();
-        List<ActivityManager.RunningServiceInfo> serviceInfos = am.getRunningServices(100);
+//        List<ActivityManager.RunningServiceInfo> serviceInfos = am.getRunningServices(100);
 
         Method method = null;
         try {
@@ -3139,8 +3099,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         long beforeMem = getAvailMemory(MainActivity.this);
         Log.d("进程", "-----------before memory info : " + beforeMem);
-//        string = string + " " + beforeMem+"\r\n";
-//        tvShow.setText(string);
+
         int count = 0;
         if (infoList != null) {
             for (int i = 0; i < infoList.size(); ++i) {
@@ -3148,8 +3107,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //                Log.d("进程", "process name : " + appProcessInfo.processName);
                 //importance 该进程的重要程度  分为几个级别，数值越低就越重要。
 //                Log.d("进程", "importance : " + appProcessInfo.importance);
-//                string = string + " process name : " + appProcessInfo.processName + " 等级 : " + appProcessInfo
-//                        .importance+"\r\n";
 
                 // 一般数值大于RunningAppProcessInfo.IMPORTANCE_SERVICE的进程都长时间没用或者空进程了
                 // 一般数值大于RunningAppProcessInfo.IMPORTANCE_VISIBLE的进程都是非可见进程，也就是在后台运行着
@@ -3178,11 +3135,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 }
             }
         }
-//        tvShow.setText(string);
+
         long afterMem = getAvailMemory(MainActivity.this);
 //        Log.d("进程", "----------- after memory info : " + afterMem);
-        Toast.makeText(MainActivity.this, "clear " + count + " process, "
-                + (afterMem - beforeMem) + "M", Toast.LENGTH_LONG).show();
     }
 
     //获取可用内存大小
@@ -3580,31 +3535,33 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //            }
 
             if (DeviceConfig.PRINTSCREEN_STATE == 2) {
-                if (null != picData) {
-                    //将byte数组转成bitmap再转成图片文件
-                    byte[] data = picData.clone();
-                    if (data != null && data.length > 0) {
-                        Bitmap bmp = BitmapUtils.byteToFile(data, mWidth, mHeight);
-                        File file = null;
-                        if (null != bmp) {
-                            file = BitmapUtils.saveBitmap(bmp);//本地截图文件地址
-                        }
-                        if (null != file && !TextUtils.isEmpty(file.getPath())) {
-                            uploadToQiNiu(file, 1);//这里做上传到七牛的操作，不返回图片URL
-                        } else {
-                            faceOpenUrl = "";
-                        }
-                        DeviceConfig.PRINTSCREEN_STATE = 0;//图片处理完成,重置状态
-                        sendMainMessager(MSG_CARD_OPENLOCK, faceOpenUrl);
-                        file = null;
-                        bmp = null;
-                        data = null;
+                //将byte数组转成bitmap再转成图片文件
+                byte[] data = picData.clone();
+                if (data != null && data.length > 0) {
+                    Bitmap bmp = BitmapUtils.byteToFile(data, mWidth, mHeight);
+                    File file = null;
+                    if (null != bmp) {
+                        file = BitmapUtils.saveBitmap(bmp);//本地截图文件地址
                     }
-                    picData = null;
+                    if (null != file && !TextUtils.isEmpty(file.getPath())) {
+                        uploadToQiNiu(file, 1);//这里做上传到七牛的操作，不返回图片URL
+                    } else {
+                        faceOpenUrl = "";
+                    }
+                    DeviceConfig.PRINTSCREEN_STATE = 0;//图片处理完成,重置状态
+                    sendMainMessager(MSG_CARD_OPENLOCK, faceOpenUrl);
+                    file = null;
+                    bmp = null;
+                    data = null;
+                } else {
+                    DeviceConfig.PRINTSCREEN_STATE = 0;//图片处理完成,重置状态
+                    data = null;
                 }
+                picData = null;
             }
 
-            if (DeviceConfig.PRINTSCREEN_STATE == 3) {
+            // TODO: 2018/8/8 一键开门暂时不用截图，用照相
+            /*if (DeviceConfig.PRINTSCREEN_STATE == 3) {
                 //将byte数组转成bitmap再转成图片文件
                 byte[] data = picData;
                 if (data != null && data.length > 0) {
@@ -3627,7 +3584,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     bmp = null;
                     data = null;
                 }
-            }
+            }*/
 
             if (DeviceConfig.DEVICE_TYPE.equals("B") && netWorkFlag == 1) {//大门,人脸验证走网络
                 if (DeviceConfig.PRINTSCREEN_STATE == 0) {
@@ -3681,6 +3638,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 if (DeviceConfig.PRINTSCREEN_STATE == 0) {//开启截图、上传图片、开门、上传日志流程
                     if (mImageNV21 != null && identification) {//摄像头检测到人脸信息且处于人脸识别状态
                         DLLog.e("人脸识别", "开始");
+                        DeviceConfig.PRINTSCREEN_STATE = 1;//开启截图、上传图片、开门、上传日志流程
                         long time = System.currentTimeMillis();
                         //检测输入图像中的人脸特征信息，输出结果保存在 AFR_FSDKFace feature
                         //data 输入的图像数据,width 图像宽度,height 图像高度,format 图像格式,face 已检测到的脸框,ori 已检测到的脸角度,
@@ -3721,7 +3679,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             if (null != name && !cardRecord.checkLastCardNew(name)) {//判断距离上次刷脸时间是否超过10秒
                                 //fr success.
                                 //Log.v(FACE_TAG, "置信度：" + (float) ((int) (max * 1000)) / 1000.0);
-                                DeviceConfig.PRINTSCREEN_STATE = 1;//开启截图、上传图片、开门、上传日志流程
                                 //将byte数组转成bitmap再转成图片文件
                                 byte[] data = mImageNV21;
                                 if (data != null && data.length > 0) {
@@ -3739,23 +3696,24 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                         parameters[1] = "";
                                     }
                                     DLLog.e("人脸识别", "发出消息 " + name);
+                                    DeviceConfig.PRINTSCREEN_STATE = 0;//人脸开门图片处理完成（异步处理）,重置状态
                                     sendMainMessager(MSG_FACE_OPENLOCK, parameters);
                                     file = null;
                                     bmp = null;
                                     data = null;
                                     name = null;
                                 }
-//                        }
                             }
                         }
-//                    result = null;
-//                    result = new AFR_FSDKFace();
+                        DeviceConfig.PRINTSCREEN_STATE = 0;//人脸开门图片处理完成（异步处理）,重置状态
+                        mAFT_FSDKFace = null;
+                        mImageNV21 = null;
+                    } else {
                         mAFT_FSDKFace = null;
                         mImageNV21 = null;
                     }
                 }
             }
-
         }
 
         @Override
@@ -3790,7 +3748,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     private void uploadBin() {
-        if (true) {//匹配，开门
+        /*if (true) {//匹配，开门
             byte[] data = mImageNV21;
             String name = "";
             if (data != null && data.length > 0) {
@@ -3819,7 +3777,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             DeviceConfig.PRINTSCREEN_STATE = 0;//重置状态
         }
         mAFT_FSDKFace = null;
-        mImageNV21 = null;
+        mImageNV21 = null;*/
     }
 
     /**

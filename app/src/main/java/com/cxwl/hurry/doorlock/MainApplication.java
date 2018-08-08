@@ -11,6 +11,7 @@ import com.cxwl.hurry.doorlock.db.DaoMaster;
 import com.cxwl.hurry.doorlock.db.DaoSession;
 import com.cxwl.hurry.doorlock.face.ArcsoftManager;
 import com.cxwl.hurry.doorlock.ui.activity.MainActivity;
+import com.cxwl.hurry.doorlock.utils.DLLog;
 import com.squareup.leakcanary.LeakCanary;
 import com.squareup.leakcanary.RefWatcher;
 import com.tencent.bugly.crashreport.CrashReport;
@@ -64,6 +65,7 @@ public class MainApplication extends Application {
     public Thread.UncaughtExceptionHandler restartHandler = new Thread.UncaughtExceptionHandler() {
         @Override
         public void uncaughtException(Thread thread, Throwable ex) {
+            DLLog.e("崩溃重启", "错误 " + ex);
             AlarmManager mgr = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
             mgr.set(AlarmManager.RTC, System.currentTimeMillis() + 1000,
                     restartIntent); // 1秒钟后重启应用

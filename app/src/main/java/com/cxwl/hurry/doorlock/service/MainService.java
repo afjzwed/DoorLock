@@ -8,6 +8,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.media.AudioManager;
+import android.os.Debug;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
@@ -18,7 +19,6 @@ import android.os.RemoteException;
 import android.support.annotation.Nullable;
 import android.text.TextUtils;
 import android.util.Log;
-import android.widget.Toast;
 
 import com.arcsoft.facerecognition.AFR_FSDKFace;
 import com.cxwl.hurry.doorlock.Bean.BanbenBean;
@@ -135,6 +135,7 @@ import static com.cxwl.hurry.doorlock.config.Constant.MSG_LOADLOCAL_DATA;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_LOCK_OPENED;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_LOGIN;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_LOGIN_AFTER;
+import static com.cxwl.hurry.doorlock.config.Constant.MSG_LOGIN_FAILED;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_PASSWORD_CHECK;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_RESTART_VIDEO;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_RTC_DISCONNECT;
@@ -539,8 +540,6 @@ public class MainService extends Service {
                         List<LogDoor> list = new ArrayList<>();
                         list.add(data);
                         createAccessLog(list);
-                        DLLog.e("人脸识别", "日志上传，准备开门");
-                        DeviceConfig.PRINTSCREEN_STATE = 0;//人脸开门图片处理完成（异步处理）,重置状态
                         openLock(3);
                         break;
                     }
@@ -955,7 +954,7 @@ public class MainService extends Service {
         //To change body of implemented methods use File | Settings | File Templates.
         ActivityManager am = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
         List<ActivityManager.RunningAppProcessInfo> infoList = am.getRunningAppProcesses();
-        List<ActivityManager.RunningServiceInfo> serviceInfos = am.getRunningServices(100);
+//        List<ActivityManager.RunningServiceInfo> serviceInfos = am.getRunningServices(100);
 
         Method method = null;
         try {
@@ -968,25 +967,30 @@ public class MainService extends Service {
 
         long beforeMem = getAvailMemory(getApplication());
         Log.d("进程", "-----------before memory info : " + beforeMem);
-//        string = string + " " + beforeMem+"\r\n";
-//        tvShow.setText(string);
+
         int count = 0;
         if (infoList != null) {
             for (int i = 0; i < infoList.size(); ++i) {
                 ActivityManager.RunningAppProcessInfo appProcessInfo = infoList.get(i);
+
+                if ("com.cxwl.hurry.newdoorlock".equals(appProcessInfo.processName)) {
+                    int[] myMempid = new int[]{appProcessInfo.pid};
+                    Debug.MemoryInfo[] appMem = am.getProcessMemoryInfo(myMempid);
+                    int memSize = appMem[0].dalvikPrivateDirty / 1024;
+                    DLLog.w("进程", appProcessInfo.processName + ":" + memSize);
+                }
+
                 Log.d("进程", "process name : " + appProcessInfo.processName);
                 //importance 该进程的重要程度  分为几个级别，数值越低就越重要。
                 Log.d("进程", "importance : " + appProcessInfo.importance);
-//                string = string + " process name : " + appProcessInfo.processName + " 等级 : " + appProcessInfo
-//                        .importance+"\r\n";
 
                 // 一般数值大于RunningAppProcessInfo.IMPORTANCE_SERVICE的进程都长时间没用或者空进程了
                 // 一般数值大于RunningAppProcessInfo.IMPORTANCE_VISIBLE的进程都是非可见进程，也就是在后台运行着
                 if (appProcessInfo.importance > ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE) {
+
                     String[] pkgList = appProcessInfo.pkgList;
                     for (int j = 0; j < pkgList.length; ++j) {//pkgList 得到该进程下运行的包名
                         Log.d("进程", "It will be killed, package name : " + pkgList[j]);
-//                        string = string + " killed: " + pkgList[j]+"\r\n";
                         if ("com.cxwl.hurry.doorlock".equals(pkgList[j])) {
 
                         } else {
@@ -1007,12 +1011,9 @@ public class MainService extends Service {
                 }
             }
         }
-//        tvShow.setText(string);
         long afterMem = getAvailMemory(getApplication());
         Log.d("进程", "----------- after memory info : " + afterMem);
         DLLog.e("进程","-----------before memory info : " + beforeMem+" ----------- after memory info : "+ afterMem);
-//        Toast.makeText(MainActivity.this, "clear " + count + " process, "
-//                + (afterMem - beforeMem) + "M", Toast.LENGTH_LONG).show();
     }
 
     //获取可用内存大小
@@ -1711,7 +1712,6 @@ public class MainService extends Service {
         }
     }
 
-
     protected void downloadAdvertisementItemFiles(GuangGaoBean item) {
 
         String type = item.getLeixing();
@@ -1827,7 +1827,6 @@ public class MainService extends Service {
             e.printStackTrace();
         }
     }
-
 
     /**
      * 获取门禁卡信息接口
@@ -2177,6 +2176,8 @@ public class MainService extends Service {
                         message.what = MSG_LOGIN;
                         message.obj = deviceBean.getDoor();
                         mHandler.sendMessage(message);
+                    } else {
+                        sendMessageToMainAcitivity(MSG_LOGIN_FAILED, mac);
                     }
                 } else {
                     //服务器异常或没有网络
@@ -2572,47 +2573,6 @@ public class MainService extends Service {
         }
     }
 
-//    private void test() {
-//        String url = API.LOG;
-//        JSONObject data = new JSONObject();
-//        try {
-//            data.put("mac", "44:2c:05:e6:9c:c5");
-//            data.put("phone", "454");
-//            data.put("ka_id", "");
-//            data.put("kaimenfangshi", "1");
-//            data.put("kaimenjietu", "");
-//            data.put("kaimenshijian", System.currentTimeMillis());
-//            data.put("uuid", "");
-//        } catch (JSONException e) {
-//            e.printStackTrace();
-//        }
-//        LogDoor logDoor = JsonUtil.parseJsonToBean(data.toString(), LogDoor.class);
-//        List<LogDoor> door = new ArrayList<>();
-//        door.add(logDoor);
-//        LogListBean logListBean = new LogListBean();
-//        logListBean.setMac("44:2c:05:e6:9c:c5");
-//        logListBean.setXdoorOneOpenDtos(door);
-//        String s = JsonUtil.parseBeanToJson(logListBean);
-//        Log.e(TAG, "test" + JsonUtil.parseBeanToJson(logListBean));
-//        OkHttpUtils.postString().url(url).content(s).mediaType(MediaType.parse
-// ("application/json;" + " " +
-//                "charset=utf-8")).addHeader("Authorization", httpServerToken).tag(this).build()
-// .execute(new
-// StringCallback() {
-//
-//
-//            @Override
-//            public void onError(Call call, Exception e, int id) {
-//                Log.e(TAG, e.toString());
-//            }
-//
-//            @Override
-//            public void onResponse(String response, int id) {
-//                Log.e(TAG, response);
-//            }
-//        });
-//    }
-
     /**
      * 上传开门日志
      * 开门方式:1卡2手机3人脸4邀请码5离线密码6临时密码
@@ -2768,7 +2728,6 @@ public class MainService extends Service {
     };
 
     /****************************初始化天翼操作********************************/
-
 
     /****************************呼叫相关start********************************/
     /**
@@ -3151,7 +3110,7 @@ public class MainService extends Service {
 
     /****************************虹软相关end*********************************************/
 
-    /****************************生命周期start*********************************************/
+    /****************************生命周期start****************************/
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -3163,6 +3122,9 @@ public class MainService extends Service {
         super.onDestroy();
         Log.v("MainService", "onDestroy()");
         MainApplication.getRefWatcher(this).watch(this);
+
+        // TODO: 2018/8/8 正式版要打开这个方法 onReStartVideo();
+
         saveVisionInfo();
         // TODO: 2018/5/15 还有资源未释放
 
@@ -3193,8 +3155,16 @@ public class MainService extends Service {
         if (aexUtil != null) {
             aexUtil.close();
         }
+    }
 
-
+    private void onReStartVideo() {
+        DLLog.e("wh", "进行设备的重启");
+//        startActivity(new Intent(this, PhotographActivity.class));
+        Intent intent1 = new Intent(Intent.ACTION_REBOOT);
+        intent1.putExtra("nowait", 1);
+        intent1.putExtra("interval", 1);
+        intent1.putExtra("window", 0);
+        sendBroadcast(intent1);
     }
 
     @Nullable
@@ -3203,8 +3173,7 @@ public class MainService extends Service {
         return serviceMessage.getBinder();
     }
 
-
-    /****************************生命周期end*********************************************/
+    /****************************生命周期end****************************/
 
     /****************************卡相关start************************/
 
