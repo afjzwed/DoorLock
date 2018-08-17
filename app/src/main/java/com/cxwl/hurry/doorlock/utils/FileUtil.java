@@ -1,9 +1,6 @@
 package com.cxwl.hurry.doorlock.utils;
 
-import android.os.Environment;
 import android.util.Log;
-
-import com.cxwl.hurry.doorlock.config.DeviceConfig;
 
 import java.io.File;
 import java.io.FileOutputStream;

@@ -4,7 +4,9 @@
           android:installLocation="internalOnly"
           android:sharedUserId="android.uid.system">
 
-    <!--重启权限-->
+    <!--允许程序读取底层系统日志文件-->
+    <uses-permission android:name="android.permission.READ_LOGS"/>
+    <!--重新启动设备权限-->
     <uses-permission
         android:name="android.permission.REBOOT"
         android:protectionLevel="signatureOrSystem"/>
@@ -12,20 +14,19 @@
     <uses-permission
         android:name="android.permission.SHUTDOWN"
         android:protectionLevel="signatureOrSystem"/>
-    <!--杀死后台进程的权限-->
-    <uses-permission android:name="android.permission.KILL_BACKGROUND_PROCESSES" />
-    <!--杀死除当前前台进程外所有非系统进程-->
-    <uses-permission android:name="android..permission.FORCE_STOP_PACKAGES" />
-
-
-    <!-- 读写文件 -->
+    <!--结束后台进程的权限-->
+    <uses-permission android:name="android.permission.KILL_BACKGROUND_PROCESSES"/>
+    <!--实现强制停止指定程序-->
+    <uses-permission android:name="android.permission.FORCE_STOP_PACKAGES"/>
+    <!--允许挂载和反挂载文件系统可移动存储-->
     <uses-permission android:name="android.permission.MOUNT_UNMOUNT_FILESYSTEMS"/>
-    <!--外存储写权限，构建语法需要用到此权限 -->
+    <!--外存储读权限，构建语法需要用到此权限 -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <!--外存储写权限，构建语法需要用到此权限 -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
     <!--获取当前wifi状态 -->
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
-    <!--自启动权限-->
+    <!--自启动权限,允许一个程序接收到 ACTION_BOOT_COMPLETED广播在系统完成启动-->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <!--网络状态改变-->
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE"/>
@@ -39,21 +40,58 @@
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
     <!-- 允许请求访问使用照相设备 -->
     <uses-permission android:name="android.permission.CAMERA"/>
-    <!-- 开启摄像头 -->
+    <!--// 允许一个程序获取信息有关当前或最近运行的任务，一个缩略的任务状态，是否活动等等-->
+    <uses-permission android:name="android.permission.GET_TASKS"/>
+    <!-- 允许程序安装应用 -->
+    <uses-permission android:name="android.permission.INSTALL_PACKAGES"/>
+    <!--允许振动-->
+    <uses-permission android:name="android.permission.VIBRATE"/>
+    <!--显示系统窗口，显示在其他所有程序的顶层-->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
+    <!--读取手机信息权限,访问电话状态 -->
+    <uses-permission android:name="android.permission.READ_PHONE_STATE"/>
+    <!--读取联系人权限，上传联系人需要用到此权限 -->
+    <uses-permission android:name="android.permission.READ_CONTACTS"/>
+    <!--配置权限，用来记录应用配置信息,允许程序读取或写入系统设置 -->
+    <uses-permission android:name="android.permission.WRITE_SETTINGS"/>
+    <!--手机定位信息，用来为语义等功能提供定位，提供更精准的服务--> <!--定位信息是敏感信息，可通过Setting.setLocationEnable(false)关闭定位请求 -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <!-- 允许程序连接到已配对的蓝牙设备 -->
+    <uses-permission android:name="android.permission.BLUETOOTH"/>
+    <!--允许程序发现和配对蓝牙设备-->
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"/>
+    <!--允许一个程序访问CellID或WiFi热点来获取粗略的位置-->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <!-- 摄像头-->
     <uses-permission android:name="android.hardware.camera"/>
+    <!--摄像头-->
     <uses-permission android:name="android.hardware.camera.autofocus"/>
-
+    <!--设置摄像头参数（非必须）-->
     <uses-feature
         android:name="android.hardware.camera.setParameters"
         android:required="false"/>
-    <!--允许使用PowerManager的WakeLocks保持进程在休眠时从屏幕消失-->
+    <!-- 开启摄像头（非必须） -->
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false"/>
+    <!--摄像头（非必须）-->
+    <uses-feature
+        android:name="android.hardware.camera.autofocus"
+        android:required="false"/>
+    <!--唤醒锁定,允许使用PowerManager的 WakeLocks保持进程在休眠时从屏幕消失,允许程序在手机屏幕关闭后后台进程仍然运行-->
+    <!--没有使用？-->
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    <!--允许程序执行NFC近距离通讯操作，用于移动支持-->
+    <uses-permission android:name="android.permission.NFC"/>
+    <!-- 允许程序读取短信息 -->
+    <uses-permission android:name="android.permission.READ_SMS"/>
+    <!-- 接收消息 -->
+    <uses-permission android:name="android.permission.RECEIVE_SMS"/>
+    <!--允许程序改变Wi-Fi连接状态-->
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE"/>
+    <!--允许程序监控或控制activities已经启动全局系统中-->
+    <uses-permission android:name="android.permission.SET_ACTIVITY_WATCHER" />
 
-    <!-- 静默安装 -->
-    <uses-permission android:name="android.permission.INSTALL_PACKAGES"/>
-
-    <!--android:roundIcon="@mipmap/ic_launcher_round"-->
-    <!--android:supportsRtl="true"-->
     <application
         android:name=".MainApplication"
         android:allowBackup="true"

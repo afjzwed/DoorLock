@@ -1,10 +1,13 @@
 package com.cxwl.hurry.doorlock.receiver;
 
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 
+import com.cxwl.hurry.doorlock.MainApplication;
+import com.cxwl.hurry.doorlock.config.DeviceConfig;
 import com.cxwl.hurry.doorlock.ui.activity.MainActivity;
 import com.cxwl.hurry.doorlock.utils.ToastUtil;
 
@@ -23,10 +26,17 @@ public class NativeAccessReceiver extends BroadcastReceiver {
             String packageName = intent.getData().getSchemeSpecificPart();
             if (packageName.equals("com.cxwl.hurry.doorlock")) {
                 startActivity(context, MainActivity.class, null);
+            }else if(packageName.equals(DeviceConfig.Lockaxial_Monitor_PackageName)){
+                //启动监控程序
+                Intent i = new Intent();
+                ComponentName cn = new ComponentName(DeviceConfig.Lockaxial_Monitor_PackageName,DeviceConfig.Lockaxial_Monitor_SERVICE);
+                i.setComponent(cn);
+                i.setPackage(MainApplication.getApplication().getPackageName());
+                context.startService(i);
             }
         } else if (action.equals(Intent.ACTION_BOOT_COMPLETED)) {
             startActivity(context, MainActivity.class,null);
-            ToastUtil.showShort("开机启动成功");
+//            ToastUtil.showShort("开机启动成功");
         }
 
 //        if (intent.getAction().equals(Intent.ACTION_PACKAGE_ADDED)) {

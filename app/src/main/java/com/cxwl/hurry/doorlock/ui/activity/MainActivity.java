@@ -1257,8 +1257,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         Intent dlIntent = new Intent(MainActivity.this, DoorLock.class);
         startService(dlIntent);//start方式启动锁Service
 
-        Intent msIntent = new Intent(MainActivity.this, MonitorService.class);
-        startService(msIntent);//start方式启动锁Service
+        // TODO: 2018/8/10 注释
+//        Intent msIntent = new Intent(MainActivity.this, MonitorService.class);
+//        startService(msIntent);//start方式启动锁Service
     }
 
     /**
@@ -3104,9 +3105,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         if (infoList != null) {
             for (int i = 0; i < infoList.size(); ++i) {
                 ActivityManager.RunningAppProcessInfo appProcessInfo = infoList.get(i);
-//                Log.d("进程", "process name : " + appProcessInfo.processName);
+                Log.d("进程", "process name : " + appProcessInfo.processName);
                 //importance 该进程的重要程度  分为几个级别，数值越低就越重要。
-//                Log.d("进程", "importance : " + appProcessInfo.importance);
+                Log.d("进程", "importance : " + appProcessInfo.importance);
 
                 // 一般数值大于RunningAppProcessInfo.IMPORTANCE_SERVICE的进程都长时间没用或者空进程了
                 // 一般数值大于RunningAppProcessInfo.IMPORTANCE_VISIBLE的进程都是非可见进程，也就是在后台运行着
@@ -3535,33 +3536,32 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //            }
 
             if (DeviceConfig.PRINTSCREEN_STATE == 2) {
-                //将byte数组转成bitmap再转成图片文件
-                byte[] data = picData.clone();
-                if (data != null && data.length > 0) {
-                    Bitmap bmp = BitmapUtils.byteToFile(data, mWidth, mHeight);
-                    File file = null;
-                    if (null != bmp) {
-                        file = BitmapUtils.saveBitmap(bmp);//本地截图文件地址
+                if (null != picData) {
+                    //将byte数组转成bitmap再转成图片文件
+                    byte[] data = picData.clone();
+                    if (data != null && data.length > 0) {
+                        Bitmap bmp = BitmapUtils.byteToFile(data, mWidth, mHeight);
+                        File file = null;
+                        if (null != bmp) {
+                            file = BitmapUtils.saveBitmap(bmp);//本地截图文件地址
+                        }
+                        if (null != file && !TextUtils.isEmpty(file.getPath())) {
+                            uploadToQiNiu(file, 1);//这里做上传到七牛的操作，不返回图片URL
+                        } else {
+                            faceOpenUrl = "";
+                        }
+                        DeviceConfig.PRINTSCREEN_STATE = 0;//图片处理完成,重置状态
+                        sendMainMessager(MSG_CARD_OPENLOCK, faceOpenUrl);
+                        file = null;
+                        bmp = null;
+                        data = null;
                     }
-                    if (null != file && !TextUtils.isEmpty(file.getPath())) {
-                        uploadToQiNiu(file, 1);//这里做上传到七牛的操作，不返回图片URL
-                    } else {
-                        faceOpenUrl = "";
-                    }
-                    DeviceConfig.PRINTSCREEN_STATE = 0;//图片处理完成,重置状态
-                    sendMainMessager(MSG_CARD_OPENLOCK, faceOpenUrl);
-                    file = null;
-                    bmp = null;
-                    data = null;
-                } else {
-                    DeviceConfig.PRINTSCREEN_STATE = 0;//图片处理完成,重置状态
-                    data = null;
+                    picData = null;
                 }
-                picData = null;
             }
 
             // TODO: 2018/8/8 一键开门暂时不用截图，用照相
-            /*if (DeviceConfig.PRINTSCREEN_STATE == 3) {
+            if (DeviceConfig.PRINTSCREEN_STATE == 3) {
                 //将byte数组转成bitmap再转成图片文件
                 byte[] data = picData;
                 if (data != null && data.length > 0) {
@@ -3584,7 +3584,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     bmp = null;
                     data = null;
                 }
-            }*/
+            }
 
             if (DeviceConfig.DEVICE_TYPE.equals("B") && netWorkFlag == 1) {//大门,人脸验证走网络
                 if (DeviceConfig.PRINTSCREEN_STATE == 0) {
@@ -3639,7 +3639,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     if (mImageNV21 != null && identification) {//摄像头检测到人脸信息且处于人脸识别状态
                         DLLog.e("人脸识别", "开始");
                         DeviceConfig.PRINTSCREEN_STATE = 1;//开启截图、上传图片、开门、上传日志流程
-                        long time = System.currentTimeMillis();
+//                        long time = System.currentTimeMillis();
                         //检测输入图像中的人脸特征信息，输出结果保存在 AFR_FSDKFace feature
                         //data 输入的图像数据,width 图像宽度,height 图像高度,format 图像格式,face 已检测到的脸框,ori 已检测到的脸角度,
                         // feature 检测到的人脸特征信息
@@ -3680,7 +3680,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                 //fr success.
                                 //Log.v(FACE_TAG, "置信度：" + (float) ((int) (max * 1000)) / 1000.0);
                                 //将byte数组转成bitmap再转成图片文件
-                                byte[] data = mImageNV21;
+                                byte[] data = mImageNV21.clone();
                                 if (data != null && data.length > 0) {
                                     Bitmap bmp = BitmapUtils.byteToFile(data, mWidth, mHeight);
                                     File file = null;
@@ -3705,12 +3705,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                 }
                             }
                         }
-                        DeviceConfig.PRINTSCREEN_STATE = 0;//人脸开门图片处理完成（异步处理）,重置状态
                         mAFT_FSDKFace = null;
                         mImageNV21 = null;
-                    } else {
-                        mAFT_FSDKFace = null;
-                        mImageNV21 = null;
+                        DeviceConfig.PRINTSCREEN_STATE = 0;//重置状态
                     }
                 }
             }
