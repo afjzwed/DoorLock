@@ -35,7 +35,7 @@ public class MonitorService extends Service {
         public void handleMessage(Message msg) {
             if (msg.what == 0x01) {
                 mContext.sendBroadcast(new Intent(Monitor_Broadcard));
-                mHandler.sendEmptyMessageDelayed(0x01, 1 * 1000);
+//                mHandler.sendEmptyMessageDelayed(0x01, 1 * 1000);
             }
         }
     };
@@ -60,7 +60,7 @@ public class MonitorService extends Service {
         Log.i("xiao_", "监控服务初始化" + myFmt.format(new Date()));
         TAG = UUID.randomUUID().toString();
         mContext = this;
-        mHandler.sendEmptyMessage(0x01);
+//        mHandler.sendEmptyMessage(0x01);
         initCheckTopActivity();
     }
 

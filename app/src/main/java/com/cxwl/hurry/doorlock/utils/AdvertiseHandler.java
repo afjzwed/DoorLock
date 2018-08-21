@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import static com.cxwl.hurry.doorlock.config.Constant.RESTART_AUDIO;
 import static com.cxwl.hurry.doorlock.ui.activity.MainActivity.MSG_ADVERTISE_IMAGE;
 
 /**
@@ -313,6 +314,13 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
             public boolean onError(MediaPlayer mp, int what, int extra) {
                 Log.e("AdvertiseHandler", "OnErrorListener");
                 imageView.setVisibility(View.VISIBLE);
+                switch (what) {
+                    case 100:
+                        Log.d("AdvertiseHandler", "多媒体死亡 MEDIA_ERROR_SERVER_DIED");
+                        DLLog.d("AdvertiseHandler", "多媒体死亡 MEDIA_ERROR_SERVER_DIED");
+                        RESTART_AUDIO = true;
+                        break;
+                }
                 return false;
             }
         });
@@ -371,8 +379,13 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
         try {
             mediaPlayer.reset();
             mediaPlayer.setDataSource(source);
-            mediaPlayer.prepare();
-            mediaPlayer.start();
+            mediaPlayer.prepareAsync();//在使用MediaPlayer准备的时候，最好使用prepareAsync()方法，而不是prepare()方法，因为前一个方法是异步准备的，不会阻碍主线程
+            mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+                @Override
+                public void onPrepared(MediaPlayer mediaPlayer) {
+                    mediaPlayer.start();
+                }
+            });
         } catch (Exception e) {
             Log.e("AdvertiseHandler", "UpdateAdvertise: startMediaPlay error");
         }

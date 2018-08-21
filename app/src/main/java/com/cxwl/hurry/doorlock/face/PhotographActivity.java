@@ -10,6 +10,7 @@ import android.view.View;
 import android.widget.ImageView;
 
 import com.cxwl.hurry.doorlock.R;
+import com.cxwl.hurry.doorlock.config.Constant;
 import com.guo.android_extend.widget.CameraFrameData;
 import com.guo.android_extend.widget.CameraGLSurfaceView;
 import com.guo.android_extend.widget.CameraSurfaceView;
@@ -39,6 +40,8 @@ public class PhotographActivity extends AppCompatActivity implements CameraSurfa
 
         mCaptureButton = (ImageView) findViewById(R.id.capture);//拍照按钮
         mCaptureButton.setOnClickListener(this);
+
+        Constant.RESTART_AUDIO = false;
 
         new Thread(new Runnable() {
             @Override

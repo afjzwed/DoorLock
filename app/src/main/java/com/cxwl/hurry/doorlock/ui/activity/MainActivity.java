@@ -78,6 +78,7 @@ import com.cxwl.hurry.doorlock.entity.GuangGaoBean;
 import com.cxwl.hurry.doorlock.entity.NoticeBean;
 import com.cxwl.hurry.doorlock.entity.ResponseBean;
 import com.cxwl.hurry.doorlock.face.ArcsoftManager;
+import com.cxwl.hurry.doorlock.face.PhotographActivity;
 import com.cxwl.hurry.doorlock.face.PhotographActivity2;
 import com.cxwl.hurry.doorlock.http.API;
 import com.cxwl.hurry.doorlock.interfac.TakePictureCallback;
@@ -325,6 +326,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         this.hwservice = new appLibsService(this);
         super.onCreate(savedInstanceState);
 
+
         //全屏设置，隐藏窗口所有装饰
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN);//清除FLAG
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
@@ -431,8 +433,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             .currentTimeMillis()) {//过期时间大于当前时间
                         Log.e(TAG, "设置视频 有数据");
                         if (Long.parseLong(StringUtils.transferDateToLong(videoList.get(i).getKaishi_shijian())) <
-                                System
-                                        .currentTimeMillis()) {//开始时间小于当前时间，可以显示
+                                System.currentTimeMillis()) {//开始时间小于当前时间，可以显示
                             isPlayingList.add(videoList.get(i));
                         }
                     }
@@ -1046,6 +1047,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                 RESTART_PHONE = false;
                                 faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_PAUSE, 100);
                                 faceHandler.sendEmptyMessageDelayed(MSG_RESTART_VIDEO1, 100);
+//                                onReStartVideo();
                             }
                         }
                         break;
@@ -2534,6 +2536,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         }
 
+        if ( blockNo.equals("99999998")) {
+            if (videoList != null && videoList.size() > 0) {
+                videoList.clear();
+            }
+            return;
+        }
+
         if (blockNo.equals(("8888")) || blockNo.equals("88888888")) {
             if (faceHandler != null) {
                 // TODO: 2018/5/28 不暂停人脸识别
@@ -3933,55 +3942,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     private void onReStartVideo() {
-        //    MainActivity/onPause-->
-//    MainActivity/onStop-->
-//    MainActivity/onRestart-->
-//    MainActivity/onStart-->
-//    MainActivity/onResume-->
 
-//        onPause();
-//        onStop();
-//        onRestart();
-//        onStart();
-//        onResume();
+        if (Constant.RESTART_AUDIO) {
+            DLLog.e("wh", "进行流媒体的重启");
+            startActivity(new Intent(this, PhotographActivity.class));
+        } else {
+            Intent intent = new Intent();
+            intent.setAction("com.androidex.action.reboot");
+            sendBroadcast(intent);
+        }
 
-//        Log.v(TAG, "MainActivity/onPause-->");
-//        if (null != advertiseHandler) {
-//            advertiseHandler.pause(adverErrorCallBack);
-//            isRestartPlay = true;
-//        }
-//        Log.v(TAG, "MainActivity/onStop-->");
-//        if (faceHandler != null) {
-//            faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_PAUSE, 1000);
-//            faceHandler.sendEmptyMessageDelayed(MSG_ID_CARD_DETECT_PAUSE, 1000);
-//        }
-//        if (as.isScrolled()) {
-//            as.setScrolled(false);
-//            as.change();
-//        }
-//        Log.v(TAG, "MainActivity/onRestart-->");
-//        setCurrentStatus(CALL_MODE);
-//        Log.v(TAG, "MainActivity/onStart-->");
-//        if (isRestartPlay) {
-//            isRestartPlay = false;
-//            advertiseHandler.start(adverErrorCallBack);
-//        }
-//        if (!as.isScrolled()) {
-//            as.setScrolled(true);
-//            as.autoScroll(isTongGaoFrist);
-//        }
-//        Log.v(TAG, "MainActivity/onResume-->");
-//        if (faceHandler != null) {
-//            faceHandler.sendEmptyMessageDelayed(MSG_FACE_DETECT_CONTRAST, 3000);
-//            faceHandler.sendEmptyMessageDelayed(MSG_ID_CARD_DETECT_RESTART, 1000);
-//        }
-//        DLLog.e("wh", "进行流媒体的重启");
-//        startActivity(new Intent(this, PhotographActivity.class));
-
-//        String[] arrayRestart = {"su","-c","reboot"};
-        Intent intent = new Intent();
-        intent.setAction("com.androidex.action.reboot");
-        sendBroadcast(intent);
     }
 
     /****************************生命周期end*********************************************/

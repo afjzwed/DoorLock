@@ -154,6 +154,7 @@ import static com.cxwl.hurry.doorlock.config.Constant.MSG_UPLOAD_LIXIAN_IMG;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_YIJIANKAIMEN_OPENLOCK;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_YIJIANKAIMEN_TAKEPIC;
 import static com.cxwl.hurry.doorlock.config.Constant.MSG_YIJIANKAIMEN_TAKEPIC1;
+import static com.cxwl.hurry.doorlock.config.Constant.RESTART_AUDIO;
 import static com.cxwl.hurry.doorlock.config.Constant.RESTART_PHONE;
 import static com.cxwl.hurry.doorlock.config.Constant.RTC_APP_ID;
 import static com.cxwl.hurry.doorlock.config.Constant.RTC_APP_KEY;
@@ -241,7 +242,6 @@ public class MainService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-
 
         Log.i(TAG, "service启动");
         audioManager = (AudioManager) getSystemService(Service.AUDIO_SERVICE);
@@ -917,7 +917,7 @@ public class MainService extends Service {
 
                                 lixianTongji();//上传离线统计日志
 
-                                Calendar calendar = Calendar.getInstance();
+                               /* Calendar calendar = Calendar.getInstance();
                                 int hour = calendar.get(Calendar.HOUR_OF_DAY);
                                 Log.e(TAG, "当前小时 " + hour + " " + RESTART_PHONE);
                                 if (hour == 3) {
@@ -927,7 +927,7 @@ public class MainService extends Service {
                                         sendMessageToMainAcitivity(MSG_RESTART_VIDEO, imgFiles);
                                     }
                                 }
-                                calendar = null;
+                                calendar = null;*/
 
                                 clearMemory();
 
@@ -935,11 +935,14 @@ public class MainService extends Service {
                                     //监控程序未开启，启动监控服务,并开始监听
                                     Intent i = new Intent();
                                     ComponentName cn = new ComponentName(DeviceConfig.Lockaxial_Monitor_PackageName,
-                                            DeviceConfig
-                                            .Lockaxial_Monitor_SERVICE);
+                                            DeviceConfig.Lockaxial_Monitor_SERVICE);
                                     i.setComponent(cn);
                                     i.setPackage(MainApplication.getApplication().getPackageName());
                                     startService(i);
+                                }
+
+                                if (RESTART_AUDIO) {
+                                    sendMessageToMainAcitivity(MSG_RESTART_VIDEO, imgFiles);
                                 }
                             }
                         } else {
@@ -1007,14 +1010,15 @@ public class MainService extends Service {
                 // 一般数值大于RunningAppProcessInfo.IMPORTANCE_SERVICE的进程都长时间没用或者空进程了
                 // 一般数值大于RunningAppProcessInfo.IMPORTANCE_VISIBLE的进程都是非可见进程，也就是在后台运行着
                 if (appProcessInfo.importance > ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE) {
-
                     String[] pkgList = appProcessInfo.pkgList;
                     for (int j = 0; j < pkgList.length; ++j) {//pkgList 得到该进程下运行的包名
-                        Log.d("进程", "It will be killed, package name : " + pkgList[j]);
                         if ("com.cxwl.hurry.doorlock".equals(pkgList[j]) || "com.cxwl.hurry.monitor".equals
+                                (pkgList[j]) || "com.android.providers.media".equals
+                                (pkgList[j]) || "com.cxwl.hurry.doorlock:leakcanary".equals
                                 (pkgList[j])) {
 
                         } else {
+                            Log.d("进程", "It will be killed, package name : " + pkgList[j]);
                             if (null != method) {
                                 try {
                                     //利用反射调用forceStopPackage来结束进程
@@ -2025,8 +2029,9 @@ public class MainService extends Service {
         Log.i("MainService", "init AEX");
         // TODO: 2018/5/8  initSqlUtil();  初始化卡相关数据库工具类
         Log.i("MainService", "init SQL");
-//        initCheckTopActivity();//检查最上层界面
+
         initMonitor();
+
         //xiaozd add
         if (netWorkstate) {
             initWhenConnected(); //开始在线版本
@@ -3199,6 +3204,7 @@ public class MainService extends Service {
     public void onDestroy() {
         super.onDestroy();
         Log.v("MainService", "onDestroy()");
+
         MainApplication.getRefWatcher(this).watch(this);
 
         // TODO: 2018/8/8 正式版要打开这个方法 onReStartVideo();
