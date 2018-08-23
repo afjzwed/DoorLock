@@ -3036,6 +3036,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         break;
                     case R.id.action_updateVersion:
                         Log.e(TAG, "menu 更新");
+                        onReStartVideo();
                         //点击，手动更新
 //                        Message message = Message.obtain();
 //                        message.what = MSG_UPDATE_VERSION;

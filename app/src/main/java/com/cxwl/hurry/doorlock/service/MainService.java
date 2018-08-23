@@ -41,7 +41,6 @@ import com.cxwl.hurry.doorlock.entity.ResponseBean;
 import com.cxwl.hurry.doorlock.entity.YeZhuBean;
 import com.cxwl.hurry.doorlock.face.ArcsoftManager;
 import com.cxwl.hurry.doorlock.http.API;
-import com.cxwl.hurry.doorlock.ui.activity.MainActivity;
 import com.cxwl.hurry.doorlock.utils.AexUtil;
 import com.cxwl.hurry.doorlock.utils.CardRecord;
 import com.cxwl.hurry.doorlock.utils.DLLog;
@@ -87,8 +86,6 @@ import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -917,17 +914,31 @@ public class MainService extends Service {
 
                                 lixianTongji();//上传离线统计日志
 
-                               /* Calendar calendar = Calendar.getInstance();
+                                Calendar calendar = Calendar.getInstance();
                                 int hour = calendar.get(Calendar.HOUR_OF_DAY);
                                 Log.e(TAG, "当前小时 " + hour + " " + RESTART_PHONE);
                                 if (hour == 3) {
                                     RESTART_PHONE = true;
                                 } else if (hour == 4) {//每晚凌晨4点时进行一次媒体流的重启
                                     if (RESTART_PHONE == true) {
-                                        sendMessageToMainAcitivity(MSG_RESTART_VIDEO, imgFiles);
+                                        RESTART_PHONE = false;
+                                        DLLog.delFile();//删除本地日志
+//                                        sendMessageToMainAcitivity(MSG_RESTART_VIDEO, imgFiles);
                                     }
                                 }
-                                calendar = null;*/
+                                calendar = null;
+
+//                                ActivityManager activityManager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+//                                int memoryClass = activityManager.getMemoryClass();
+//                                Log.e(TAG, "内存 " + memoryClass);
+//                                int largeMemoryClass = activityManager.getLargeMemoryClass();
+//                                Log.e(TAG, "最大内存 " + memoryClass);
+//
+//                                float maxMemory = (float) (Runtime.getRuntime().maxMemory() * 1.0/ (1024 * 1024));
+//                                //当前分配的总内存
+//                                float totalMemory = (float) (Runtime.getRuntime().totalMemory() * 1.0/ (1024 * 1024));
+//                                //剩余内存
+//                                float freeMemory = (float) (Runtime.getRuntime().freeMemory() * 1.0/ (1024 * 1024));
 
                                 clearMemory();
 
@@ -996,10 +1007,14 @@ public class MainService extends Service {
             for (int i = 0; i < infoList.size(); ++i) {
                 ActivityManager.RunningAppProcessInfo appProcessInfo = infoList.get(i);
 
-                if ("com.cxwl.hurry.newdoorlock".equals(appProcessInfo.processName)) {
+                if ("com.cxwl.hurry.doorlock".equals(appProcessInfo.processName)) {
                     int[] myMempid = new int[]{appProcessInfo.pid};
                     Debug.MemoryInfo[] appMem = am.getProcessMemoryInfo(myMempid);
                     int memSize = appMem[0].dalvikPrivateDirty / 1024;
+                    if (memSize > 110) {//内存占用超过180M就重启
+                        onReStartVideo();
+                    }
+                    Log.d("进程", "当前进程 : "+appProcessInfo.processName +  ":" + memSize);
                     DLLog.w("进程", appProcessInfo.processName + ":" + memSize);
                 }
 
@@ -2027,8 +2042,6 @@ public class MainService extends Service {
     protected void init() {
         initAexUtil(); //安卓工控设备控制器初始化
         Log.i("MainService", "init AEX");
-        // TODO: 2018/5/8  initSqlUtil();  初始化卡相关数据库工具类
-        Log.i("MainService", "init SQL");
 
         initMonitor();
 
