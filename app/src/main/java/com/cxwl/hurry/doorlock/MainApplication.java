@@ -5,12 +5,10 @@ import android.app.Application;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
-import android.util.Log;
 
 import com.cxwl.hurry.doorlock.db.DaoMaster;
 import com.cxwl.hurry.doorlock.db.DaoSession;
 import com.cxwl.hurry.doorlock.face.ArcsoftManager;
-import com.cxwl.hurry.doorlock.ui.activity.MainActivity;
 import com.cxwl.hurry.doorlock.utils.DLLog;
 import com.cxwl.hurry.doorlock.utils.HttpApi;
 import com.squareup.leakcanary.LeakCanary;
@@ -28,7 +26,7 @@ import okhttp3.OkHttpClient;
  * Created by William on 2018/4/26.
  */
 
-public class MainApplication extends Application implements Thread.UncaughtExceptionHandler {
+public class MainApplication extends Application {
 
     private static MainApplication application;
     PendingIntent restartIntent;
@@ -42,7 +40,7 @@ public class MainApplication extends Application implements Thread.UncaughtExcep
         //人脸识别的数据存本地
         ArcsoftManager.getInstance().initArcsoft(this);//虹软人脸识别初始化
 
-        Thread.setDefaultUncaughtExceptionHandler(this);
+//        Thread.setDefaultUncaughtExceptionHandler(this);
 
         super.onCreate();
         //初始化腾讯buggly
@@ -57,12 +55,12 @@ public class MainApplication extends Application implements Thread.UncaughtExcep
                 .build();
         OkHttpUtils.initClient(okHttpClient);
 //    }
-//        Intent intent = new Intent();
-//        // 参数1：包名，参数2：程序入口的activity
-//        intent.setClassName("com.cxwl.hurry.doorlock", "com.cxwl.hurry.doorlock.ui.activity.MainActivity");
-//        restartIntent = PendingIntent.getActivity(getApplicationContext(), 0,
-//                intent, Intent.FLAG_ACTIVITY_NEW_TASK);
-//        Thread.setDefaultUncaughtExceptionHandler(restartHandler); // 程序崩溃时触发线程
+        Intent intent = new Intent();
+        // 参数1：包名，参数2：程序入口的activity
+        intent.setClassName("com.cxwl.hurry.doorlock", "com.cxwl.hurry.doorlock.ui.activity.MainActivity");
+        restartIntent = PendingIntent.getActivity(getApplicationContext(), 0,
+                intent, Intent.FLAG_ACTIVITY_NEW_TASK);
+        Thread.setDefaultUncaughtExceptionHandler(restartHandler); // 程序崩溃时触发线程
     }
 
     public Thread.UncaughtExceptionHandler restartHandler = new Thread.UncaughtExceptionHandler() {
@@ -72,6 +70,9 @@ public class MainApplication extends Application implements Thread.UncaughtExcep
             AlarmManager mgr = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
             mgr.set(AlarmManager.RTC, System.currentTimeMillis() + 500,restartIntent); // 1秒钟后重启应用
             android.os.Process.killProcess(android.os.Process.myPid()); // 自定义方法，关闭当前打开的所有avtivity
+            //下面这两个试一下
+            System.exit(0);
+            System.gc();
         }
     };
 
@@ -102,24 +103,24 @@ public class MainApplication extends Application implements Thread.UncaughtExcep
         return application;
     }
 
-    @Override
-    public void uncaughtException(Thread thread, Throwable throwable) {
-        // System.exit(0);
-        HttpApi.i("捕获到异常，重启程序");
-        throwable.printStackTrace();
-
-        Intent intent = getBaseContext().getPackageManager()
-                .getLaunchIntentForPackage(getBaseContext().getPackageName());
-
-        PendingIntent restartIntent = PendingIntent.getActivity(
-                getApplicationContext(),0, intent, PendingIntent.FLAG_ONE_SHOT);
-
-        // 退出程序
-        AlarmManager mgr = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-        mgr.set(AlarmManager.RTC, System.currentTimeMillis() + 500, restartIntent); // 1秒钟后重启应用
-
-        System.exit(0);
-    }
+//    @Override
+//    public void uncaughtException(Thread thread, Throwable throwable) {
+//        // System.exit(0);
+//        HttpApi.i("捕获到异常，重启程序");
+//        throwable.printStackTrace();
+//
+//        Intent intent = getBaseContext().getPackageManager()
+//                .getLaunchIntentForPackage(getBaseContext().getPackageName());
+//
+//        PendingIntent restartIntent = PendingIntent.getActivity(
+//                getApplicationContext(),0, intent, PendingIntent.FLAG_ONE_SHOT);
+//
+//        // 退出程序
+//        AlarmManager mgr = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+//        mgr.set(AlarmManager.RTC, System.currentTimeMillis() + 1000, restartIntent); // 1秒钟后重启应用
+//
+//        System.exit(0);
+//    }
 
 //    // 捕获系统运行停止错误
 //    @SuppressWarnings("WrongConstant")

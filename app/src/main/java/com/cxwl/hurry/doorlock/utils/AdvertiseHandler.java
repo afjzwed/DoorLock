@@ -143,7 +143,7 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
         mAdverTongJiCallBack = mCallBack;
         //initScreen();
         initInterger();
-        initMediaPlayer();
+//        initMediaPlayer();
         play();
         if (isOnVideo) {
             pause(errorCallBack);
@@ -207,7 +207,7 @@ public class AdvertiseHandler implements SurfaceHolder.Callback {
                 videoView.setVisibility(View.VISIBLE);
                 imageView.setVisibility(View.INVISIBLE);
                 mediaPlayerSource = source;
-//                initMediaPlayer();// TODO: 2018/7/13  //这个初始化方法应该放在initData()中
+                initMediaPlayer();// TODO: 2018/7/13  //这个初始化方法应该放在initData()中
                 startMediaPlay(mediaPlayerSource);
             } else {
                 Log.e("AdvertiseHandler", "next");

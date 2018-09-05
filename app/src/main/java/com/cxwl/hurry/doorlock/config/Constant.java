@@ -32,12 +32,16 @@ public class Constant {
 
     public static final int MSG_FACE_OPENLOCK = 40000;//人脸开门
 
+    public static final int START_FACE_CHECK = 11110;//人脸对比前的过滤准备流程(释放相机)
+
     public static final float FACE_MAX = 0.6f;
     /********************虹软相关*********************/
 
     /********************天翼RTC相关******************/
-    public static final String RTC_APP_ID = "71012";
-    public static final String RTC_APP_KEY = "71007b1c-6b75-4d6f-85aa-40c1f3b842ef";
+//    public static final String RTC_APP_ID = "71012";
+//    public static final String RTC_APP_KEY = "71007b1c-6b75-4d6f-85aa-40c1f3b842ef";
+    public static final String RTC_APP_ID = "72321";
+    public static final String RTC_APP_KEY = "9c4cd049-579d-431f-ba4b-5eb81edac064";
 
     public static final int MSG_RTC_NEWCALL = 10000;//收到新的来电
     public static final int MSG_RTC_ONVIDEO = 10001;//视频通话连接

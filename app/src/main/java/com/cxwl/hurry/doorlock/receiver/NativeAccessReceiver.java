@@ -9,7 +9,6 @@ import android.os.Bundle;
 import com.cxwl.hurry.doorlock.MainApplication;
 import com.cxwl.hurry.doorlock.config.DeviceConfig;
 import com.cxwl.hurry.doorlock.ui.activity.MainActivity;
-import com.cxwl.hurry.doorlock.utils.ToastUtil;
 
 
 /**

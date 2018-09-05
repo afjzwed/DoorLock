@@ -942,15 +942,15 @@ public class MainService extends Service {
 
                                 clearMemory();
 
-                                if (!isServiceRunning()) {
-                                    //监控程序未开启，启动监控服务,并开始监听
-                                    Intent i = new Intent();
-                                    ComponentName cn = new ComponentName(DeviceConfig.Lockaxial_Monitor_PackageName,
-                                            DeviceConfig.Lockaxial_Monitor_SERVICE);
-                                    i.setComponent(cn);
-                                    i.setPackage(MainApplication.getApplication().getPackageName());
-                                    startService(i);
-                                }
+//                                if (!isServiceRunning()) {
+//                                    //监控程序未开启，启动监控服务,并开始监听
+//                                    Intent i = new Intent();
+//                                    ComponentName cn = new ComponentName(DeviceConfig.Lockaxial_Monitor_PackageName,
+//                                            DeviceConfig.Lockaxial_Monitor_SERVICE);
+//                                    i.setComponent(cn);
+//                                    i.setPackage(MainApplication.getApplication().getPackageName());
+//                                    startService(i);
+//                                }
 
                                 if (RESTART_AUDIO) {
                                     sendMessageToMainAcitivity(MSG_RESTART_VIDEO, imgFiles);
@@ -2043,7 +2043,7 @@ public class MainService extends Service {
         initAexUtil(); //安卓工控设备控制器初始化
         Log.i("MainService", "init AEX");
 
-        initMonitor();
+//        initMonitor();
 
         //xiaozd add
         if (netWorkstate) {
@@ -2319,32 +2319,6 @@ public class MainService extends Service {
         } catch (RemoteException e) {
             e.printStackTrace();
         }
-
-        // TODO: 2018/6/3 注释
-        /*XdoorBean result = (XdoorBean) msg.obj;
-        if ("0".equals(result.getType())) {//大门
-            DeviceConfig.DEVICE_TYPE = "C";
-            lockName = "大门";
-        } else if ("1".equals(result.getType())) {//单元门
-            DeviceConfig.DEVICE_TYPE = "B";
-            blockId = Integer.parseInt(result.getLoudong_id());
-            lockId = Integer.parseInt(result.getDanyuan_id());
-            lockName = blockId + "栋" + lockId + "单元";
-        }
-        communityId = result.getXiangmu_id();
-        //目前服务器返回为空
-        communityName = result.getXiangmu_name() == null ? "欣社区" : result.getXiangmu_name();
-
-        // 保存消息  需要操作
-        saveInfoIntoLocal(communityId, blockId, lockId, communityName, lockName);
-        Message message = Message.obtain();
-        message.what = MSG_LOGIN_AFTER;
-        message.obj = result;
-        try {
-            mainMessage.send(message);
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        }*/
     }
 
     protected void loadInfoFromLocal() {
@@ -2603,37 +2577,6 @@ public class MainService extends Service {
             stopTimeoutCheckThread();
             //开门操作
             Log.e(TAG, "进行开门操作 开门开门");
-            //分为手机开门和视屏开门 1和2 进行区分 上传日志统一传2；
-            /*if (logDoor.getKaimenfangshi() == 1) {
-                logDoor.setKaimenfangshi(2);
-                //一键开门拍照
-//                if (StringUtils.isFastClick()) {
-                //开始截图
-                if (DeviceConfig.PRINTSCREEN_STATE == 0) {
-                    DeviceConfig.PRINTSCREEN_STATE = 3;
-                    Log.e(TAG, "一键开门，开始截图" + DeviceConfig.PRINTSCREEN_STATE);
-                    mLogDoor = logDoor;
-                    openLock(2);
-                }
-                //以下为调用摄像头拍照
-//                openLock(2);
-//                String imgurl = "door/img/" + System.currentTimeMillis() + ".jpg";
-//                sendMessageToMainAcitivity(MSG_YIJIANKAIMEN_TAKEPIC, imgurl);
-//                logDoor.setKaimenjietu(imgurl);
-//                }
-            } else {
-                openLock(2);
-                logDoor.setState(1);
-                List<LogDoor> list = new ArrayList<>();
-                //拼接图片地址
-                logDoor.setKaimenjietu(logDoor.getKaimenjietu());
-                logDoor.setKaimenshijian(StringUtils.transferLongToDate("yyyy-MM-dd HH:mm:ss", System
-                        .currentTimeMillis()));
-                Log.e(TAG, "图片imageUrl" + logDoor.getKaimenjietu());
-                list.add(logDoor);
-                createAccessLog(list);//上传日志
-                sendMessageToMainAcitivity(MSG_YIJIANKAIMEN_TAKEPIC1, null);
-            }*/
 
             openLock(2);
             //分为手机开门和视屏开门 1和2 进行区分 上传日志统一传2；
