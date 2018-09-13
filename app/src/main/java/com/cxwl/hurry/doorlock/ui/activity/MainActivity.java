@@ -643,7 +643,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         return b;
     }
 
-    /*********************************************/
+    /**************************图片轮播***************/
     private void startTonggaoThread() {
         defaultNotice = new NoticeBean();
         defaultNotice.setBiaoti("暂无通知");
@@ -1104,6 +1104,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         advertiseHandler.initData(obj1, mainMessage, (currentStatus == ONVIDEO_MODE), adverErrorCallBack,
                 adverTongJiCallBack);
     }
+
 
     /**
      * 刷新广告图片
@@ -1986,7 +1987,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 /*********************************密码房号等输入状态相关end*******************************************/
 
-    /****************************天翼rtc********************/
+    /****************************天翼rtc****************************/
     public void onRtcDisconnect() {
         Log.i(TAG, "重置房号为空 设置为 呼叫模式状态");
         blockNo = "";
@@ -3983,7 +3984,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     private void onReStartVideo() {
-
         if (Constant.RESTART_AUDIO) {
             DLLog.e("wh", "进行流媒体的重启");
             startActivity(new Intent(this, PhotographActivity.class));
@@ -3992,7 +3992,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             intent.setAction("com.androidex.action.reboot");
             sendBroadcast(intent);
         }
-
     }
 
     /****************************生命周期end*********************************************/

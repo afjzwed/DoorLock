@@ -143,9 +143,9 @@ public class BitmapUtils {
     public static Bitmap byteToFile(byte[] data, int width, int height) {
         //防止厂商没有优化YuvImage.compressToJpeg方法导致native层内存溢出，用以下的方法压缩转换图片
         RenderScript rs = RenderScript.create(MainApplication.getApplication()); // where context can be your
-// activity, application, etc.
+        // activity, application, etc.
         Bitmap outputBitmap = Nv21Image.nv21ToBitmap(rs, data, width, height); // where nv21ByteArray contains the
-// NV21 image data
+        // NV21 image data
         return outputBitmap;
 
 //        YuvImage yuv = new YuvImage(data, ImageFormat.NV21, width, height, null);

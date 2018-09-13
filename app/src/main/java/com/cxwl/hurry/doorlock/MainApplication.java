@@ -54,7 +54,7 @@ public class MainApplication extends Application {
                 //其他配置
                 .build();
         OkHttpUtils.initClient(okHttpClient);
-//    }
+
         Intent intent = new Intent();
         // 参数1：包名，参数2：程序入口的activity
         intent.setClassName("com.cxwl.hurry.doorlock", "com.cxwl.hurry.doorlock.ui.activity.MainActivity");
